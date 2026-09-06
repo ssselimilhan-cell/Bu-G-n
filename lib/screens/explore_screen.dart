@@ -8,17 +8,29 @@ class ExploreScreen extends StatefulWidget {
   final List<Event> events;
   final String? initialCategory;
 
-  const ExploreScreen({super.key, required this.events, this.initialCategory});
+  const ExploreScreen({
+    super.key,
+    required this.events,
+    this.initialCategory,
+  });
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  String? _category;
+  late String _category;
 
-  static const _categories = [
-    'Tümü', 'Konser', 'Tiyatro', 'Maç', 'Fırsat', 'Sergi', 'Doğa', 'Ücretsiz', 'Yeni'
+  static const List<String> _categories = [
+    'Tümü',
+    'Konser',
+    'Tiyatro',
+    'Maç',
+    'Fırsat',
+    'Sergi',
+    'Doğa',
+    'Ücretsiz',
+    'Yeni',
   ];
 
   @override
@@ -27,20 +39,50 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _category = widget.initialCategory ?? 'Tümü';
   }
 
+  List<Event> get _filteredEvents {
+    if (_category == 'Tümü') {
+      return widget.events;
+    }
+
+    final searchText = _category.toLowerCase();
+
+    return widget.events.where((event) {
+      final category = event.category.toLowerCase();
+
+      return category == searchText || category.contains(searchText);
+    }).toList();
+  }
+
+  void _openEvent(Event event) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EventDetailScreen(event: event),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredEvents;
+    final events = _filteredEvents;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F4),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF6F6F4),
-        title: const Text('Keşfet', style: TextStyle(fontWeight: FontWeight.w900)),
+        elevation: 0,
+        title: const Text(
+          'KEŞFET',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
       ),
       body: Column(
         children: [
           SizedBox(
-            height: 46,
+            height: 50,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -49,35 +91,40 @@ class _ExploreScreenState extends State<ExploreScreen> {
               itemBuilder: (context, index) {
                 final category = _categories[index];
                 final selected = category == _category;
+
                 return ChoiceChip(
-                  label: Text(category),
+                  label: Text(
+                    category,
+                    style: TextStyle(
+                      fontWeight:
+                          selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
                   selected: selected,
-                  onSelected: (_) => setState(() => _category = category),
+                  onSelected: (_) {
+                    setState(() {
+                      _category = category;
+                    });
+                  },
                 );
               },
             ),
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Bu kategoride bugün için içerik yok.',
-                      textAlign: TextAlign.center,
-                    ),
-                  )
+            child: events.isEmpty
+                ? _EmptyState(category: _category)
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
+                    itemCount: events.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final event = filtered[index];
+                      final event = events[index];
+
                       return _ExploreEventCard(
                         event: event,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
-                        ),
+                        onTap: () => _openEvent(event),
                       );
                     },
                   ),
@@ -86,15 +133,51 @@ class _ExploreScreenState extends State<ExploreScreen> {
       ),
     );
   }
+}
 
-  List<Event> get _filteredEvents {
-    final events = List<Event>.from(widget.events);
-    if (_category == null || _category == 'Tümü') return events;
+class _EmptyState extends StatelessWidget {
+  final String category;
 
-    return events.where((event) {
-      final value = event.category.toLowerCase();
-      return value == _category!.toLowerCase() || value.contains(_category!.toLowerCase());
-    }).toList();
+  const _EmptyState({
+    required this.category,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.explore_outlined,
+              size: 52,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              category == 'Tümü'
+                  ? 'Bugün için henüz etkinlik bulunamadı.'
+                  : '$category kategorisinde bugün içerik yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Daha sonra tekrar kontrol edebilirsin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -102,70 +185,158 @@ class _ExploreEventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
 
-  const _ExploreEventCard({required this.event, required this.onTap});
+  const _ExploreEventCard({
+    required this.event,
+    required this.onTap,
+  });
+
+  String _timeText() {
+    return DateFormat('HH:mm').format(event.startsAt);
+  }
+
+  String _metaText() {
+    final time = _timeText();
+
+    if (event.venueName == null || event.venueName!.trim().isEmpty) {
+      return 'Bugün · $time';
+    }
+
+    return 'Bugün · $time · ${event.venueName}';
+  }
+
+  String _priceText() {
+    if (event.priceMin == null && event.priceMax == null) {
+      return 'Fiyat bilgisi yok';
+    }
+
+    if (event.priceMin != null &&
+        event.priceMax != null &&
+        event.priceMin != event.priceMax) {
+      return '${event.priceMin!.round()} - ${event.priceMax!.round()} TL';
+    }
+
+    final price = event.priceMin ?? event.priceMax;
+
+    if (price == null) {
+      return 'Fiyat bilgisi yok';
+    }
+
+    if (price == 0) {
+      return 'Ücretsiz';
+    }
+
+    return '${price.round()} TL';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final time = DateFormat('HH:mm').format(event.startsAt);
-
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Container(
-                width: 84,
-                height: 84,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFEFEC),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: event.imageUrl == null
-                    ? const Icon(Icons.event_outlined, size: 30)
-                    : Image.network(
-                        event.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.event_outlined, size: 30),
-                      ),
-              ),
-              const SizedBox(width: 12),
+              _buildImage(),
+              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       event.category.toUpperCase(),
-                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .7),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                        color: Colors.black54,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
                       event.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, height: 1.1),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
                     ),
                     const SizedBox(height: 7),
                     Text(
-                      event.venueName == null ? 'Bugün · $time' : 'Bugün · $time · ${event.venueName}',
+                      _metaText(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _priceText(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.chevron_right),
+              const SizedBox(width: 8),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (event.recommendationScore > 0)
+                    Text(
+                      '%${event.recommendationScore.round()}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 24,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildImage() {
+    return Container(
+      width: 86,
+      height: 86,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFEFEC),
+        borderRadius: BorderRadius.circular(17),
+      ),
+      child: event.imageUrl == null
+          ? const Icon(
+              Icons.event_outlined,
+              size: 30,
+            )
+          : Image.network(
+              event.imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) {
+                return const Icon(
+                  Icons.event_outlined,
+                  size: 30,
+                );
+              },
+            ),
     );
   }
 }
