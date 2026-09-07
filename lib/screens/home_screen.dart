@@ -34,51 +34,42 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEvents();
-  }
-
-  void _loadEvents() {
     _events = _service.getTodayEvents();
   }
 
   Future<void> _refresh() async {
-    setState(_loadEvents);
+    setState(() {
+      _events = _service.getTodayEvents();
+    });
+
     await _events;
   }
 
-  void _openExplore({
-    String? category,
-    List<Event>? events,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ExploreScreen(
-          events: events ?? const [],
-          initialCategory: category,
-        ),
-      ),
-    );
+  Future<List<Event>> _loadEvents() async {
+    return _events;
   }
 
-  Future<void> _openCategory(String category) async {
+  Future<void> _openExplore({String? category}) async {
     try {
-      final events = await _events;
+      final events = await _loadEvents();
 
       if (!mounted) return;
 
-      _openExplore(
-        category: category,
-        events: events,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ExploreScreen(
+            events: events,
+            initialCategory: category,
+          ),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'İçerikler yüklenemedi. Lütfen tekrar deneyin.',
-          ),
+          content: Text('İçerikler yüklenemedi.'),
         ),
       );
     }
@@ -88,34 +79,16 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EventDetailScreen(event: event),
+        builder: (_) => EventDetailScreen(
+          event: event,
+        ),
       ),
     );
   }
 
-  Future<void> _openExploreAll() async {
-    try {
-      final events = await _events;
-
-      if (!mounted) return;
-
-      _openExplore(events: events);
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'İçerikler yüklenemedi.',
-          ),
-        ),
-      );
-    }
-  }
-
   Future<void> _openSaved() async {
     try {
-      final events = await _events;
+      final events = await _loadEvents();
 
       if (!mounted) return;
 
@@ -150,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String _formattedDate() {
+  String _dateText() {
     return DateFormat(
       'd MMMM EEEE',
       'tr_TR',
@@ -212,8 +185,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     sliver: SliverToBoxAdapter(
                       child: _buildSectionHeader(
-                        'BUGÜNÜN ÖNERİSİ',
-                        'Senin için seçtik',
+                        title: 'BUGÜNÜN ÖNERİSİ',
+                        subtitle: 'Senin için seçtik',
+                        onTap: _openExplore,
                       ),
                     ),
                   ),
@@ -237,8 +211,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     sliver: SliverToBoxAdapter(
                       child: _buildSectionHeader(
-                        'SANA ÖZEL',
-                        'Bugün sana uygun',
+                        title: 'SANA ÖZEL',
+                        subtitle: 'Bugün sana uygun',
+                        onTap: _openExplore,
                       ),
                     ),
                   ),
@@ -386,7 +361,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _formattedDate(),
+                  _dateText(),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
@@ -456,7 +431,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 9),
+            separatorBuilder: (_, __) {
+              return const SizedBox(width: 9);
+            },
             itemBuilder: (context, index) {
               final category = _categories[index];
 
@@ -466,7 +443,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: () {
-                    _openCategory(category.name);
+                    _openExplore(
+                      category: category.name,
+                    );
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -500,10 +479,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(
-    String title,
-    String subtitle,
-  ) {
+  Widget _buildSectionHeader({
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -532,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         GestureDetector(
-          onTap: _openExploreAll,
+          onTap: onTap,
           child: const Text(
             'TÜMÜ',
             style: TextStyle(
@@ -548,7 +528,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeaturedEvent(
     AsyncSnapshot<List<Event>> snapshot,
   ) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
+    if (snapshot.connectionState ==
+        ConnectionState.waiting) {
       return _buildLoadingCard(height: 220);
     }
 
@@ -556,14 +537,16 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildErrorCard();
     }
 
-    final events = snapshot.data ?? const [];
+    final events = snapshot.data ?? const <Event>[];
 
     if (events.isEmpty) {
       return _buildEmptyCard();
     }
 
     return GestureDetector(
-      onTap: () => _openEvent(events.first),
+      onTap: () {
+        _openEvent(events.first);
+      },
       child: _FeaturedEventCard(
         event: events.first,
       ),
@@ -573,40 +556,55 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEventList(
     AsyncSnapshot<List<Event>> snapshot,
   ) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
+    if (snapshot.connectionState ==
+        ConnectionState.waiting) {
       return Column(
         children: List.generate(
           3,
-          (_) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildLoadingCard(height: 100),
-          ),
+          (_) {
+            return Padding(
+              padding: const EdgeInsets.only(
+                bottom: 12,
+              ),
+              child: _buildLoadingCard(
+                height: 100,
+              ),
+            );
+          },
         ),
       );
     }
 
-    if (snapshot.hasError || snapshot.data == null) {
+    if (snapshot.hasError ||
+        snapshot.data == null) {
       return const SizedBox.shrink();
     }
 
-    final events = snapshot.data!.skip(1).take(6).toList();
+    final events = snapshot.data!
+        .skip(1)
+        .take(6)
+        .toList();
 
     if (events.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Column(
-      children: events
-          .map(
-            (event) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: GestureDetector(
-                onTap: () => _openEvent(event),
-                child: _EventCard(event: event),
-              ),
+      children: events.map((event) {
+        return Padding(
+          padding: const EdgeInsets.only(
+            bottom: 12,
+          ),
+          child: GestureDetector(
+            onTap: () {
+              _openEvent(event);
+            },
+            child: _EventCard(
+              event: event,
             ),
-          )
-          .toList(),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -626,7 +624,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () {
           _openExplore(
             category: category,
-            events: snapshot.data ?? const [],
           );
         },
         child: Padding(
@@ -752,7 +749,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 12),
           Text(
-            'Bugün için henüz içerik bulunamadı.',
+            'Bugün için etkinlik bulunamadı.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w800,
@@ -781,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onDestinationSelected: (index) {
         switch (index) {
           case 1:
-            _openExploreAll();
+            _openExplore();
             break;
           case 2:
             _openSaved();
@@ -793,23 +790,39 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.today_outlined),
-          selectedIcon: Icon(Icons.today),
+          icon: Icon(
+            Icons.today_outlined,
+          ),
+          selectedIcon: Icon(
+            Icons.today,
+          ),
           label: 'BUGÜN',
         ),
         NavigationDestination(
-          icon: Icon(Icons.explore_outlined),
-          selectedIcon: Icon(Icons.explore),
+          icon: Icon(
+            Icons.explore_outlined,
+          ),
+          selectedIcon: Icon(
+            Icons.explore,
+          ),
           label: 'Keşfet',
         ),
         NavigationDestination(
-          icon: Icon(Icons.bookmark_outline),
-          selectedIcon: Icon(Icons.bookmark),
+          icon: Icon(
+            Icons.bookmark_outline,
+          ),
+          selectedIcon: Icon(
+            Icons.bookmark,
+          ),
           label: 'Kayıt',
         ),
         NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
+          icon: Icon(
+            Icons.person_outline,
+          ),
+          selectedIcon: Icon(
+            Icons.person,
+          ),
           label: 'Profil',
         ),
       ],
@@ -824,13 +837,13 @@ class _FeaturedEventCard extends StatelessWidget {
     required this.event,
   });
 
-  String _eventMeta() {
+  String _meta() {
     final time = DateFormat(
       'HH:mm',
     ).format(event.startsAt);
 
     if (event.venueName == null ||
-        event.venueName!.isEmpty) {
+        event.venueName!.trim().isEmpty) {
       return 'Bugün · $time';
     }
 
@@ -906,7 +919,8 @@ class _FeaturedEventCard extends StatelessWidget {
             right: 18,
             bottom: 17,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   event.category.toUpperCase(),
@@ -931,7 +945,9 @@ class _FeaturedEventCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
                 Text(
-                  _eventMeta(),
+                  _meta(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -954,13 +970,13 @@ class _EventCard extends StatelessWidget {
     required this.event,
   });
 
-  String get _subtitle {
+  String _subtitle() {
     final time = DateFormat(
       'HH:mm',
     ).format(event.startsAt);
 
     if (event.venueName == null ||
-        event.venueName!.isEmpty) {
+        event.venueName!.trim().isEmpty) {
       return 'Bugün · $time';
     }
 
@@ -1029,7 +1045,7 @@ class _EventCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
                 Text(
-                  _subtitle,
+                  _subtitle(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
