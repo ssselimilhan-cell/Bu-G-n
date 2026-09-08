@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
-import '../models/event.dart';
-import 'event_detail_screen.dart';
+import '../models/place.dart';
+import '../services/place_service.dart';
 
 class ExploreScreen extends StatefulWidget {
-  final List<Event> events;
   final String? initialCategory;
 
   const ExploreScreen({
     super.key,
-    required this.events,
     this.initialCategory,
   });
 
@@ -19,292 +16,460 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  late String _category;
+  final PlaceService _placeService = PlaceService();
 
-  static const List<String> _categories = [
+  List<Place> _places = [];
+  bool _loading = true;
+  String? _error;
+
+  late String? _selectedCategory;
+
+  final List<String> _categories = const [
     'Tümü',
-    'Konser',
-    'Tiyatro',
-    'Maç',
-    'Fırsat',
-    'Sergi',
     'Doğa',
-    'Ücretsiz',
-    'Yeni',
+    'Park',
+    'Tarih',
+    'Müze',
+    'Kültür',
   ];
 
   @override
   void initState() {
     super.initState();
-    _category = widget.initialCategory ?? 'Tümü';
+
+    _selectedCategory = widget.initialCategory;
+
+    _loadPlaces();
   }
 
-  List<Event> get _filteredEvents {
-    if (_category == 'Tümü') {
-      return widget.events;
+  Future<void> _loadPlaces() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final places = await _placeService.getPlaces(
+        city: 'Ankara',
+        category: _selectedCategory,
+        limit: 100,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _places = places;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = 'Yerler yüklenemedi.';
+      });
+    }
+  }
+
+  Future<void> _selectCategory(String category) async {
+    setState(() {
+      _selectedCategory =
+          category == 'Tümü' ? null : category;
+    });
+
+    await _loadPlaces();
+  }
+
+  String _title() {
+    if (_selectedCategory == null) {
+      return 'Ankara’yı keşfet';
     }
 
-    final searchText = _category.toLowerCase();
-
-    return widget.events.where((event) {
-      final category = event.category.toLowerCase();
-
-      return category == searchText || category.contains(searchText);
-    }).toList();
-  }
-
-  void _openEvent(Event event) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EventDetailScreen(event: event),
-      ),
-    );
+    return _selectedCategory!;
   }
 
   @override
   Widget build(BuildContext context) {
-    final events = _filteredEvents;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F4),
+      backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F6F4),
+        backgroundColor: const Color(0xFFF7F7F5),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'KEŞFET',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
+        title: Text(
+          _title(),
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 50,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final selected = category == _category;
-
-                return ChoiceChip(
-                  label: Text(
-                    category,
-                    style: TextStyle(
-                      fontWeight:
-                          selected ? FontWeight.w800 : FontWeight.w600,
-                    ),
-                  ),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _category = category;
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
+          _buildCategories(),
           Expanded(
-            child: events.isEmpty
-                ? _EmptyState(category: _category)
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
-                    itemCount: events.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-
-                      return _ExploreEventCard(
-                        event: event,
-                        onTap: () => _openEvent(event),
-                      );
-                    },
-                  ),
+            child: _buildContent(),
           ),
         ],
       ),
     );
   }
-}
 
-class _EmptyState extends StatelessWidget {
-  final String category;
+  Widget _buildCategories() {
+    final activeCategory =
+        _selectedCategory ?? 'Tümü';
 
-  const _EmptyState({
-    required this.category,
-  });
+    return SizedBox(
+      height: 58,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        scrollDirection: Axis.horizontal,
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          final selected =
+              category == activeCategory;
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.explore_outlined,
-              size: 52,
+          return ChoiceChip(
+            label: Text(category),
+            selected: selected,
+            onSelected: (_) {
+              _selectCategory(category);
+            },
+            selectedColor: Colors.black,
+            backgroundColor: Colors.white,
+            side: BorderSide(
+              color: Colors.grey.shade200,
             ),
-            const SizedBox(height: 16),
-            Text(
-              category == 'Tümü'
-                  ? 'Bugün için henüz etkinlik bulunamadı.'
-                  : '$category kategorisinde bugün içerik yok.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+            labelStyle: TextStyle(
+              color: selected
+                  ? Colors.white
+                  : Colors.black,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 44,
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Daha sonra tekrar kontrol edebilirsin.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 13,
+              const SizedBox(height: 14),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 14),
+              FilledButton(
+                onPressed: _loadPlaces,
+                child: const Text('Tekrar dene'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_places.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadPlaces,
+        child: ListView(
+          children: const [
+            SizedBox(height: 150),
+            Center(
+              child: Text(
+                'Bu kategoride henüz yer yok.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadPlaces,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          24,
+        ),
+        itemCount: _places.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final place = _places[index];
+
+          return _PlaceCard(
+            place: place,
+            onTap: () {
+              _showPlaceDetails(place);
+            },
+          );
+        },
       ),
+    );
+  }
+
+  void _showPlaceDetails(Place place) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              14,
+              20,
+              24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius:
+                          BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  place.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  place.category,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (place.shortDescription != null)
+                  Text(
+                    place.shortDescription!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.45,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                if (place.address != null)
+                  _InfoRow(
+                    icon: Icons.location_on_outlined,
+                    text: place.address!,
+                  ),
+                if (place.visitDurationMin != null)
+                  _InfoRow(
+                    icon: Icons.schedule_outlined,
+                    text:
+                        'Yaklaşık ${place.visitDurationMin} dk.',
+                  ),
+                if (place.isFree != null)
+                  _InfoRow(
+                    icon: place.isFree!
+                        ? Icons.money_off
+                        : Icons.payments_outlined,
+                    text: place.isFree!
+                        ? 'Ücretsiz'
+                        : 'Ücretli olabilir',
+                  ),
+                if (place.kidsFriendly == true)
+                  const _InfoRow(
+                    icon: Icons.child_friendly_outlined,
+                    text: 'Çocuklarla uygun',
+                  ),
+                if (place.parkingAvailable == true)
+                  const _InfoRow(
+                    icon: Icons.local_parking_outlined,
+                    text: 'Otopark bilgisi mevcut',
+                  ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+
+                      ScaffoldMessenger.of(
+                        this.context,
+                      ).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${place.name} için navigasyon özelliğini ekliyoruz.',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.navigation_outlined,
+                    ),
+                    label: const Text(
+                      'Rotayı oluştur',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class _ExploreEventCard extends StatelessWidget {
-  final Event event;
+class _PlaceCard extends StatelessWidget {
+  final Place place;
   final VoidCallback onTap;
 
-  const _ExploreEventCard({
-    required this.event,
+  const _PlaceCard({
+    required this.place,
     required this.onTap,
   });
-
-  String _timeText() {
-    return DateFormat('HH:mm').format(event.startsAt);
-  }
-
-  String _metaText() {
-    final time = _timeText();
-
-    if (event.venueName == null || event.venueName!.trim().isEmpty) {
-      return 'Bugün · $time';
-    }
-
-    return 'Bugün · $time · ${event.venueName}';
-  }
-
-  String _priceText() {
-    if (event.priceMin == null && event.priceMax == null) {
-      return 'Fiyat bilgisi yok';
-    }
-
-    if (event.priceMin != null &&
-        event.priceMax != null &&
-        event.priceMin != event.priceMax) {
-      return '${event.priceMin!.round()} - ${event.priceMax!.round()} TL';
-    }
-
-    final price = event.priceMin ?? event.priceMax;
-
-    if (price == null) {
-      return 'Fiyat bilgisi yok';
-    }
-
-    if (price == 0) {
-      return 'Ücretsiz';
-    }
-
-    return '${price.round()} TL';
-  }
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              _buildImage(),
-              const SizedBox(width: 13),
+              Container(
+                width: 78,
+                height: 78,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius:
+                      BorderRadius.circular(17),
+                ),
+                child: Icon(
+                  _iconForCategory(place.category),
+                  size: 34,
+                ),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      event.category.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.8,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      event.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      _metaText(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            place.name,
+                            maxLines: 2,
+                            overflow:
+                                TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight:
+                                  FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (place.verified)
+                          const Icon(
+                            Icons.verified,
+                            size: 17,
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _priceText(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                      place.category,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
                       ),
+                    ),
+                    if (place.address != null) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        place.address!,
+                        maxLines: 1,
+                        overflow:
+                            TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        if (place.isFree == true)
+                          const _MiniLabel(
+                            icon: Icons.money_off,
+                            text: 'Ücretsiz',
+                          ),
+                        if (place.visitDurationMin != null)
+                          _MiniLabel(
+                            icon: Icons.schedule_outlined,
+                            text:
+                                '${place.visitDurationMin} dk',
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (event.recommendationScore > 0)
-                    Text(
-                      '%${event.recommendationScore.round()}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 24,
-                  ),
-                ],
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
               ),
             ],
           ),
@@ -313,30 +478,94 @@ class _ExploreEventCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImage() {
-    return Container(
-      width: 86,
-      height: 86,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFEFEC),
-        borderRadius: BorderRadius.circular(17),
-      ),
-      child: event.imageUrl == null
-          ? const Icon(
-              Icons.event_outlined,
-              size: 30,
-            )
-          : Image.network(
-              event.imageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) {
-                return const Icon(
-                  Icons.event_outlined,
-                  size: 30,
-                );
-              },
+  IconData _iconForCategory(String category) {
+    switch (category) {
+      case 'Doğa':
+        return Icons.park_outlined;
+      case 'Park':
+        return Icons.grass_outlined;
+      case 'Tarih':
+        return Icons.account_balance_outlined;
+      case 'Müze':
+        return Icons.museum_outlined;
+      case 'Kültür':
+        return Icons.theater_comedy_outlined;
+      default:
+        return Icons.place_outlined;
+    }
+  }
+}
+
+class _MiniLabel extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MiniLabel({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoRow({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 19,
+            color: Colors.grey.shade700,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
