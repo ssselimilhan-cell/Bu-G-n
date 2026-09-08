@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
-import '../models/event.dart';
-import '../services/saved_event_service.dart';
-import 'event_detail_screen.dart';
+import '../models/place.dart';
+import '../services/place_service.dart';
 
 class SavedScreen extends StatefulWidget {
-  final List<Event> events;
-
   const SavedScreen({
     super.key,
-    required this.events,
   });
 
   @override
@@ -18,53 +13,57 @@ class SavedScreen extends StatefulWidget {
 }
 
 class _SavedScreenState extends State<SavedScreen> {
-  final SavedEventService _savedService = SavedEventService();
+  final PlaceService _placeService = PlaceService();
 
-  Set<String> _savedIds = <String>{};
+  List<Place> _places = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSaved();
+    _loadPlaces();
   }
 
-  Future<void> _loadSaved() async {
-    final ids = await _savedService.getSavedIds();
-
-    if (!mounted) return;
-
+  Future<void> _loadPlaces() async {
     setState(() {
-      _savedIds = ids;
-      _loading = false;
+      _loading = true;
     });
-  }
 
-  Future<void> _remove(Event event) async {
-    await _savedService.remove(event.id);
+    try {
+      final places = await _placeService.getPlaces(
+        city: 'Ankara',
+        limit: 50,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _savedIds.remove(event.id);
-    });
+      setState(() {
+        _places = places;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _places = [];
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final savedEvents = widget.events
-        .where((event) => _savedIds.contains(event.id))
-        .toList();
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F4),
+      backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6F6F4),
+        backgroundColor: const Color(0xFFF7F7F5),
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'KAYITLARIM',
+          'Kayıt',
           style: TextStyle(
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
+            color: Colors.black,
           ),
         ),
       ),
@@ -72,74 +71,50 @@ class _SavedScreenState extends State<SavedScreen> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
-          : savedEvents.isEmpty
+          : _places.isEmpty
               ? _buildEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    16,
-                    30,
+              : RefreshIndicator(
+                  onRefresh: _loadPlaces,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _places.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      return _SavedPlaceCard(
+                        place: _places[index],
+                      );
+                    },
                   ),
-                  itemCount: savedEvents.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final event = savedEvents[index];
-
-                    return _SavedEventCard(
-                      event: event,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => EventDetailScreen(
-                              event: event,
-                            ),
-                          ),
-                        );
-                      },
-                      onRemove: () => _remove(event),
-                    );
-                  },
                 ),
     );
   }
 
   Widget _buildEmpty() {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(30),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.bookmark_border_rounded,
-                size: 36,
-              ),
+            Icon(
+              Icons.bookmark_border,
+              size: 48,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Henüz kayıt yok',
+            SizedBox(height: 14),
+            Text(
+              'Henüz kayıtlı yer yok.',
               style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Beğendiğin etkinlikleri kaydettiğinde '
-              'burada görebileceksin.',
+            SizedBox(height: 8),
+            Text(
+              'Beğendiğin yerleri daha sonra kolayca bulmak için kaydedebilirsin.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.black54,
+                color: Colors.grey,
                 height: 1.4,
               ),
             ),
@@ -150,110 +125,59 @@ class _SavedScreenState extends State<SavedScreen> {
   }
 }
 
-class _SavedEventCard extends StatelessWidget {
-  final Event event;
-  final VoidCallback onTap;
-  final VoidCallback onRemove;
+class _SavedPlaceCard extends StatelessWidget {
+  final Place place;
 
-  const _SavedEventCard({
-    required this.event,
-    required this.onTap,
-    required this.onRemove,
+  const _SavedPlaceCard({
+    required this.place,
   });
-
-  String _metaText() {
-    final time = DateFormat('HH:mm').format(event.startsAt);
-
-    if (event.venueName == null ||
-        event.venueName!.trim().isEmpty) {
-      return 'Bugün · $time';
-    }
-
-    return 'Bugün · $time · ${event.venueName}';
-  }
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 78,
-                height: 78,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F0EE),
-                  borderRadius: BorderRadius.circular(17),
-                ),
-                child: event.imageUrl == null
-                    ? const Icon(
-                        Icons.event_outlined,
-                        size: 28,
-                      )
-                    : Image.network(
-                        event.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) {
-                          return const Icon(
-                            Icons.event_outlined,
-                            size: 28,
-                          );
-                        },
-                      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.category.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: .7,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      event.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      _metaText(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
+              child: const Icon(
+                Icons.place_outlined,
+                size: 30,
               ),
-              IconButton(
-                onPressed: onRemove,
-                icon: const Icon(
-                  Icons.bookmark_rounded,
-                ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    place.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    place.category,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
