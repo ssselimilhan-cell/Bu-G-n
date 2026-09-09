@@ -91,30 +91,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openExplore() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ExploreScreen(),
-      ),
-    );
+    setState(() {
+      _selectedIndex = 1;
+    });
   }
 
   void _openSaved() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SavedScreen(),
-      ),
-    );
+    setState(() {
+      _selectedIndex = 2;
+    });
   }
 
   void _openProfile() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ProfileScreen(),
-      ),
-    );
+    setState(() {
+      _selectedIndex = 3;
+    });
   }
 
   Place? get _featuredPlace {
@@ -142,6 +133,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      },
+      child: _buildCurrentPage(),
+    );
+  }
+
+  Widget _buildCurrentPage() {
     if (_selectedIndex == 1) {
       return const ExploreScreen();
     }
@@ -154,6 +161,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return const ProfileScreen();
     }
 
+    return _buildHomePage();
+  }
+
+  Widget _buildHomePage() {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
       body: SafeArea(
