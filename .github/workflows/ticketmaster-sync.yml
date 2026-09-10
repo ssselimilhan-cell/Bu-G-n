@@ -1,0 +1,128 @@
+name: Ticketmaster Ankara Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  sync-ticketmaster:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sync Ankara events
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+
+          echo "Ticketmaster → Supabase senkronizasyonu başlıyor..."
+
+          NOW_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          curl -sS --fail-with-body \
+            --get \
+            "https://app.ticketmaster.com/discovery/v2/events.json" \
+            --data-urlencode "apikey=${TICKETMASTER_API_KEY}" \
+            --data-urlencode "locale=*" \
+            --data-urlencode "city=ankara" \
+            --data-urlencode "countryCode=TR" \
+            --data-urlencode "startDateTime=${NOW_UTC}" \
+            --data-urlencode "size=200" \
+            --data-urlencode "sort=date,asc" \
+            -o ticketmaster.json
+
+          echo "Ticketmaster cevabı alındı."
+
+          EVENT_COUNT=$(jq '._embedded.events // [] | length' ticketmaster.json)
+
+          echo "Ticketmaster'dan gelen etkinlik sayısı: ${EVENT_COUNT}"
+
+          if [ "${EVENT_COUNT}" -eq 0 ]; then
+            echo "Ankara için etkinlik bulunamadı."
+            exit 0
+          fi
+
+          jq -c '
+            (._embedded.events // [])
+            | map(
+                {
+                  external_id: .id,
+                  external_source: "ticketmaster",
+                  title: .name,
+                  description: (
+                    if (.description // "") != ""
+                    then .description
+                    else null
+                    end
+                  ),
+                  category: (
+                    .classifications[0].segment.name
+                    // "Etkinlik"
+                  ),
+                  subcategory: (
+                    .classifications[0].genre.name
+                    // null
+                  ),
+                  city: "Ankara",
+                  starts_at: .dates.start.dateTime,
+                  ends_at: (
+                    .dates.end.dateTime
+                    // null
+                  ),
+                  price_min: (
+                    .priceRanges[0].min
+                    // null
+                  ),
+                  price_max: (
+                    .priceRanges[0].max
+                    // null
+                  ),
+                  ticket_url: (.url // null),
+                  source_url: (.url // null),
+                  image_url: (
+                    .images[0].url
+                    // null
+                  ),
+                  venue_name: (
+                    ._embedded.venues[0].name
+                    // null
+                  ),
+                  venue_address: (
+                    (
+                      ._embedded.venues[0].address.line1
+                      // ""
+                    )
+                    + (
+                      if (. _embedded.venues[0].postalCode // "") != ""
+                      then
+                        ", " + ._embedded.venues[0].postalCode
+                      else
+                        ""
+                      end
+                    )
+                  ),
+                  trust_score: 95,
+                  popularity_score: 0,
+                  recommendation_score: 0,
+                  is_active: true,
+                  last_synced_at: "'"${NOW_UTC}"'"
+                }
+              )
+          ' ticketmaster.json > ticketmaster_events.json
+
+          echo "Supabase'e aktarım başlıyor..."
+
+          RESPONSE=$(curl -sS --fail-with-body \
+            -X POST \
+            "${SUPABASE_URL}/rest/v1/events?on_conflict=external_source,external_id" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            --data-binary @ticketmaster_events.json)
+
+          echo "Supabase aktarımı tamamlandı."
+          echo "${RESPONSE}"
