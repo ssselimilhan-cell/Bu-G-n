@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/place.dart';
 import '../services/saved_place_service.dart';
@@ -27,49 +28,112 @@ class _PlaceDetailScreenState
   @override
   void initState() {
     super.initState();
-    _loadSavedState();
+    _loadSaved();
   }
 
-  Future<void> _loadSavedState() async {
-    final saved =
-        await _savedService.isSaved(widget.place.id);
+  Future<void> _loadSaved() async {
+    try {
+      final saved =
+          await _savedService.isSaved(
+        widget.place.id,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isSaved = saved;
-      _loadingSaved = false;
-    });
+      setState(() {
+        _isSaved = saved;
+        _loadingSaved = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingSaved = false;
+      });
+    }
   }
 
   Future<void> _toggleSaved() async {
-    await _savedService.toggleSaved(widget.place.id);
+    try {
+      await _savedService.toggleSaved(
+        widget.place.id,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isSaved = !_isSaved;
-    });
+      setState(() {
+        _isSaved = !_isSaved;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isSaved
-              ? 'Yer kayıtlarına eklendi.'
-              : 'Yer kayıtlardan çıkarıldı.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isSaved
+                ? 'Yer kayıtlarına eklendi.'
+                : 'Yer kayıtlardan çıkarıldı.',
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Kayıt işlemi gerçekleştirilemedi.',
+          ),
+        ),
+      );
+    }
   }
 
-  void _showNavigationMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Yol tarifi bağlantısını bir sonraki aşamada Google Haritalar’a bağlayacağız.',
+  Future<void> _openMaps() async {
+    final place = widget.place;
+
+    Uri? uri;
+
+    if (place.latitude != null &&
+        place.longitude != null) {
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}',
+      );
+    } else if (place.address != null &&
+        place.address!.trim().isNotEmpty) {
+      final query =
+          Uri.encodeComponent(
+        '${place.name}, ${place.address}',
+      );
+
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$query',
+      );
+    }
+
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bu yer için konum bilgisi bulunamadı.',
+          ),
         ),
-      ),
+      );
+      return;
+    }
+
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
     );
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Google Haritalar açılamadı.',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -77,10 +141,13 @@ class _PlaceDetailScreenState
     final place = widget.place;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor:
+          const Color(0xFFF7F7F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F7F5),
-        surfaceTintColor: Colors.transparent,
+        backgroundColor:
+            const Color(0xFFF7F7F5),
+        surfaceTintColor:
+            Colors.transparent,
         elevation: 0,
         title: const Text(
           'YER',
@@ -91,19 +158,22 @@ class _PlaceDetailScreenState
         actions: [
           IconButton(
             onPressed:
-                _loadingSaved ? null : _toggleSaved,
+                _loadingSaved
+                    ? null
+                    : _toggleSaved,
             icon: Icon(
               _isSaved
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
+                  ? Icons.bookmark
+                  : Icons.bookmark_border,
             ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding:
+            const EdgeInsets.fromLTRB(
           20,
-          10,
+          8,
           20,
           30,
         ),
@@ -111,19 +181,24 @@ class _PlaceDetailScreenState
           Container(
             height: 230,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Colors.white,
               borderRadius:
-                  BorderRadius.circular(26),
+                  BorderRadius.circular(24),
+              border: Border.all(
+                color:
+                    Colors.grey.shade200,
+              ),
             ),
             child: Icon(
-              place.outdoor == true
-                  ? Icons.landscape_outlined
-                  : place.category == 'Müze'
-                      ? Icons.museum_outlined
+              place.category == 'Müze'
+                  ? Icons.museum_outlined
+                  : place.outdoor == true
+                      ? Icons.landscape_outlined
                       : Icons.place_outlined,
               size: 68,
             ),
           ),
+
           const SizedBox(height: 22),
 
           Text(
@@ -136,12 +211,12 @@ class _PlaceDetailScreenState
             ),
           ),
 
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
 
           Text(
             place.name,
             style: const TextStyle(
-              fontSize: 28,
+              fontSize: 29,
               fontWeight: FontWeight.w900,
               height: 1.05,
             ),
@@ -164,7 +239,9 @@ class _PlaceDetailScreenState
           const SizedBox(height: 20),
 
           if (place.address != null &&
-              place.address!.trim().isNotEmpty)
+              place.address!
+                  .trim()
+                  .isNotEmpty)
             _InfoRow(
               icon: Icons.location_on_outlined,
               title: 'Adres',
@@ -208,7 +285,9 @@ class _PlaceDetailScreenState
             ),
 
           if (place.bestTime != null &&
-              place.bestTime!.trim().isNotEmpty)
+              place.bestTime!
+                  .trim()
+                  .isNotEmpty)
             _InfoRow(
               icon: Icons.wb_sunny_outlined,
               title: 'En iyi zaman',
@@ -216,7 +295,7 @@ class _PlaceDetailScreenState
             ),
 
           if (place.tags.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -224,7 +303,8 @@ class _PlaceDetailScreenState
                   .map(
                     (tag) => Chip(
                       label: Text(tag),
-                      backgroundColor: Colors.white,
+                      backgroundColor:
+                          Colors.white,
                     ),
                   )
                   .toList(),
@@ -234,7 +314,7 @@ class _PlaceDetailScreenState
           const SizedBox(height: 24),
 
           FilledButton.icon(
-            onPressed: _showNavigationMessage,
+            onPressed: _openMaps,
             icon: const Icon(
               Icons.navigation_outlined,
             ),
@@ -243,9 +323,11 @@ class _PlaceDetailScreenState
             ),
             style: FilledButton.styleFrom(
               minimumSize:
-                  const Size.fromHeight(54),
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
+                  const Size.fromHeight(56),
+              backgroundColor:
+                  Colors.black,
+              foregroundColor:
+                  Colors.white,
               shape:
                   RoundedRectangleBorder(
                 borderRadius:
@@ -260,8 +342,8 @@ class _PlaceDetailScreenState
             onPressed: _toggleSaved,
             icon: Icon(
               _isSaved
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
+                  ? Icons.bookmark
+                  : Icons.bookmark_border,
             ),
             label: Text(
               _isSaved
@@ -270,11 +352,9 @@ class _PlaceDetailScreenState
             ),
             style: OutlinedButton.styleFrom(
               minimumSize:
-                  const Size.fromHeight(54),
-              foregroundColor: Colors.black,
-              side: const BorderSide(
-                color: Colors.black12,
-              ),
+                  const Size.fromHeight(56),
+              foregroundColor:
+                  Colors.black,
               shape:
                   RoundedRectangleBorder(
                 borderRadius:
@@ -304,7 +384,8 @@ class _InfoRow extends StatelessWidget {
     return Container(
       margin:
           const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding:
+          const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius:
@@ -314,10 +395,7 @@ class _InfoRow extends StatelessWidget {
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 22,
-          ),
+          Icon(icon, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -326,18 +404,23 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black54,
+                    fontWeight:
+                        FontWeight.w900,
+                    color:
+                        Colors.black54,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style:
+                      const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight:
+                        FontWeight.w700,
                   ),
                 ),
               ],
