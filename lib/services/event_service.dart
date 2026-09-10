@@ -12,19 +12,86 @@ class EventService {
   }) async {
     final now = DateTime.now();
 
-    final startOfDay = DateTime(
+    final start = now;
+    final end = DateTime(
       now.year,
       now.month,
       now.day,
+      23,
+      59,
+      59,
+      999,
     );
-
-    final endOfDay =
-        startOfDay.add(const Duration(days: 1));
 
     return _getEvents(
       city: city,
-      start: startOfDay.toUtc(),
-      end: endOfDay.toUtc(),
+      start: start.toUtc(),
+      end: end.toUtc(),
+      limit: limit,
+    );
+  }
+
+  Future<List<Event>> getThisWeekEvents({
+    String city = 'Ankara',
+    int limit = 100,
+  }) async {
+    final now = DateTime.now();
+
+    final dayFromMonday =
+        now.weekday - DateTime.monday;
+
+    final monday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(
+      Duration(days: dayFromMonday),
+    );
+
+    final nextMonday = monday.add(
+      const Duration(days: 7),
+    );
+
+    final start = now;
+    final end = nextMonday.subtract(
+      const Duration(milliseconds: 1),
+    );
+
+    return _getEvents(
+      city: city,
+      start: start.toUtc(),
+      end: end.toUtc(),
+      limit: limit,
+    );
+  }
+
+  Future<List<Event>> getThisMonthEvents({
+    String city = 'Ankara',
+    int limit = 200,
+  }) async {
+    final now = DateTime.now();
+
+    final nextMonth = now.month == 12
+        ? DateTime(
+            now.year + 1,
+            1,
+            1,
+          )
+        : DateTime(
+            now.year,
+            now.month + 1,
+            1,
+          );
+
+    final start = now;
+    final end = nextMonth.subtract(
+      const Duration(milliseconds: 1),
+    );
+
+    return _getEvents(
+      city: city,
+      start: start.toUtc(),
+      end: end.toUtc(),
       limit: limit,
     );
   }
@@ -36,19 +103,13 @@ class EventService {
   }) async {
     final now = DateTime.now();
 
-    final start = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
-
-    final end = start.add(
-      Duration(days: days + 1),
+    final end = now.add(
+      Duration(days: days),
     );
 
     return _getEvents(
       city: city,
-      start: start.toUtc(),
+      start: now.toUtc(),
       end: end.toUtc(),
       limit: limit,
     );
@@ -129,7 +190,7 @@ class EventService {
           'starts_at',
           start.toIso8601String(),
         )
-        .lt(
+        .lte(
           'starts_at',
           end.toIso8601String(),
         )
@@ -146,6 +207,12 @@ class EventService {
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Event.fromMap)
+        .where(
+          (event) =>
+              event.startsAt.isAfter(
+                DateTime.now(),
+              ),
+        )
         .toList();
   }
 }
