@@ -3,7 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event.dart';
 
 class EventService {
-  final SupabaseClient _client = Supabase.instance.client;
+  final SupabaseClient _client =
+      Supabase.instance.client;
 
   Future<List<Event>> getTodayEvents({
     String city = 'Ankara',
@@ -17,9 +18,8 @@ class EventService {
       now.day,
     );
 
-    final endOfDay = startOfDay.add(
-      const Duration(days: 1),
-    );
+    final endOfDay =
+        startOfDay.add(const Duration(days: 1));
 
     return _getEvents(
       city: city,
@@ -83,22 +83,20 @@ class EventService {
         ''')
         .eq('city', city)
         .eq('is_active', true)
-        .gte('starts_at', start.toIso8601String())
-        .lt('starts_at', end.toIso8601String())
+        .gte(
+          'starts_at',
+          start.toIso8601String(),
+        )
+        .lt(
+          'starts_at',
+          end.toIso8601String(),
+        )
         .order(
           'starts_at',
           ascending: true,
         )
-        .order(
-          'recommendation_score',
-          ascending: false,
-        )
         .limit(limit);
 
-    return _mapEvents(rows);
-  }
-
-  List<Event> _mapEvents(List<dynamic> rows) {
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Event.fromMap)
