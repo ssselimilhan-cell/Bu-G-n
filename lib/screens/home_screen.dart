@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../models/event.dart';
 import '../models/place.dart';
+import '../services/event_service.dart';
 import '../services/place_service.dart';
+import 'event_detail_screen.dart';
 import 'explore_screen.dart';
 import 'profile_screen.dart';
 import 'saved_screen.dart';
-import '../widgets/home_events_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,10 +19,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final PlaceService _placeService = PlaceService();
+  final EventService _eventService = EventService();
 
   List<Place> _places = [];
-  bool _loading = true;
-  String? _error;
+  List<Event> _todayEvents = [];
+
+  bool _placesLoading = true;
+  bool _eventsLoading = true;
+
+  String? _placesError;
+  String? _eventsError;
 
   int _selectedIndex = 0;
 
@@ -49,14 +58,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPlaces();
+    _loadAll();
+  }
+
+  Future<void> _loadAll() async {
+    await Future.wait([
+      _loadPlaces(),
+      _loadTodayEvents(),
+    ]);
   }
 
   Future<void> _loadPlaces() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (mounted) {
+      setState(() {
+        _placesLoading = true;
+        _placesError = null;
+      });
+    }
 
     try {
       final places = await _placeService.getPlaces(
@@ -68,16 +86,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _places = places;
-        _loading = false;
+        _placesLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _loading = false;
-        _error = 'Yerler yüklenemedi.';
+        _placesLoading = false;
+        _placesError = 'Yerler yüklenemedi.';
       });
     }
+  }
+
+  Future<void> _loadTodayEvents() async {
+    if (mounted) {
+      setState(() {
+        _eventsLoading = true;
+        _eventsError = null;
+      });
+    }
+
+    try {
+      final events = await _eventService.getTodayEvents(
+        city: 'Ankara',
+        limit: 10,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _todayEvents = events;
+        _eventsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _eventsLoading = false;
+        _eventsError = 'Bugünkü etkinlikler yüklenemedi.';
+      });
+    }
+  }
+
+  Future<void> _refreshHome() async {
+    await Future.wait([
+      _loadPlaces(),
+      _loadTodayEvents(),
+    ]);
   }
 
   void _openCategory(String category) {
@@ -107,6 +162,26 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedIndex = 3;
     });
+  }
+
+  void _openTodayEvents() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const _AllTodayEventsScreen(),
+      ),
+    );
+  }
+
+  void _openEvent(Event event) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EventDetailScreen(
+          event: event,
+        ),
+      ),
+    );
   }
 
   Place? get _featuredPlace {
@@ -170,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF7F7F5),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadPlaces,
+          onRefresh: _refreshHome,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -182,6 +257,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               SliverToBoxAdapter(
                 child: _buildCategories(),
+              ),
+              SliverToBoxAdapter(
+                child: _buildTodayEventsSection(),
               ),
               SliverToBoxAdapter(
                 child: _buildFeaturedSection(),
@@ -235,12 +313,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        18,
+        20,
+        8,
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 const Text(
                   'BUGÜN',
@@ -284,9 +368,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMainQuestion() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        14,
+        20,
+        22,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           const Text(
             'Bugün Ankara’da\nne yapmak istersin?',
@@ -355,10 +445,12 @@ class _HomeScreenState extends State<HomeScreen> {
       child: SizedBox(
         height: 98,
         child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
           itemCount: _categories.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          separatorBuilder: (_, __) =>
+              const SizedBox(width: 12),
           itemBuilder: (context, index) {
             final category = _categories[index];
 
@@ -374,13 +466,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius:
+                      BorderRadius.circular(18),
                   border: Border.all(
                     color: Colors.grey.shade200,
                   ),
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
                   children: [
                     Icon(
                       category['icon'] as IconData,
@@ -405,14 +499,203 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildTodayEventsSection() {
+    if (_eventsLoading) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          0,
+          0,
+          4,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              'BUGÜN ANKARA’DA',
+              onTap: _openTodayEvents,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 184,
+              child: ListView.separated(
+                padding:
+                    const EdgeInsets.only(right: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: 2,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: 12),
+                itemBuilder: (_, __) {
+                  return _LoadingEventCard();
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_eventsError != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          4,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              'BUGÜN ANKARA’DA',
+              onTap: _openTodayEvents,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _eventsError!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _loadTodayEvents,
+                    icon: const Icon(
+                      Icons.refresh,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_todayEvents.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          4,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              'BUGÜN ANKARA’DA',
+              onTap: _openTodayEvents,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    size: 28,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Bugün için listelenmiş etkinlik bulunmuyor.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        0,
+        0,
+        4,
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.only(right: 20),
+            child: _sectionTitle(
+              'BUGÜN ANKARA’DA',
+              onTap: _openTodayEvents,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 184,
+            child: ListView.separated(
+              padding:
+                  const EdgeInsets.only(right: 20),
+              scrollDirection: Axis.horizontal,
+              itemCount: _todayEvents.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final event = _todayEvents[index];
+
+                return _HomeEventCard(
+                  event: event,
+                  onTap: () => _openEvent(event),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFeaturedSection() {
-    if (_loading) {
+    if (_placesLoading) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
+        margin:
+            const EdgeInsets.symmetric(horizontal: 20),
         height: 190,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius:
+              BorderRadius.circular(22),
         ),
         child: const Center(
           child: CircularProgressIndicator(),
@@ -420,13 +703,15 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (_error != null) {
+    if (_placesError != null) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
+        margin:
+            const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius:
+              BorderRadius.circular(22),
         ),
         child: Column(
           children: [
@@ -436,7 +721,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              _error!,
+              _placesError!,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
@@ -445,7 +730,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             FilledButton(
               onPressed: _loadPlaces,
-              child: const Text('Tekrar dene'),
+              child: const Text(
+                'Tekrar dene',
+              ),
             ),
           ],
         ),
@@ -456,11 +743,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (place == null) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
+        margin:
+            const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(26),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius:
+              BorderRadius.circular(22),
         ),
         child: const Column(
           children: [
@@ -482,9 +771,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           _sectionTitle(
             'BUGÜNÜN ÖNERİSİ',
@@ -509,12 +800,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 0, 0),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        28,
+        0,
+        0,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 20),
+            padding:
+                const EdgeInsets.only(right: 20),
             child: _sectionTitle(
               'YAKINDA',
               onTap: _openExplore,
@@ -524,7 +822,8 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             height: 150,
             child: ListView.separated(
-              padding: const EdgeInsets.only(right: 20),
+              padding:
+                  const EdgeInsets.only(right: 20),
               scrollDirection: Axis.horizontal,
               itemCount: places.length,
               separatorBuilder: (_, __) =>
@@ -546,7 +845,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMapButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        28,
+        20,
+        0,
+      ),
       child: GestureDetector(
         onTap: _openExplore,
         child: Container(
@@ -556,7 +860,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius:
+                BorderRadius.circular(20),
             border: Border.all(
               color: Colors.grey.shade200,
             ),
@@ -574,7 +879,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       'Haritada keşfet',
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                            FontWeight.w700,
                       ),
                     ),
                     SizedBox(height: 3),
@@ -631,7 +937,280 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _FeaturedPlaceCard extends StatelessWidget {
+class _HomeEventCard extends StatelessWidget {
+  final Event event;
+  final VoidCallback onTap;
+
+  const _HomeEventCard({
+    required this.event,
+    required this.onTap,
+  });
+
+  String _dateText() {
+    final localDate = event.startsAt.toLocal();
+
+    return DateFormat(
+      'HH:mm',
+      'tr_TR',
+    ).format(localDate);
+  }
+
+  String _priceText() {
+    final min = event.priceMin;
+    final max = event.priceMax;
+
+    if (min == null && max == null) {
+      return '';
+    }
+
+    if (min == 0 &&
+        (max == null || max == 0)) {
+      return 'Ücretsiz';
+    }
+
+    if (min != null &&
+        max != null &&
+        min != max) {
+      return '${min.round()}-${max.round()} TL';
+    }
+
+    final price = min ?? max;
+
+    if (price == null) {
+      return '';
+    }
+
+    return '${price.round()} TL';
+  }
+
+  IconData _categoryIcon() {
+    final category =
+        event.category.toLowerCase();
+
+    if (category.contains('music') ||
+        category.contains('müzik')) {
+      return Icons.music_note_outlined;
+    }
+
+    if (category.contains('sports') ||
+        category.contains('spor')) {
+      return Icons.sports_outlined;
+    }
+
+    if (category.contains('arts') ||
+        category.contains('theatre') ||
+        category.contains('tiyatro')) {
+      return Icons.theater_comedy_outlined;
+    }
+
+    if (category.contains('film') ||
+        category.contains('movie')) {
+      return Icons.local_movies_outlined;
+    }
+
+    return Icons.event_outlined;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final priceText = _priceText();
+
+    return Material(
+      color: Colors.white,
+      borderRadius:
+          BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius:
+            BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          width: 270,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+                BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.grey.shade200,
+            ),
+          ),
+          clipBehavior:
+              Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 82,
+                width: double.infinity,
+                child: event.imageUrl == null ||
+                        event.imageUrl!
+                            .trim()
+                            .isEmpty
+                    ? Container(
+                        color:
+                            Colors.grey.shade100,
+                        child: Center(
+                          child: Icon(
+                            _categoryIcon(),
+                            size: 32,
+                          ),
+                        ),
+                      )
+                    : Image.network(
+                        event.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) {
+                          return Container(
+                            color: Colors
+                                .grey.shade100,
+                            child: Center(
+                              child: Icon(
+                                _categoryIcon(),
+                                size: 32,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(
+                    14,
+                    10,
+                    14,
+                    10,
+                  ),
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment
+                            .start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              event.category
+                                  .toUpperCase(),
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow
+                                      .ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight:
+                                    FontWeight.w900,
+                                letterSpacing:
+                                    0.7,
+                                color: Colors
+                                    .grey.shade600,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _dateText(),
+                            style:
+                                const TextStyle(
+                              fontSize: 11,
+                              fontWeight:
+                                  FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        event.title,
+                        maxLines: 2,
+                        overflow:
+                            TextOverflow.ellipsis,
+                        style:
+                            const TextStyle(
+                          fontSize: 14,
+                          fontWeight:
+                              FontWeight.w800,
+                          height: 1.1,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          if (event.venueName !=
+                                  null &&
+                              event.venueName!
+                                  .trim()
+                                  .isNotEmpty) ...[
+                            const Icon(
+                              Icons
+                                  .location_on_outlined,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                event.venueName!,
+                                maxLines: 1,
+                                overflow:
+                                    TextOverflow
+                                        .ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors
+                                      .grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ] else
+                            const Spacer(),
+                          if (priceText.isNotEmpty)
+                            Text(
+                              priceText,
+                              style:
+                                  const TextStyle(
+                                fontSize: 10,
+                                fontWeight:
+                                    FontWeight.w800,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingEventCard
+    extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 270,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.grey.shade200,
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class _FeaturedPlaceCard
+    extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
   final VoidCallback onSave;
@@ -646,14 +1225,17 @@ class _FeaturedPlaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius:
+          BorderRadius.circular(22),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius:
+            BorderRadius.circular(22),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius:
+                BorderRadius.circular(22),
             border: Border.all(
               color: Colors.grey.shade200,
             ),
@@ -664,8 +1246,10 @@ class _FeaturedPlaceCard extends StatelessWidget {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(18),
+                  color:
+                      Colors.grey.shade100,
+                  borderRadius:
+                      BorderRadius.circular(18),
                 ),
                 child: const Icon(
                   Icons.landscape_outlined,
@@ -679,11 +1263,14 @@ class _FeaturedPlaceCard extends StatelessWidget {
                       CrossAxisAlignment.start,
                   children: [
                     Text(
-                      place.category.toUpperCase(),
+                      place.category
+                          .toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w800,
+                        color:
+                            Colors.grey.shade600,
+                        fontWeight:
+                            FontWeight.w800,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -691,10 +1278,13 @@ class _FeaturedPlaceCard extends StatelessWidget {
                     Text(
                       place.name,
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w800,
+                        fontWeight:
+                            FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -702,11 +1292,13 @@ class _FeaturedPlaceCard extends StatelessWidget {
                       place.shortDescription ??
                           'Ankara’da keşfedilecek güzel bir yer.',
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.3,
-                        color: Colors.grey.shade600,
+                        color:
+                            Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -727,7 +1319,8 @@ class _FeaturedPlaceCard extends StatelessWidget {
   }
 }
 
-class _SmallPlaceCard extends StatelessWidget {
+class _SmallPlaceCard
+    extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
 
@@ -740,15 +1333,19 @@ class _SmallPlaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius:
+          BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius:
+            BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
           width: 190,
-          padding: const EdgeInsets.all(15),
+          padding:
+              const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius:
+                BorderRadius.circular(18),
             border: Border.all(
               color: Colors.grey.shade200,
             ),
@@ -760,16 +1357,21 @@ class _SmallPlaceCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding:
+                        const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color:
+                          Colors.grey.shade100,
                       borderRadius:
                           BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      place.category == 'Doğa'
-                          ? Icons.park_outlined
-                          : Icons.place_outlined,
+                      place.category ==
+                              'Doğa'
+                          ? Icons
+                              .park_outlined
+                          : Icons
+                              .place_outlined,
                       size: 20,
                     ),
                   ),
@@ -779,7 +1381,8 @@ class _SmallPlaceCard extends StatelessWidget {
                       'ÜCRETSİZ',
                       style: TextStyle(
                         fontSize: 9,
-                        fontWeight: FontWeight.w800,
+                        fontWeight:
+                            FontWeight.w800,
                       ),
                     ),
                 ],
@@ -788,19 +1391,318 @@ class _SmallPlaceCard extends StatelessWidget {
               Text(
                 place.name,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                  fontWeight:
+                      FontWeight.w800,
                 ),
               ),
               const Spacer(),
               Text(
-                place.placeType ?? place.category,
+                place.placeType ??
+                    place.category,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade600,
+                  color:
+                      Colors.grey.shade600,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AllTodayEventsScreen
+    extends StatefulWidget {
+  const _AllTodayEventsScreen();
+
+  @override
+  State<_AllTodayEventsScreen> createState() =>
+      _AllTodayEventsScreenState();
+}
+
+class _AllTodayEventsScreenState
+    extends State<_AllTodayEventsScreen> {
+  final EventService _eventService =
+      EventService();
+
+  List<Event> _events = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final events =
+          await _eventService.getTodayEvents(
+        city: 'Ankara',
+        limit: 100,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _events = events;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error =
+            'Bugünkü etkinlikler yüklenemedi.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          const Color(0xFFF7F7F5),
+      appBar: AppBar(
+        backgroundColor:
+            const Color(0xFFF7F7F5),
+        surfaceTintColor:
+            Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Bugün Ankara’da',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment:
+                MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 42,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _loadEvents,
+                child: const Text(
+                  'Tekrar dene',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_events.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Bugün Ankara için listelenmiş etkinlik bulunmuyor.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadEvents,
+      child: ListView.separated(
+        padding:
+            const EdgeInsets.fromLTRB(
+          16,
+          14,
+          16,
+          24,
+        ),
+        itemCount: _events.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final event = _events[index];
+
+          return _TodayEventListCard(
+            event: event,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TodayEventListCard
+    extends StatelessWidget {
+  final Event event;
+
+  const _TodayEventListCard({
+    required this.event,
+  });
+
+  String _dateText() {
+    return DateFormat(
+      'd MMM · HH:mm',
+      'tr_TR',
+    ).format(
+      event.startsAt.toLocal(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius:
+          BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius:
+            BorderRadius.circular(20),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  EventDetailScreen(
+                event: event,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding:
+              const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 82,
+                height: 92,
+                clipBehavior:
+                    Clip.antiAlias,
+                decoration:
+                    BoxDecoration(
+                  color:
+                      Colors.grey.shade100,
+                  borderRadius:
+                      BorderRadius.circular(15),
+                ),
+                child:
+                    event.imageUrl == null ||
+                            event.imageUrl!
+                                .trim()
+                                .isEmpty
+                        ? const Icon(
+                            Icons
+                                .event_outlined,
+                            size: 30,
+                          )
+                        : Image.network(
+                            event.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) {
+                              return const Icon(
+                                Icons
+                                    .event_outlined,
+                                size: 30,
+                              );
+                            },
+                          ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment
+                          .start,
+                  children: [
+                    Text(
+                      _dateText(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color:
+                            Colors.grey.shade600,
+                        fontWeight:
+                            FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      event.title,
+                      maxLines: 3,
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(
+                        fontSize: 15,
+                        fontWeight:
+                            FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                    if (event.venueName !=
+                            null &&
+                        event.venueName!
+                            .trim()
+                            .isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Text(
+                        event.venueName!,
+                        maxLines: 1,
+                        overflow:
+                            TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color:
+                              Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 5),
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.black45,
               ),
             ],
           ),
