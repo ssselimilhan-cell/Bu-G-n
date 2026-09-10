@@ -5,6 +5,7 @@ import '../services/place_service.dart';
 import 'explore_screen.dart';
 import 'profile_screen.dart';
 import 'saved_screen.dart';
+import '../widgets/home_events_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
