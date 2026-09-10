@@ -7,6 +7,7 @@ import '../services/event_service.dart';
 import '../services/place_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
+import 'place_detail_screen.dart';
 import 'profile_screen.dart';
 import 'saved_screen.dart';
 
@@ -14,15 +15,20 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() =>
+      _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final PlaceService _placeService = PlaceService();
-  final EventService _eventService = EventService();
+class _HomeScreenState
+    extends State<HomeScreen> {
+  final PlaceService _placeService =
+      PlaceService();
+
+  final EventService _eventService =
+      EventService();
 
   List<Place> _places = [];
-  List<Event> _todayEvents = [];
+  List<Event> _events = [];
 
   bool _placesLoading = true;
   bool _eventsLoading = true;
@@ -32,7 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _selectedIndex = 0;
 
-  final List<Map<String, dynamic>> _categories = const [
+  final List<Map<String, dynamic>> _categories =
+      const [
     {
       'title': 'Doğa',
       'icon': Icons.park_outlined,
@@ -43,15 +50,18 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'title': 'Tarih',
-      'icon': Icons.account_balance_outlined,
+      'icon':
+          Icons.account_balance_outlined,
     },
     {
       'title': 'Müze',
-      'icon': Icons.museum_outlined,
+      'icon':
+          Icons.museum_outlined,
     },
     {
       'title': 'Kültür',
-      'icon': Icons.theater_comedy_outlined,
+      'icon':
+          Icons.theater_comedy_outlined,
     },
   ];
 
@@ -64,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadAll() async {
     await Future.wait([
       _loadPlaces(),
-      _loadTodayEvents(),
+      _loadEvents(),
     ]);
   }
 
@@ -77,7 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final places = await _placeService.getPlaces(
+      final places =
+          await _placeService.getPlaces(
         city: 'Ankara',
         limit: 50,
       );
@@ -93,12 +104,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _placesLoading = false;
-        _placesError = 'Yerler yüklenemedi.';
+        _placesError =
+            'Yerler yüklenemedi.';
       });
     }
   }
 
-  Future<void> _loadTodayEvents() async {
+  Future<void> _loadEvents() async {
     if (mounted) {
       setState(() {
         _eventsLoading = true;
@@ -107,15 +119,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final events = await _eventService.getTodayEvents(
+      final events =
+          await _eventService.getUpcomingEvents(
         city: 'Ankara',
+        days: 7,
         limit: 10,
       );
 
       if (!mounted) return;
 
       setState(() {
-        _todayEvents = events;
+        _events = events;
         _eventsLoading = false;
       });
     } catch (_) {
@@ -123,7 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _eventsLoading = false;
-        _eventsError = 'Bugünkü etkinlikler yüklenemedi.';
+        _eventsError =
+            'Etkinlikler yüklenemedi.';
       });
     }
   }
@@ -131,16 +146,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refreshHome() async {
     await Future.wait([
       _loadPlaces(),
-      _loadTodayEvents(),
+      _loadEvents(),
     ]);
   }
 
-  void _openCategory(String category) {
+  void _openCategory(
+    String category,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ExploreScreen(
-          initialCategory: category,
+        builder: (_) =>
+            ExploreScreen(
+          initialCategory:
+              category,
         ),
       ),
     );
@@ -164,54 +183,103 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _openTodayEvents() {
+  void _openEvent(
+    Event event,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const _AllTodayEventsScreen(),
-      ),
-    );
-  }
-
-  void _openEvent(Event event) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EventDetailScreen(
+        builder: (_) =>
+            EventDetailScreen(
           event: event,
         ),
       ),
     );
   }
 
-  Place? get _featuredPlace {
-    if (_places.isEmpty) return null;
+  void _openPlace(
+    Place place,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            PlaceDetailScreen(
+          place: place,
+        ),
+      ),
+    );
+  }
 
-    final outdoorPlaces = _places.where(
-      (place) => place.outdoor == true,
+  void _openAllEvents() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            const _AllEventsScreen(),
+      ),
+    );
+  }
+
+  Place? get _featuredPlace {
+    if (_places.isEmpty) {
+      return null;
+    }
+
+    final outdoor =
+        _places.where(
+      (place) =>
+          place.outdoor == true,
     );
 
-    if (outdoorPlaces.isNotEmpty) {
-      return outdoorPlaces.first;
+    if (outdoor.isNotEmpty) {
+      return outdoor.first;
     }
 
     return _places.first;
   }
 
-  List<Place> get _nearbySuggestions {
-    final featured = _featuredPlace;
+  List<Place>
+      get _nearbySuggestions {
+    final featured =
+        _featuredPlace;
 
     return _places
-        .where((place) => place.id != featured?.id)
+        .where(
+          (place) =>
+              place.id !=
+              featured?.id,
+        )
         .take(5)
         .toList();
   }
 
+  bool get _hasEventsToday {
+    final now = DateTime.now();
+
+    return _events.any(
+      (event) {
+        final date =
+            event.startsAt.toLocal();
+
+        return date.year ==
+                now.year &&
+            date.month ==
+                now.month &&
+            date.day ==
+                now.day;
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return PopScope(
       canPop: _selectedIndex == 0,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult:
+          (didPop, result) {
         if (didPop) return;
 
         if (_selectedIndex != 0) {
@@ -220,7 +288,8 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
       },
-      child: _buildCurrentPage(),
+      child:
+          _buildCurrentPage(),
     );
   }
 
@@ -242,68 +311,100 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomePage() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor:
+          const Color(0xFFF7F7F5),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refreshHome,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
+        child:
+            RefreshIndicator(
+          onRefresh:
+              _refreshHome,
+          child:
+              CustomScrollView(
+            physics:
+                const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: _buildHeader(),
+                child:
+                    _buildHeader(),
               ),
               SliverToBoxAdapter(
-                child: _buildMainQuestion(),
+                child:
+                    _buildMainQuestion(),
               ),
               SliverToBoxAdapter(
-                child: _buildCategories(),
+                child:
+                    _buildCategories(),
               ),
               SliverToBoxAdapter(
-                child: _buildTodayEventsSection(),
+                child:
+                    _buildEventsSection(),
               ),
               SliverToBoxAdapter(
-                child: _buildFeaturedSection(),
+                child:
+                    _buildFeaturedSection(),
               ),
               SliverToBoxAdapter(
-                child: _buildNearbySection(),
+                child:
+                    _buildNearbySection(),
               ),
               SliverToBoxAdapter(
-                child: _buildMapButton(),
+                child:
+                    _buildMapButton(),
               ),
               const SliverToBoxAdapter(
-                child: SizedBox(height: 24),
+                child:
+                    SizedBox(
+                  height: 24,
+                ),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
+      bottomNavigationBar:
+          NavigationBar(
+        selectedIndex:
+            _selectedIndex,
+        onDestinationSelected:
+            (index) {
           setState(() {
-            _selectedIndex = index;
+            _selectedIndex =
+                index;
           });
         },
-        backgroundColor: Colors.white,
+        backgroundColor:
+            Colors.white,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home_outlined,
+            ),
+            selectedIcon:
+                Icon(Icons.home),
             label: 'Bugün',
           ),
           NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
+            icon: Icon(
+              Icons.explore_outlined,
+            ),
+            selectedIcon:
+                Icon(Icons.explore),
             label: 'Keşfet',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
+            icon: Icon(
+              Icons.bookmark_outline,
+            ),
+            selectedIcon:
+                Icon(Icons.bookmark),
             label: 'Kayıt',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: Icon(
+              Icons.person_outline,
+            ),
+            selectedIcon:
+                Icon(Icons.person),
             label: 'Profil',
           ),
         ],
@@ -313,7 +414,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         20,
         18,
         20,
@@ -324,23 +426,30 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  CrossAxisAlignment
+                      .start,
               children: [
                 const Text(
                   'BUGÜN',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.8,
+                    fontWeight:
+                        FontWeight.w800,
+                    letterSpacing:
+                        -0.8,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(
+                  height: 4,
+                ),
                 Text(
                   'Ankara',
-                  style: TextStyle(
+                  style:
+                      TextStyle(
                     fontSize: 15,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
+                    color:
+                        Colors.grey.shade600,
                   ),
                 ),
               ],
@@ -348,14 +457,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Material(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius:
+                BorderRadius.circular(
+              18,
+            ),
             child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: _openProfile,
-              child: const Padding(
-                padding: EdgeInsets.all(11),
+              borderRadius:
+                  BorderRadius.circular(
+                18,
+              ),
+              onTap:
+                  _openProfile,
+              child:
+                  const Padding(
+                padding:
+                    EdgeInsets.all(
+                  11,
+                ),
                 child: Icon(
-                  Icons.person_outline,
+                  Icons
+                      .person_outline,
                   size: 23,
                 ),
               ),
@@ -368,7 +489,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMainQuestion() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         20,
         14,
         20,
@@ -376,21 +498,29 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+            CrossAxisAlignment
+                .start,
         children: [
           const Text(
             'Bugün Ankara’da\nne yapmak istersin?',
-            style: TextStyle(
+            style:
+                TextStyle(
               fontSize: 31,
-              fontWeight: FontWeight.w800,
+              fontWeight:
+                  FontWeight.w800,
               height: 1.06,
-              letterSpacing: -1,
+              letterSpacing:
+                  -1,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(
+            height: 18,
+          ),
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger
+                  .of(context)
+                  .showSnackBar(
                 const SnackBar(
                   content: Text(
                     'Yapay zekâ öneri ekranını birazdan ekliyoruz.',
@@ -398,37 +528,59 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 17,
+            child:
+                Container(
+              width:
+                  double.infinity,
+              padding:
+                  const EdgeInsets
+                      .symmetric(
+                horizontal:
+                    18,
+                vertical:
+                    17,
               ),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(20),
+              decoration:
+                  BoxDecoration(
+                color:
+                    Colors.black,
+                borderRadius:
+                    BorderRadius
+                        .circular(
+                  20,
+                ),
               ),
-              child: const Row(
+              child:
+                  const Row(
                 children: [
                   Icon(
                     Icons.auto_awesome,
-                    color: Colors.white,
+                    color:
+                        Colors.white,
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(
+                    width: 12,
+                  ),
                   Expanded(
                     child: Text(
                       'Bugün ne yapayım?',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                      style:
+                          TextStyle(
+                        color:
+                            Colors.white,
+                        fontSize:
+                            16,
+                        fontWeight:
+                            FontWeight.w700,
                       ),
                     ),
                   ),
                   Icon(
-                    Icons.arrow_forward_ios,
+                    Icons
+                        .arrow_forward_ios,
                     size: 16,
-                    color: Colors.white,
+                    color:
+                        Colors.white,
                   ),
                 ],
               ),
@@ -441,52 +593,95 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategories() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding:
+          const EdgeInsets.only(
+        bottom: 24,
+      ),
       child: SizedBox(
         height: 98,
-        child: ListView.separated(
+        child:
+            ListView.separated(
           padding:
-              const EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          itemCount: _categories.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(width: 12),
-          itemBuilder: (context, index) {
-            final category = _categories[index];
+              const EdgeInsets
+                  .symmetric(
+            horizontal: 20,
+          ),
+          scrollDirection:
+              Axis.horizontal,
+          itemCount:
+              _categories.length,
+          separatorBuilder:
+              (_, __) =>
+                  const SizedBox(
+            width: 12,
+          ),
+          itemBuilder:
+              (context, index) {
+            final category =
+                _categories[index];
 
             return GestureDetector(
-              onTap: () => _openCategory(
-                category['title'] as String,
+              onTap:
+                  () =>
+                      _openCategory(
+                category['title']
+                    as String,
               ),
-              child: Container(
+              child:
+                  Container(
                 width: 92,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
+                padding:
+                    const EdgeInsets
+                        .symmetric(
+                  horizontal:
+                      10,
+                  vertical:
+                      12,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
+                decoration:
+                    BoxDecoration(
+                  color:
+                      Colors.white,
                   borderRadius:
-                      BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.grey.shade200,
+                      BorderRadius
+                          .circular(
+                    18,
+                  ),
+                  border:
+                      Border.all(
+                    color: Colors
+                        .grey
+                        .shade200,
                   ),
                 ),
-                child: Column(
+                child:
+                    Column(
                   mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
                   children: [
                     Icon(
-                      category['icon'] as IconData,
+                      category[
+                          'icon'] as IconData,
                       size: 25,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(
+                      height: 8,
+                    ),
                     Text(
-                      category['title'] as String,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                      category[
+                              'title']
+                          as String,
+                      textAlign:
+                          TextAlign
+                              .center,
+                      style:
+                          const TextStyle(
+                        fontSize:
+                            12,
+                        fontWeight:
+                            FontWeight
+                                .w700,
                       ),
                     ),
                   ],
@@ -499,36 +694,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTodayEventsSection() {
+  Widget _buildEventsSection() {
+    final title =
+        _hasEventsToday
+            ? 'BUGÜN ANKARA’DA'
+            : 'YAKLAŞAN ETKİNLİKLER';
+
     if (_eventsLoading) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding:
+            const EdgeInsets.fromLTRB(
           20,
           0,
           0,
           4,
         ),
-        child: Column(
+        child:
+            Column(
           crossAxisAlignment:
-              CrossAxisAlignment.start,
+              CrossAxisAlignment
+                  .start,
           children: [
             _sectionTitle(
-              'BUGÜN ANKARA’DA',
-              onTap: _openTodayEvents,
+              title,
+              onTap:
+                  _openAllEvents,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
             SizedBox(
-              height: 184,
-              child: ListView.separated(
+              height: 185,
+              child:
+                  ListView.separated(
                 padding:
-                    const EdgeInsets.only(right: 20),
-                scrollDirection: Axis.horizontal,
+                    const EdgeInsets
+                        .only(
+                  right: 20,
+                ),
+                scrollDirection:
+                    Axis.horizontal,
                 itemCount: 2,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(width: 12),
-                itemBuilder: (_, __) {
-                  return _LoadingEventCard();
-                },
+                separatorBuilder:
+                    (_, __) =>
+                        const SizedBox(
+                  width: 12,
+                ),
+                itemBuilder:
+                    (_, __) =>
+                        const _LoadingEventCard(),
               ),
             ),
           ],
@@ -538,48 +752,68 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (_eventsError != null) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding:
+            const EdgeInsets.fromLTRB(
           20,
           0,
           20,
           4,
         ),
-        child: Column(
+        child:
+            Column(
           crossAxisAlignment:
-              CrossAxisAlignment.start,
+              CrossAxisAlignment
+                  .start,
           children: [
             _sectionTitle(
-              'BUGÜN ANKARA’DA',
-              onTap: _openTodayEvents,
+              title,
+              onTap:
+                  _openAllEvents,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
             Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
+              padding:
+                  const EdgeInsets.all(
+                18,
+              ),
+              decoration:
+                  BoxDecoration(
+                color:
+                    Colors.white,
                 borderRadius:
-                    BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.grey.shade200,
+                    BorderRadius.circular(
+                  20,
                 ),
               ),
-              child: Row(
+              child:
+                  Row(
                 children: [
                   const Icon(
-                    Icons.error_outline,
+                    Icons
+                        .error_outline,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(
+                    width: 12,
+                  ),
                   Expanded(
-                    child: Text(
+                    child:
+                        Text(
                       _eventsError!,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
+                      style:
+                          const TextStyle(
+                        fontWeight:
+                            FontWeight
+                                .w600,
                       ),
                     ),
                   ),
                   IconButton(
-                    onPressed: _loadTodayEvents,
-                    icon: const Icon(
+                    onPressed:
+                        _loadEvents,
+                    icon:
+                        const Icon(
                       Icons.refresh,
                     ),
                   ),
@@ -591,50 +825,46 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (_todayEvents.isEmpty) {
+    if (_events.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding:
+            const EdgeInsets.fromLTRB(
           20,
           0,
           20,
           4,
         ),
-        child: Column(
+        child:
+            Column(
           crossAxisAlignment:
-              CrossAxisAlignment.start,
+              CrossAxisAlignment
+                  .start,
           children: [
             _sectionTitle(
-              'BUGÜN ANKARA’DA',
-              onTap: _openTodayEvents,
+              title,
+              onTap:
+                  _openAllEvents,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
+              padding:
+                  const EdgeInsets.all(
+                20,
+              ),
+              decoration:
+                  BoxDecoration(
+                color:
+                    Colors.white,
                 borderRadius:
-                    BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.grey.shade200,
+                    BorderRadius.circular(
+                  20,
                 ),
               ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.event_available_outlined,
-                    size: 28,
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Bugün için listelenmiş etkinlik bulunmuyor.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+              child:
+                  const Text(
+                'Önümüzdeki günlerde Ankara için listelenmiş etkinlik bulunmuyor.',
               ),
             ),
           ],
@@ -643,40 +873,64 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         20,
         0,
         0,
         4,
       ),
-      child: Column(
+      child:
+          Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+            CrossAxisAlignment
+                .start,
         children: [
           Padding(
             padding:
-                const EdgeInsets.only(right: 20),
-            child: _sectionTitle(
-              'BUGÜN ANKARA’DA',
-              onTap: _openTodayEvents,
+                const EdgeInsets
+                    .only(
+              right: 20,
+            ),
+            child:
+                _sectionTitle(
+              title,
+              onTap:
+                  _openAllEvents,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(
+            height: 12,
+          ),
           SizedBox(
-            height: 184,
-            child: ListView.separated(
+            height: 185,
+            child:
+                ListView.separated(
               padding:
-                  const EdgeInsets.only(right: 20),
-              scrollDirection: Axis.horizontal,
-              itemCount: _todayEvents.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final event = _todayEvents[index];
+                  const EdgeInsets
+                      .only(
+                right: 20,
+              ),
+              scrollDirection:
+                  Axis.horizontal,
+              itemCount:
+                  _events.length,
+              separatorBuilder:
+                  (_, __) =>
+                      const SizedBox(
+                width: 12,
+              ),
+              itemBuilder:
+                  (context, index) {
+                final event =
+                    _events[index];
 
                 return _HomeEventCard(
                   event: event,
-                  onTap: () => _openEvent(event),
+                  onTap: () =>
+                      _openEvent(
+                    event,
+                  ),
                 );
               },
             ),
@@ -690,15 +944,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_placesLoading) {
       return Container(
         margin:
-            const EdgeInsets.symmetric(horizontal: 20),
-        height: 190,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(22),
+            const EdgeInsets
+                .symmetric(
+          horizontal: 20,
         ),
-        child: const Center(
-          child: CircularProgressIndicator(),
+        height: 190,
+        decoration:
+            BoxDecoration(
+          color:
+              Colors.white,
+          borderRadius:
+              BorderRadius.circular(
+            22,
+          ),
+        ),
+        child:
+            const Center(
+          child:
+              CircularProgressIndicator(),
         ),
       );
     }
@@ -706,31 +969,47 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_placesError != null) {
       return Container(
         margin:
-            const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(22),
+            const EdgeInsets
+                .symmetric(
+          horizontal: 20,
         ),
-        child: Column(
+        padding:
+            const EdgeInsets.all(
+          24,
+        ),
+        decoration:
+            BoxDecoration(
+          color:
+              Colors.white,
+          borderRadius:
+              BorderRadius.circular(
+            22,
+          ),
+        ),
+        child:
+            Column(
           children: [
             const Icon(
-              Icons.error_outline,
+              Icons
+                  .error_outline,
               size: 36,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
             Text(
               _placesError!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              textAlign:
+                  TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(
+              height: 12,
+            ),
             FilledButton(
-              onPressed: _loadPlaces,
-              child: const Text(
+              onPressed:
+                  _loadPlaces,
+              child:
+                  const Text(
                 'Tekrar dene',
               ),
             ),
@@ -739,53 +1018,40 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final place = _featuredPlace;
+    final place =
+        _featuredPlace;
 
     if (place == null) {
-      return Container(
-        margin:
-            const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(26),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(22),
-        ),
-        child: const Column(
-          children: [
-            Icon(
-              Icons.location_on_outlined,
-              size: 42,
-            ),
-            SizedBox(height: 12),
-            Text(
-              'Henüz keşif noktası bulunmuyor.',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      );
+      return const SizedBox
+          .shrink();
     }
 
     return Padding(
       padding:
-          const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
+          const EdgeInsets
+              .symmetric(
+        horizontal: 20,
+      ),
+      child:
+          Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+            CrossAxisAlignment
+                .start,
         children: [
           _sectionTitle(
             'BUGÜNÜN ÖNERİSİ',
-            onTap: _openExplore,
+            onTap:
+                _openExplore,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(
+            height: 12,
+          ),
           _FeaturedPlaceCard(
             place: place,
-            onTap: _openExplore,
-            onSave: _openSaved,
+            onTap: () =>
+                _openPlace(
+              place,
+            ),
           ),
         ],
       ),
@@ -793,47 +1059,73 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNearbySection() {
-    final places = _nearbySuggestions;
+    final places =
+        _nearbySuggestions;
 
     if (places.isEmpty) {
-      return const SizedBox.shrink();
+      return const SizedBox
+          .shrink();
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         20,
         28,
         0,
         0,
       ),
-      child: Column(
+      child:
+          Column(
         crossAxisAlignment:
-            CrossAxisAlignment.start,
+            CrossAxisAlignment
+                .start,
         children: [
           Padding(
             padding:
-                const EdgeInsets.only(right: 20),
-            child: _sectionTitle(
+                const EdgeInsets
+                    .only(
+              right: 20,
+            ),
+            child:
+                _sectionTitle(
               'YAKINDA',
-              onTap: _openExplore,
+              onTap:
+                  _openExplore,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(
+            height: 12,
+          ),
           SizedBox(
             height: 150,
-            child: ListView.separated(
+            child:
+                ListView.separated(
               padding:
-                  const EdgeInsets.only(right: 20),
-              scrollDirection: Axis.horizontal,
-              itemCount: places.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final place = places[index];
+                  const EdgeInsets
+                      .only(
+                right: 20,
+              ),
+              scrollDirection:
+                  Axis.horizontal,
+              itemCount:
+                  places.length,
+              separatorBuilder:
+                  (_, __) =>
+                      const SizedBox(
+                width: 12,
+              ),
+              itemBuilder:
+                  (context, index) {
+                final place =
+                    places[index];
 
                 return _SmallPlaceCard(
                   place: place,
-                  onTap: _openExplore,
+                  onTap: () =>
+                      _openPlace(
+                    place,
+                  ),
                 );
               },
             ),
@@ -845,57 +1137,87 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMapButton() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+          const EdgeInsets.fromLTRB(
         20,
         28,
         20,
         0,
       ),
-      child: GestureDetector(
-        onTap: _openExplore,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
+      child:
+          GestureDetector(
+        onTap:
+            _openExplore,
+        child:
+            Container(
+          padding:
+              const EdgeInsets
+                  .symmetric(
             horizontal: 18,
             vertical: 18,
           ),
-          decoration: BoxDecoration(
-            color: Colors.white,
+          decoration:
+              BoxDecoration(
+            color:
+                Colors.white,
             borderRadius:
-                BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.grey.shade200,
+                BorderRadius.circular(
+              20,
+            ),
+            border:
+                Border.all(
+              color: Colors
+                  .grey
+                  .shade200,
             ),
           ),
-          child: const Row(
+          child:
+              const Row(
             children: [
-              Icon(Icons.map_outlined),
-              SizedBox(width: 12),
+              Icon(
+                Icons
+                    .map_outlined,
+              ),
+              SizedBox(
+                width: 12,
+              ),
               Expanded(
-                child: Column(
+                child:
+                    Column(
                   crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      CrossAxisAlignment
+                          .start,
                   children: [
                     Text(
                       'Haritada keşfet',
-                      style: TextStyle(
-                        fontSize: 15,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            15,
                         fontWeight:
-                            FontWeight.w700,
+                            FontWeight
+                                .w700,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    SizedBox(
+                      height: 3,
+                    ),
                     Text(
                       'Ankara’daki yerleri harita üzerinde gör',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            12,
+                        color:
+                            Colors.grey,
                       ),
                     ),
                   ],
                 ),
               ),
               Icon(
-                Icons.arrow_forward_ios,
+                Icons
+                    .arrow_forward_ios,
                 size: 15,
               ),
             ],
@@ -912,23 +1234,33 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       children: [
         Expanded(
-          child: Text(
+          child:
+              Text(
             title,
-            style: const TextStyle(
+            style:
+                const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
+              fontWeight:
+                  FontWeight.w800,
+              letterSpacing:
+                  0.8,
             ),
           ),
         ),
         if (onTap != null)
           GestureDetector(
-            onTap: onTap,
-            child: const Text(
+            onTap:
+                onTap,
+            child:
+                const Text(
               'Tümü',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+              style:
+                  TextStyle(
+                fontSize:
+                    13,
+                fontWeight:
+                    FontWeight
+                        .w700,
               ),
             ),
           ),
@@ -937,7 +1269,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeEventCard extends StatelessWidget {
+class _HomeEventCard
+    extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
 
@@ -946,144 +1279,122 @@ class _HomeEventCard extends StatelessWidget {
     required this.onTap,
   });
 
-  String _dateText() {
-    final localDate = event.startsAt.toLocal();
-
+  String _timeText() {
     return DateFormat(
       'HH:mm',
       'tr_TR',
-    ).format(localDate);
-  }
-
-  String _priceText() {
-    final min = event.priceMin;
-    final max = event.priceMax;
-
-    if (min == null && max == null) {
-      return '';
-    }
-
-    if (min == 0 &&
-        (max == null || max == 0)) {
-      return 'Ücretsiz';
-    }
-
-    if (min != null &&
-        max != null &&
-        min != max) {
-      return '${min.round()}-${max.round()} TL';
-    }
-
-    final price = min ?? max;
-
-    if (price == null) {
-      return '';
-    }
-
-    return '${price.round()} TL';
-  }
-
-  IconData _categoryIcon() {
-    final category =
-        event.category.toLowerCase();
-
-    if (category.contains('music') ||
-        category.contains('müzik')) {
-      return Icons.music_note_outlined;
-    }
-
-    if (category.contains('sports') ||
-        category.contains('spor')) {
-      return Icons.sports_outlined;
-    }
-
-    if (category.contains('arts') ||
-        category.contains('theatre') ||
-        category.contains('tiyatro')) {
-      return Icons.theater_comedy_outlined;
-    }
-
-    if (category.contains('film') ||
-        category.contains('movie')) {
-      return Icons.local_movies_outlined;
-    }
-
-    return Icons.event_outlined;
+    ).format(
+      event.startsAt
+          .toLocal(),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final priceText = _priceText();
-
+  Widget build(
+    BuildContext context,
+  ) {
     return Material(
-      color: Colors.white,
+      color:
+          Colors.white,
       borderRadius:
-          BorderRadius.circular(20),
-      child: InkWell(
+          BorderRadius.circular(
+        20,
+      ),
+      child:
+          InkWell(
         borderRadius:
-            BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          width: 270,
-          decoration: BoxDecoration(
-            color: Colors.white,
+            BorderRadius.circular(
+          20,
+        ),
+        onTap:
+            onTap,
+        child:
+            Container(
+          width: 275,
+          decoration:
+              BoxDecoration(
+            color:
+                Colors.white,
             borderRadius:
-                BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.grey.shade200,
+                BorderRadius.circular(
+              20,
+            ),
+            border:
+                Border.all(
+              color: Colors
+                  .grey
+                  .shade200,
             ),
           ),
           clipBehavior:
               Clip.antiAlias,
-          child: Column(
+          child:
+              Column(
             crossAxisAlignment:
-                CrossAxisAlignment.start,
+                CrossAxisAlignment
+                    .start,
             children: [
               SizedBox(
-                height: 82,
-                width: double.infinity,
-                child: event.imageUrl == null ||
-                        event.imageUrl!
-                            .trim()
-                            .isEmpty
-                    ? Container(
-                        color:
-                            Colors.grey.shade100,
-                        child: Center(
-                          child: Icon(
-                            _categoryIcon(),
-                            size: 32,
-                          ),
-                        ),
-                      )
-                    : Image.network(
-                        event.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) {
-                          return Container(
+                height: 84,
+                width:
+                    double.infinity,
+                child:
+                    event.imageUrl ==
+                                null ||
+                            event.imageUrl!
+                                .trim()
+                                .isEmpty
+                        ? Container(
                             color: Colors
-                                .grey.shade100,
-                            child: Center(
-                              child: Icon(
-                                _categoryIcon(),
-                                size: 32,
+                                .grey
+                                .shade100,
+                            child:
+                                const Center(
+                              child:
+                                  Icon(
+                                Icons
+                                    .event_outlined,
+                                size:
+                                    34,
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                        : Image.network(
+                            event.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) {
+                              return Container(
+                                color: Colors
+                                    .grey
+                                    .shade100,
+                                child:
+                                    const Center(
+                                  child:
+                                      Icon(
+                                    Icons
+                                        .event_outlined,
+                                    size:
+                                        34,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
               ),
               Expanded(
-                child: Padding(
+                child:
+                    Padding(
                   padding:
-                      const EdgeInsets.fromLTRB(
+                      const EdgeInsets
+                          .fromLTRB(
                     14,
                     10,
                     14,
                     10,
                   ),
-                  child: Column(
+                  child:
+                      Column(
                     crossAxisAlignment:
                         CrossAxisAlignment
                             .start,
@@ -1091,91 +1402,101 @@ class _HomeEventCard extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
+                            child:
+                                Text(
                               event.category
                                   .toUpperCase(),
-                              maxLines: 1,
+                              maxLines:
+                                  1,
                               overflow:
                                   TextOverflow
                                       .ellipsis,
-                              style: TextStyle(
-                                fontSize: 9,
+                              style:
+                                  TextStyle(
+                                fontSize:
+                                    9,
                                 fontWeight:
-                                    FontWeight.w900,
-                                letterSpacing:
-                                    0.7,
+                                    FontWeight
+                                        .w900,
                                 color: Colors
-                                    .grey.shade600,
+                                    .grey
+                                    .shade600,
                               ),
                             ),
                           ),
                           Text(
-                            _dateText(),
+                            _timeText(),
                             style:
                                 const TextStyle(
-                              fontSize: 11,
+                              fontSize:
+                                  11,
                               fontWeight:
-                                  FontWeight.w800,
+                                  FontWeight
+                                      .w800,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(
+                        height: 5,
+                      ),
                       Text(
                         event.title,
-                        maxLines: 2,
+                        maxLines:
+                            2,
                         overflow:
-                            TextOverflow.ellipsis,
+                            TextOverflow
+                                .ellipsis,
                         style:
                             const TextStyle(
-                          fontSize: 14,
+                          fontSize:
+                              14,
                           fontWeight:
-                              FontWeight.w800,
-                          height: 1.1,
+                              FontWeight
+                                  .w800,
+                          height:
+                              1.1,
                         ),
                       ),
                       const Spacer(),
-                      Row(
-                        children: [
-                          if (event.venueName !=
-                                  null &&
-                              event.venueName!
-                                  .trim()
-                                  .isNotEmpty) ...[
+                      if (event.venueName !=
+                              null &&
+                          event.venueName!
+                              .trim()
+                              .isNotEmpty)
+                        Row(
+                          children: [
                             const Icon(
                               Icons
                                   .location_on_outlined,
-                              size: 14,
+                              size:
+                                  14,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(
+                              width:
+                                  4,
+                            ),
                             Expanded(
-                              child: Text(
+                              child:
+                                  Text(
                                 event.venueName!,
-                                maxLines: 1,
+                                maxLines:
+                                    1,
                                 overflow:
                                     TextOverflow
                                         .ellipsis,
-                                style: TextStyle(
-                                  fontSize: 10,
+                                style:
+                                    TextStyle(
+                                  fontSize:
+                                      10,
                                   color: Colors
-                                      .grey.shade700,
+                                      .grey
+                                      .shade700,
                                 ),
                               ),
                             ),
-                          ] else
-                            const Spacer(),
-                          if (priceText.isNotEmpty)
-                            Text(
-                              priceText,
-                              style:
-                                  const TextStyle(
-                                fontSize: 10,
-                                fontWeight:
-                                    FontWeight.w800,
-                              ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -1190,20 +1511,27 @@ class _HomeEventCard extends StatelessWidget {
 
 class _LoadingEventCard
     extends StatelessWidget {
+  const _LoadingEventCard();
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Container(
-      width: 270,
-      decoration: BoxDecoration(
-        color: Colors.white,
+      width: 275,
+      decoration:
+          BoxDecoration(
+        color:
+            Colors.white,
         borderRadius:
-            BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.grey.shade200,
+            BorderRadius.circular(
+          20,
         ),
       ),
-      child: const Center(
-        child: CircularProgressIndicator(),
+      child:
+          const Center(
+        child:
+            CircularProgressIndicator(),
       ),
     );
   }
@@ -1213,103 +1541,148 @@ class _FeaturedPlaceCard
     extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
-  final VoidCallback onSave;
 
   const _FeaturedPlaceCard({
     required this.place,
     required this.onTap,
-    required this.onSave,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Material(
-      color: Colors.white,
+      color:
+          Colors.white,
       borderRadius:
-          BorderRadius.circular(22),
-      child: InkWell(
+          BorderRadius.circular(
+        22,
+      ),
+      child:
+          InkWell(
         borderRadius:
-            BorderRadius.circular(22),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
+            BorderRadius.circular(
+          22,
+        ),
+        onTap:
+            onTap,
+        child:
+            Container(
+          padding:
+              const EdgeInsets.all(
+            18,
+          ),
+          decoration:
+              BoxDecoration(
             borderRadius:
-                BorderRadius.circular(22),
-            border: Border.all(
-              color: Colors.grey.shade200,
+                BorderRadius.circular(
+              22,
+            ),
+            border:
+                Border.all(
+              color: Colors
+                  .grey
+                  .shade200,
             ),
           ),
-          child: Row(
+          child:
+              Row(
             children: [
               Container(
                 width: 76,
                 height: 76,
-                decoration: BoxDecoration(
-                  color:
-                      Colors.grey.shade100,
+                decoration:
+                    BoxDecoration(
+                  color: Colors
+                      .grey
+                      .shade100,
                   borderRadius:
-                      BorderRadius.circular(18),
+                      BorderRadius
+                          .circular(
+                    18,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.landscape_outlined,
+                child:
+                    Icon(
+                  place.outdoor ==
+                          true
+                      ? Icons
+                          .landscape_outlined
+                      : Icons
+                          .place_outlined,
                   size: 36,
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(
+                width: 15,
+              ),
               Expanded(
-                child: Column(
+                child:
+                    Column(
                   crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      CrossAxisAlignment
+                          .start,
                   children: [
                     Text(
                       place.category
                           .toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color:
-                            Colors.grey.shade600,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            10,
+                        color: Colors
+                            .grey
+                            .shade600,
                         fontWeight:
-                            FontWeight.w800,
-                        letterSpacing: 0.8,
+                            FontWeight
+                                .w800,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(
+                      height: 5,
+                    ),
                     Text(
                       place.name,
-                      maxLines: 2,
+                      maxLines:
+                          2,
                       overflow:
-                          TextOverflow.ellipsis,
+                          TextOverflow
+                              .ellipsis,
                       style:
                           const TextStyle(
-                        fontSize: 18,
+                        fontSize:
+                            18,
                         fontWeight:
-                            FontWeight.w800,
+                            FontWeight
+                                .w800,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(
+                      height: 5,
+                    ),
                     Text(
                       place.shortDescription ??
                           'Ankara’da keşfedilecek güzel bir yer.',
-                      maxLines: 2,
+                      maxLines:
+                          2,
                       overflow:
-                          TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.3,
-                        color:
-                            Colors.grey.shade600,
+                          TextOverflow
+                              .ellipsis,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            12,
+                        color: Colors
+                            .grey
+                            .shade600,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: onSave,
-                icon: const Icon(
-                  Icons.bookmark_border,
-                ),
+              const Icon(
+                Icons
+                    .chevron_right,
               ),
             ],
           ),
@@ -1330,44 +1703,73 @@ class _SmallPlaceCard
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Material(
-      color: Colors.white,
+      color:
+          Colors.white,
       borderRadius:
-          BorderRadius.circular(18),
-      child: InkWell(
+          BorderRadius.circular(
+        18,
+      ),
+      child:
+          InkWell(
         borderRadius:
-            BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
+            BorderRadius.circular(
+          18,
+        ),
+        onTap:
+            onTap,
+        child:
+            Container(
           width: 190,
           padding:
-              const EdgeInsets.all(15),
-          decoration: BoxDecoration(
+              const EdgeInsets.all(
+            15,
+          ),
+          decoration:
+              BoxDecoration(
             borderRadius:
-                BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.grey.shade200,
+                BorderRadius.circular(
+              18,
+            ),
+            border:
+                Border.all(
+              color: Colors
+                  .grey
+                  .shade200,
             ),
           ),
-          child: Column(
+          child:
+              Column(
             crossAxisAlignment:
-                CrossAxisAlignment.start,
+                CrossAxisAlignment
+                    .start,
             children: [
               Row(
                 children: [
                   Container(
                     padding:
-                        const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color:
-                          Colors.grey.shade100,
-                      borderRadius:
-                          BorderRadius.circular(12),
+                        const EdgeInsets
+                            .all(
+                      8,
                     ),
-                    child: Icon(
-                      place.category ==
-                              'Doğa'
+                    decoration:
+                        BoxDecoration(
+                      color: Colors
+                          .grey
+                          .shade100,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        12,
+                      ),
+                    ),
+                    child:
+                        Icon(
+                      place.outdoor ==
+                              true
                           ? Icons
                               .park_outlined
                           : Icons
@@ -1376,37 +1778,51 @@ class _SmallPlaceCard
                     ),
                   ),
                   const Spacer(),
-                  if (place.isFree == true)
+                  if (place.isFree ==
+                      true)
                     const Text(
                       'ÜCRETSİZ',
-                      style: TextStyle(
-                        fontSize: 9,
+                      style:
+                          TextStyle(
+                        fontSize:
+                            9,
                         fontWeight:
-                            FontWeight.w800,
+                            FontWeight
+                                .w800,
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(
+                height: 14,
+              ),
               Text(
                 place.name,
-                maxLines: 2,
+                maxLines:
+                    2,
                 overflow:
-                    TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
+                    TextOverflow
+                        .ellipsis,
+                style:
+                    const TextStyle(
+                  fontSize:
+                      15,
                   fontWeight:
-                      FontWeight.w800,
+                      FontWeight
+                          .w800,
                 ),
               ),
               const Spacer(),
               Text(
                 place.placeType ??
                     place.category,
-                style: TextStyle(
-                  fontSize: 11,
-                  color:
-                      Colors.grey.shade600,
+                style:
+                    TextStyle(
+                  fontSize:
+                      11,
+                  color: Colors
+                      .grey
+                      .shade600,
                 ),
               ),
             ],
@@ -1417,21 +1833,22 @@ class _SmallPlaceCard
   }
 }
 
-class _AllTodayEventsScreen
+class _AllEventsScreen
     extends StatefulWidget {
-  const _AllTodayEventsScreen();
+  const _AllEventsScreen();
 
   @override
-  State<_AllTodayEventsScreen> createState() =>
-      _AllTodayEventsScreenState();
+  State<_AllEventsScreen> createState() =>
+      _AllEventsScreenState();
 }
 
-class _AllTodayEventsScreenState
-    extends State<_AllTodayEventsScreen> {
+class _AllEventsScreenState
+    extends State<_AllEventsScreen> {
   final EventService _eventService =
       EventService();
 
   List<Event> _events = [];
+
   bool _loading = true;
   String? _error;
 
@@ -1442,15 +1859,12 @@ class _AllTodayEventsScreenState
   }
 
   Future<void> _loadEvents() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
     try {
       final events =
-          await _eventService.getTodayEvents(
+          await _eventService
+              .getUpcomingEvents(
         city: 'Ankara',
+        days: 14,
         limit: 100,
       );
 
@@ -1466,13 +1880,15 @@ class _AllTodayEventsScreenState
       setState(() {
         _loading = false;
         _error =
-            'Bugünkü etkinlikler yüklenemedi.';
+            'Etkinlikler yüklenemedi.';
       });
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       backgroundColor:
           const Color(0xFFF7F7F5),
@@ -1482,49 +1898,38 @@ class _AllTodayEventsScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Bugün Ankara’da',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
+        title:
+            const Text(
+          'Ankara Etkinlikleri',
+          style:
+              TextStyle(
+            fontWeight:
+                FontWeight.w800,
           ),
         ),
       ),
-      body: _buildBody(),
+      body:
+          _buildBody(),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child:
+            CircularProgressIndicator(),
       );
     }
 
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 42,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _loadEvents,
-                child: const Text(
-                  'Tekrar dene',
-                ),
-              ),
-            ],
+        child:
+            FilledButton(
+          onPressed:
+              _loadEvents,
+          child:
+              const Text(
+            'Tekrar dene',
           ),
         ),
       );
@@ -1532,180 +1937,195 @@ class _AllTodayEventsScreenState
 
     if (_events.isEmpty) {
       return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Bugün Ankara için listelenmiş etkinlik bulunmuyor.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        child:
+            Text(
+          'Önümüzdeki 14 gün içinde etkinlik bulunamadı.',
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: _loadEvents,
-      child: ListView.separated(
+      onRefresh:
+          _loadEvents,
+      child:
+          ListView.separated(
         padding:
-            const EdgeInsets.fromLTRB(
+            const EdgeInsets.all(
           16,
-          14,
-          16,
-          24,
         ),
-        itemCount: _events.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final event = _events[index];
+        itemCount:
+            _events.length,
+        separatorBuilder:
+            (_, __) =>
+                const SizedBox(
+          height: 12,
+        ),
+        itemBuilder:
+            (context, index) {
+          final event =
+              _events[index];
 
-          return _TodayEventListCard(
-            event: event,
+          return Material(
+            color:
+                Colors.white,
+            borderRadius:
+                BorderRadius.circular(
+              20,
+            ),
+            child:
+                InkWell(
+              borderRadius:
+                  BorderRadius.circular(
+                20,
+              ),
+              onTap: () =>
+                  _openEvent(
+                context,
+                event,
+              ),
+              child:
+                  Padding(
+                padding:
+                    const EdgeInsets
+                        .all(
+                  12,
+                ),
+                child:
+                    Row(
+                  children: [
+                    Container(
+                      width: 82,
+                      height: 92,
+                      clipBehavior:
+                          Clip.antiAlias,
+                      decoration:
+                          BoxDecoration(
+                        color: Colors
+                            .grey
+                            .shade100,
+                        borderRadius:
+                            BorderRadius
+                                .circular(
+                          15,
+                        ),
+                      ),
+                      child:
+                          event.imageUrl ==
+                                      null ||
+                                  event.imageUrl!
+                                      .trim()
+                                      .isEmpty
+                              ? const Icon(
+                                  Icons
+                                      .event_outlined,
+                                  size:
+                                      30,
+                                )
+                              : Image.network(
+                                  event.imageUrl!,
+                                  fit: BoxFit
+                                      .cover,
+                                ),
+                    ),
+                    const SizedBox(
+                      width: 13,
+                    ),
+                    Expanded(
+                      child:
+                          Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start,
+                        children: [
+                          Text(
+                            DateFormat(
+                              'd MMM · HH:mm',
+                              'tr_TR',
+                            ).format(
+                              event.startsAt
+                                  .toLocal(),
+                            ),
+                            style:
+                                const TextStyle(
+                              fontSize:
+                                  10,
+                              fontWeight:
+                                  FontWeight
+                                      .w800,
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            event.title,
+                            maxLines:
+                                3,
+                            overflow:
+                                TextOverflow
+                                    .ellipsis,
+                            style:
+                                const TextStyle(
+                              fontSize:
+                                  15,
+                              fontWeight:
+                                  FontWeight
+                                      .w800,
+                            ),
+                          ),
+                          if (event.venueName !=
+                                  null &&
+                              event.venueName!
+                                  .trim()
+                                  .isNotEmpty) ...[
+                            const SizedBox(
+                              height:
+                                  6,
+                            ),
+                            Text(
+                              event.venueName!,
+                              maxLines:
+                                  1,
+                              overflow:
+                                  TextOverflow
+                                      .ellipsis,
+                              style:
+                                  TextStyle(
+                                fontSize:
+                                    11,
+                                color: Colors
+                                    .grey
+                                    .shade600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons
+                          .chevron_right,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         },
       ),
     );
   }
-}
 
-class _TodayEventListCard
-    extends StatelessWidget {
-  final Event event;
-
-  const _TodayEventListCard({
-    required this.event,
-  });
-
-  String _dateText() {
-    return DateFormat(
-      'd MMM · HH:mm',
-      'tr_TR',
-    ).format(
-      event.startsAt.toLocal(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius:
-          BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  EventDetailScreen(
-                event: event,
-              ),
-            ),
-          );
-        },
-        child: Padding(
-          padding:
-              const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 82,
-                height: 92,
-                clipBehavior:
-                    Clip.antiAlias,
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.grey.shade100,
-                  borderRadius:
-                      BorderRadius.circular(15),
-                ),
-                child:
-                    event.imageUrl == null ||
-                            event.imageUrl!
-                                .trim()
-                                .isEmpty
-                        ? const Icon(
-                            Icons
-                                .event_outlined,
-                            size: 30,
-                          )
-                        : Image.network(
-                            event.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (_, __, ___) {
-                              return const Icon(
-                                Icons
-                                    .event_outlined,
-                                size: 30,
-                              );
-                            },
-                          ),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
-                  children: [
-                    Text(
-                      _dateText(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color:
-                            Colors.grey.shade600,
-                        fontWeight:
-                            FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      event.title,
-                      maxLines: 3,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(
-                        fontSize: 15,
-                        fontWeight:
-                            FontWeight.w800,
-                        height: 1.1,
-                      ),
-                    ),
-                    if (event.venueName !=
-                            null &&
-                        event.venueName!
-                            .trim()
-                            .isNotEmpty) ...[
-                      const SizedBox(height: 7),
-                      Text(
-                        event.venueName!,
-                        maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color:
-                              Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 5),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.black45,
-              ),
-            ],
-          ),
+  void _openEvent(
+    BuildContext context,
+    Event event,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            EventDetailScreen(
+          event: event,
         ),
       ),
     );
