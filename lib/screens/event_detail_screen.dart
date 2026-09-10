@@ -33,45 +33,65 @@ class _EventDetailScreenState
   }
 
   Future<void> _loadSavedState() async {
-    final saved =
-        await _savedService.isSaved(
-      widget.event.id,
-    );
+    try {
+      final saved = await _savedService.isSaved(
+        widget.event.id,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isSaved = saved;
-      _loadingSaved = false;
-    });
+      setState(() {
+        _isSaved = saved;
+        _loadingSaved = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingSaved = false;
+      });
+    }
   }
 
   Future<void> _toggleSaved() async {
-    await _savedService.toggleSaved(
-      widget.event.id,
-    );
+    try {
+      await _savedService.toggleSaved(
+        widget.event.id,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isSaved = !_isSaved;
-    });
+      setState(() {
+        _isSaved = !_isSaved;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isSaved
-              ? 'Etkinlik kayıtlarına eklendi.'
-              : 'Etkinlik kayıtlardan çıkarıldı.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isSaved
+                ? 'Etkinlik kayıtlarına eklendi.'
+                : 'Etkinlik kayıtlardan çıkarıldı.',
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Kayıt işlemi gerçekleştirilemedi.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _openTicketPage() async {
-    final url = widget.event.ticketUrl;
+    final ticketUrl = widget.event.ticketUrl;
 
-    if (url == null || url.trim().isEmpty) {
+    if (ticketUrl == null ||
+        ticketUrl.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -82,18 +102,39 @@ class _EventDetailScreenState
       return;
     }
 
-    final uri = Uri.tryParse(url);
+    final uri = Uri.tryParse(ticketUrl);
 
-    if (uri == null) {
+    if (uri == null ||
+        !(uri.scheme == 'http' ||
+            uri.scheme == 'https')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bilet bağlantısı geçerli değil.',
+          ),
+        ),
+      );
       return;
     }
 
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
 
-    if (!opened && mounted) {
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Bilet sayfası açılamadı.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -104,9 +145,59 @@ class _EventDetailScreenState
     }
   }
 
+  Future<void> _openNavigation() async {
+    final address = widget.event.address;
+
+    if (address == null ||
+        address.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Bu etkinlik için adres bilgisi bulunamadı.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final encodedAddress =
+        Uri.encodeComponent(address);
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encodedAddress',
+    );
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Harita açılamadı.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Harita açılamadı.',
+          ),
+        ),
+      );
+    }
+  }
+
   String _dateText() {
     return DateFormat(
-      'd MMMM EEEE · HH:mm',
+      'd MMMM yyyy, EEEE · HH:mm',
       'tr_TR',
     ).format(
       widget.event.startsAt.toLocal(),
@@ -118,7 +209,7 @@ class _EventDetailScreenState
     final max = widget.event.priceMax;
 
     if (min == null && max == null) {
-      return 'Fiyat bilgisi yok';
+      return 'Fiyat bilgisi bulunmuyor';
     }
 
     if (min == 0 &&
@@ -135,7 +226,7 @@ class _EventDetailScreenState
     final price = min ?? max;
 
     if (price == null) {
-      return 'Fiyat bilgisi yok';
+      return 'Fiyat bilgisi bulunmuyor';
     }
 
     return '${price.round()} TL';
@@ -144,6 +235,26 @@ class _EventDetailScreenState
   @override
   Widget build(BuildContext context) {
     final event = widget.event;
+
+    final hasImage =
+        event.imageUrl != null &&
+        event.imageUrl!.trim().isNotEmpty;
+
+    final hasVenue =
+        event.venueName != null &&
+        event.venueName!.trim().isNotEmpty;
+
+    final hasAddress =
+        event.address != null &&
+        event.address!.trim().isNotEmpty;
+
+    final hasDescription =
+        event.description != null &&
+        event.description!.trim().isNotEmpty;
+
+    final hasTicketUrl =
+        event.ticketUrl != null &&
+        event.ticketUrl!.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor:
@@ -179,13 +290,13 @@ class _EventDetailScreenState
         padding:
             const EdgeInsets.fromLTRB(
           20,
-          10,
+          8,
           20,
           30,
         ),
         children: [
           Container(
-            height: 230,
+            height: 235,
             clipBehavior:
                 Clip.antiAlias,
             decoration: BoxDecoration(
@@ -193,19 +304,8 @@ class _EventDetailScreenState
               borderRadius:
                   BorderRadius.circular(26),
             ),
-            child: event.imageUrl == null ||
-                    event.imageUrl!
-                        .trim()
-                        .isEmpty
-                ? const Center(
-                    child: Icon(
-                      Icons
-                          .event_outlined,
-                      color: Colors.white,
-                      size: 60,
-                    ),
-                  )
-                : Image.network(
+            child: hasImage
+                ? Image.network(
                     event.imageUrl!,
                     fit: BoxFit.cover,
                     errorBuilder:
@@ -216,10 +316,19 @@ class _EventDetailScreenState
                               .event_outlined,
                           color:
                               Colors.white,
-                          size: 60,
+                          size: 64,
                         ),
                       );
                     },
+                  )
+                : const Center(
+                    child: Icon(
+                      Icons
+                          .event_outlined,
+                      color:
+                          Colors.white,
+                      size: 64,
+                    ),
                   ),
           ),
 
@@ -228,7 +337,8 @@ class _EventDetailScreenState
           Text(
             event.category
                 .toUpperCase(),
-            style: const TextStyle(
+            style:
+                const TextStyle(
               fontSize: 11,
               fontWeight:
                   FontWeight.w900,
@@ -238,68 +348,61 @@ class _EventDetailScreenState
             ),
           ),
 
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
 
           Text(
             event.title,
-            style: const TextStyle(
-              fontSize: 28,
+            style:
+                const TextStyle(
+              fontSize: 29,
               fontWeight:
                   FontWeight.w900,
               height: 1.05,
+              letterSpacing: -0.5,
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
-          _InfoRow(
+          _InfoCard(
             icon:
-                Icons.schedule_outlined,
-            title: 'Tarih',
+                Icons.calendar_month_outlined,
+            title: 'Tarih ve saat',
             value: _dateText(),
           ),
 
-          if (event.venueName !=
-                  null &&
-              event.venueName!
-                  .trim()
-                  .isNotEmpty)
-            _InfoRow(
-              icon: Icons
-                  .location_on_outlined,
+          if (hasVenue)
+            _InfoCard(
+              icon:
+                  Icons.location_on_outlined,
               title: 'Mekan',
               value:
                   event.venueName!,
             ),
 
-          if (event.address != null &&
-              event.address!
-                  .trim()
-                  .isNotEmpty)
-            _InfoRow(
-              icon: Icons
-                  .place_outlined,
+          if (hasAddress)
+            _InfoCard(
+              icon:
+                  Icons.place_outlined,
               title: 'Adres',
               value:
                   event.address!,
             ),
 
-          _InfoRow(
+          _InfoCard(
             icon:
                 Icons.payments_outlined,
-            title: 'Fiyat',
-            value: _priceText(),
+            title: 'Bilet fiyatı',
+            value:
+                _priceText(),
           ),
 
-          if (event.description !=
-                  null &&
-              event.description!
-                  .trim()
-                  .isNotEmpty) ...[
-            const SizedBox(height: 18),
+          if (hasDescription) ...[
+            const SizedBox(height: 20),
             const Text(
-              'HAKKINDA',
-              style: TextStyle(
+              'ETKİNLİK HAKKINDA',
+              style:
+                  TextStyle(
                 fontSize: 12,
                 fontWeight:
                     FontWeight.w900,
@@ -309,48 +412,89 @@ class _EventDetailScreenState
             const SizedBox(height: 10),
             Text(
               event.description!,
-              style: const TextStyle(
+              style:
+                  const TextStyle(
                 fontSize: 14,
-                height: 1.45,
+                height: 1.5,
               ),
             ),
           ],
 
           const SizedBox(height: 24),
 
-          FilledButton.icon(
-            onPressed:
-                _openTicketPage,
-            icon: const Icon(
-              Icons.confirmation_number_outlined,
-            ),
-            label: const Text(
-              'BİLET AL',
-            ),
-            style:
-                FilledButton.styleFrom(
-              minimumSize:
-                  const Size.fromHeight(
-                54,
+          if (hasTicketUrl)
+            FilledButton.icon(
+              onPressed:
+                  _openTicketPage,
+              icon: const Icon(
+                Icons
+                    .confirmation_number_outlined,
               ),
-              backgroundColor:
-                  Colors.black,
-              foregroundColor:
-                  Colors.white,
-              shape:
-                  RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(
-                  17,
+              label: const Text(
+                'BİLET AL',
+              ),
+              style:
+                  FilledButton.styleFrom(
+                minimumSize:
+                    const Size.fromHeight(
+                  56,
+                ),
+                backgroundColor:
+                    Colors.black,
+                foregroundColor:
+                    Colors.white,
+                shape:
+                    RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(
+                    17,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 10),
+          if (hasTicketUrl)
+            const SizedBox(height: 10),
+
+          if (hasAddress)
+            OutlinedButton.icon(
+              onPressed:
+                  _openNavigation,
+              icon: const Icon(
+                Icons.navigation_outlined,
+              ),
+              label: const Text(
+                'YOL TARİFİ',
+              ),
+              style:
+                  OutlinedButton.styleFrom(
+                minimumSize:
+                    const Size.fromHeight(
+                  56,
+                ),
+                foregroundColor:
+                    Colors.black,
+                side:
+                    const BorderSide(
+                  color:
+                      Colors.black12,
+                ),
+                shape:
+                    RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(
+                    17,
+                  ),
+                ),
+              ),
+            ),
+
+          if (hasAddress)
+            const SizedBox(height: 10),
 
           OutlinedButton.icon(
-            onPressed: _toggleSaved,
+            onPressed:
+                _toggleSaved,
             icon: Icon(
               _isSaved
                   ? Icons.bookmark_rounded
@@ -366,7 +510,7 @@ class _EventDetailScreenState
                 OutlinedButton.styleFrom(
               minimumSize:
                   const Size.fromHeight(
-                54,
+                56,
               ),
               foregroundColor:
                   Colors.black,
@@ -384,52 +528,76 @@ class _EventDetailScreenState
               ),
             ),
           ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            'Bu etkinlik Ticketmaster üzerinden sağlanmaktadır.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              color:
+                  Colors.grey.shade600,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
 
-  const _InfoRow({
+  const _InfoCard({
     required this.icon,
     required this.title,
     required this.value,
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Container(
       margin:
           const EdgeInsets.only(
         bottom: 10,
       ),
       padding:
-          const EdgeInsets.all(14),
+          const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius:
             BorderRadius.circular(
           18,
         ),
+        border: Border.all(
+          color:
+              Colors.grey.shade200,
+        ),
       ),
       child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 22,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color:
+                  Colors.grey.shade100,
+              borderRadius:
+                  BorderRadius.circular(
+                12,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+            ),
           ),
-          const SizedBox(
-            width: 12,
-          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment:
@@ -447,9 +615,7 @@ class _InfoRow extends StatelessWidget {
                         Colors.black54,
                   ),
                 ),
-                const SizedBox(
-                  height: 3,
-                ),
+                const SizedBox(height: 4),
                 Text(
                   value,
                   style:
@@ -457,6 +623,7 @@ class _InfoRow extends StatelessWidget {
                     fontSize: 13,
                     fontWeight:
                         FontWeight.w700,
+                    height: 1.3,
                   ),
                 ),
               ],
