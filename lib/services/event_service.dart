@@ -54,6 +54,48 @@ class EventService {
     );
   }
 
+  Future<List<Event>> getEventsByIds(
+    Iterable<String> ids,
+  ) async {
+    final idList = ids.toList();
+
+    if (idList.isEmpty) {
+      return <Event>[];
+    }
+
+    final rows = await _client
+        .from('events')
+        .select('''
+          id,
+          title,
+          category,
+          subcategory,
+          description,
+          starts_at,
+          ends_at,
+          price_min,
+          price_max,
+          image_url,
+          source_url,
+          ticket_url,
+          venue_name,
+          venue_address,
+          trust_score,
+          recommendation_score,
+          is_active
+        ''')
+        .inFilter('id', idList)
+        .order(
+          'starts_at',
+          ascending: true,
+        );
+
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(Event.fromMap)
+        .toList();
+  }
+
   Future<List<Event>> _getEvents({
     required String city,
     required DateTime start,
@@ -94,6 +136,10 @@ class EventService {
         .order(
           'starts_at',
           ascending: true,
+        )
+        .order(
+          'recommendation_score',
+          ascending: false,
         )
         .limit(limit);
 
