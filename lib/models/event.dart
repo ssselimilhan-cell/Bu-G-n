@@ -12,6 +12,7 @@ class Event {
   final double? priceMin;
   final double? priceMax;
   final String? imageUrl;
+  final String? ticketUrl;
   final int trustScore;
   final double recommendationScore;
 
@@ -29,25 +30,52 @@ class Event {
     this.priceMin,
     this.priceMax,
     this.imageUrl,
+    this.ticketUrl,
     this.trustScore = 0,
     this.recommendationScore = 0,
   });
 
-  factory Event.fromMap(Map<String, dynamic> map) => Event(
-        id: map['id'] as String,
-        title: map['title'] as String,
-        category: map['category'] as String,
-        description: map['description'] as String?,
-        startsAt: DateTime.parse(map['starts_at'] as String),
-        endsAt: map['ends_at'] == null ? null : DateTime.parse(map['ends_at'] as String),
-        venueName: map['venue_name'] as String?,
-        address: map['address'] as String?,
-        latitude: (map['latitude'] as num?)?.toDouble(),
-        longitude: (map['longitude'] as num?)?.toDouble(),
-        priceMin: (map['price_min'] as num?)?.toDouble(),
-        priceMax: (map['price_max'] as num?)?.toDouble(),
-        imageUrl: map['image_url'] as String?,
-        trustScore: (map['trust_score'] as num?)?.toInt() ?? 0,
-        recommendationScore: (map['recommendation_score'] as num?)?.toDouble() ?? 0,
-      );
+  factory Event.fromMap(
+    Map<String, dynamic> map,
+  ) {
+    return Event(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      category: map['category'] as String,
+      description:
+          map['description'] as String?,
+      startsAt: DateTime.parse(
+        map['starts_at'] as String,
+      ),
+      endsAt: map['ends_at'] == null
+          ? null
+          : DateTime.parse(
+              map['ends_at'] as String,
+            ),
+      venueName:
+          map['venue_name'] as String?,
+      address:
+          map['venue_address'] as String? ??
+              map['address'] as String?,
+      latitude:
+          (map['latitude'] as num?)?.toDouble(),
+      longitude:
+          (map['longitude'] as num?)?.toDouble(),
+      priceMin:
+          (map['price_min'] as num?)?.toDouble(),
+      priceMax:
+          (map['price_max'] as num?)?.toDouble(),
+      imageUrl:
+          map['image_url'] as String?,
+      ticketUrl:
+          map['ticket_url'] as String?,
+      trustScore:
+          (map['trust_score'] as num?)?.toInt() ??
+              0,
+      recommendationScore:
+          (map['recommendation_score'] as num?)
+                  ?.toDouble() ??
+              0,
+    );
+  }
 }
