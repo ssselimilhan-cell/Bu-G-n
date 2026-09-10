@@ -59,8 +59,11 @@ class RecommendationScreen extends StatefulWidget {
 
 class _RecommendationScreenState
     extends State<RecommendationScreen> {
-  final EventService _eventService = EventService();
-  final PlaceService _placeService = PlaceService();
+  final EventService _eventService =
+      EventService();
+
+  final PlaceService _placeService =
+      PlaceService();
 
   Set<CompanionType> _companions = {
     CompanionType.any,
@@ -86,7 +89,8 @@ class _RecommendationScreenState
 
   String? _error;
 
-  List<_Activity> _results = <_Activity>[];
+  List<_Activity> _results =
+      <_Activity>[];
 
   final List<_Activity> _queue =
       <_Activity>[];
@@ -99,7 +103,8 @@ class _RecommendationScreenState
 
   Future<void> _tryGetLocationSilently() async {
     try {
-      final position = await _getLocation(
+      final position =
+          await _getLocation(
         requestPermission: false,
       );
 
@@ -119,14 +124,16 @@ class _RecommendationScreenState
     required bool requestPermission,
   }) async {
     final enabled =
-        await Geolocator.isLocationServiceEnabled();
+        await Geolocator
+            .isLocationServiceEnabled();
 
     if (!enabled) {
       return null;
     }
 
     var permission =
-        await Geolocator.checkPermission();
+        await Geolocator
+            .checkPermission();
 
     if (permission ==
         LocationPermission.denied) {
@@ -135,7 +142,8 @@ class _RecommendationScreenState
       }
 
       permission =
-          await Geolocator.requestPermission();
+          await Geolocator
+              .requestPermission();
     }
 
     if (permission ==
@@ -145,7 +153,8 @@ class _RecommendationScreenState
       return null;
     }
 
-    return Geolocator.getCurrentPosition(
+    return Geolocator
+        .getCurrentPosition(
       locationSettings:
           const LocationSettings(
         accuracy:
@@ -321,7 +330,8 @@ class _RecommendationScreenState
     try {
       final response =
           await Future.wait<Object>([
-        _eventService.getUpcomingEvents(
+        _eventService
+            .getUpcomingEvents(
           city: 'Ankara',
           days: 31,
           limit: 200,
@@ -343,7 +353,9 @@ class _RecommendationScreenState
 
       for (final event in events) {
         final item =
-            _makeEventActivity(event);
+            _makeEventActivity(
+          event,
+        );
 
         if (item != null) {
           activities.add(item);
@@ -352,7 +364,9 @@ class _RecommendationScreenState
 
       for (final place in places) {
         final item =
-            _makePlaceActivity(place);
+            _makePlaceActivity(
+          place,
+        );
 
         if (item != null) {
           activities.add(item);
@@ -361,7 +375,9 @@ class _RecommendationScreenState
 
       activities.sort(
         (a, b) =>
-            b.score.compareTo(a.score),
+            b.score.compareTo(
+          a.score,
+        ),
       );
 
       final unique =
@@ -500,15 +516,11 @@ class _RecommendationScreenState
   double _scoreEvent(
     Event event,
   ) {
-    if (!_matchesInterestForEvent(
-      event,
-    )) {
+    if (!_matchesInterestForEvent(event)) {
       return 0;
     }
 
-    if (!_matchesBudgetForEvent(
-      event,
-    )) {
+    if (!_matchesBudgetForEvent(event)) {
       return 0;
     }
 
@@ -544,11 +556,9 @@ class _RecommendationScreenState
       }
     }
 
-    final start =
-        event.startsAt.toLocal();
-
     final minutesUntil =
-        start
+        event.startsAt
+            .toLocal()
             .difference(
               DateTime.now(),
             )
@@ -585,15 +595,11 @@ class _RecommendationScreenState
   double _scorePlace(
     Place place,
   ) {
-    if (!_matchesInterestForPlace(
-      place,
-    )) {
+    if (!_matchesInterestForPlace(place)) {
       return 0;
     }
 
-    if (!_matchesBudgetForPlace(
-      place,
-    )) {
+    if (!_matchesBudgetForPlace(place)) {
       return 0;
     }
 
@@ -682,6 +688,24 @@ class _RecommendationScreenState
       place.shortDescription ?? '',
       ...place.tags,
     ].join(' ').toLowerCase();
+  }
+
+  bool _containsAny(
+    String text,
+    List<String> values,
+  ) {
+    final source =
+        text.toLowerCase();
+
+    for (final value in values) {
+      if (source.contains(
+        value.toLowerCase(),
+      )) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   bool _matchesInterestForEvent(
@@ -950,25 +974,26 @@ class _RecommendationScreenState
         return true;
       }
 
-      if (price == null) {
-        if (budget ==
-                BudgetType.low ||
-            budget ==
-                BudgetType.medium) {
-          return true;
-        }
-      } else {
-        if (budget ==
-                BudgetType.low &&
-            price <= 1000) {
-          return true;
-        }
+      if (price == null &&
+          (budget ==
+                  BudgetType.low ||
+              budget ==
+                  BudgetType.medium)) {
+        return true;
+      }
 
-        if (budget ==
-                BudgetType.medium &&
-            price <= 2500) {
-          return true;
-        }
+      if (budget ==
+              BudgetType.low &&
+          price != null &&
+          price <= 1000) {
+        return true;
+      }
+
+      if (budget ==
+              BudgetType.medium &&
+          price != null &&
+          price <= 2500) {
+        return true;
       }
     }
 
@@ -1243,8 +1268,10 @@ class _RecommendationScreenState
       return '';
     }
 
-    if ((min == null || min == 0) &&
-        (max == null || max == 0)) {
+    if ((min == null ||
+            min == 0) &&
+        (max == null ||
+            max == 0)) {
       return 'Ücretsiz';
     }
 
@@ -1263,14 +1290,16 @@ class _RecommendationScreenState
   String _formatPrice(
     double value,
   ) {
-    if (value == value.roundToDouble()) {
+    if (value ==
+        value.roundToDouble()) {
       return value
           .round()
           .toString();
     }
 
-    return value
-        .toStringAsFixed(0);
+    return value.toStringAsFixed(
+      0,
+    );
   }
 
   String _dateLabel(
@@ -1423,7 +1452,7 @@ class _RecommendationScreenState
 
     if (navigable.isEmpty) {
       _showMessage(
-        'Seçtiğin yerlerde kullanılabilir konum bilgisi bulunmuyor.',
+        'Seçtiğin seçeneklerde kullanılabilir konum bilgisi yok.',
       );
       return;
     }
@@ -1531,573 +1560,6 @@ class _RecommendationScreenState
       );
   }
 
-  String _eventTextCategory(
-    Event event,
-  ) {
-    return event.category;
-  }
-
-  String _placeTextCategory(
-    Place place,
-  ) {
-    return place.category;
-  }
-
-  Widget _buildCardImage(
-    _Activity activity,
-  ) {
-    final imageUrl =
-        activity.event?.imageUrl ??
-            activity.place?.imageUrl;
-
-    if (imageUrl == null ||
-        imageUrl.trim().isEmpty) {
-      return Container(
-        width: double.infinity,
-        height: 155,
-        color:
-            Colors.grey.shade100,
-        child: Icon(
-          activity.type ==
-                  _ActivityType.event
-              ? Icons.event_outlined
-              : Icons.place_outlined,
-          size: 42,
-          color:
-              Colors.black38,
-        ),
-      );
-    }
-
-    return Image.network(
-      imageUrl,
-      width: double.infinity,
-      height: 155,
-      fit: BoxFit.cover,
-      errorBuilder:
-          (_, __, ___) {
-        return Container(
-          width: double.infinity,
-          height: 155,
-          color:
-              Colors.grey.shade100,
-          child: Icon(
-            activity.type ==
-                    _ActivityType.event
-                ? Icons.event_outlined
-                : Icons.place_outlined,
-            size: 42,
-            color:
-                Colors.black38,
-          ),
-        );
-      },
-      loadingBuilder:
-          (
-        context,
-        child,
-        loadingProgress,
-      ) {
-        if (loadingProgress ==
-            null) {
-          return child;
-        }
-
-        return Container(
-          width: double.infinity,
-          height: 155,
-          color:
-              Colors.grey.shade100,
-          child:
-              const Center(
-            child:
-                SizedBox(
-              width: 24,
-              height: 24,
-              child:
-                  CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildResultCard(
-    _Activity activity,
-  ) {
-    final queued =
-        _isQueued(activity);
-
-    final isEvent =
-        activity.type ==
-            _ActivityType.event;
-
-    final distance =
-        _distanceFromUser(
-      _activityLatitude(
-        activity,
-      ),
-      _activityLongitude(
-        activity,
-      ),
-    );
-
-    final locationText =
-        _distanceLabel(
-      distance,
-    );
-
-    final placeName =
-        activity.event?.venueName ??
-            activity.place?.address;
-
-    return Container(
-      margin:
-          const EdgeInsets.only(
-        bottom: 16,
-      ),
-      clipBehavior:
-          Clip.antiAlias,
-      decoration:
-          BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(
-          22,
-        ),
-        border:
-            Border.all(
-          color: queued
-              ? Colors.black
-              : Colors.grey.shade200,
-          width:
-              queued ? 1.4 : 1,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color:
-                Color(0x08000000),
-            blurRadius: 14,
-            offset:
-                Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              _buildCardImage(
-                activity,
-              ),
-              Positioned(
-                left: 12,
-                top: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        Colors.black87,
-                    borderRadius:
-                        BorderRadius.circular(
-                      20,
-                    ),
-                  ),
-                  child:
-                      Text(
-                    isEvent
-                        ? 'ETKİNLİK'
-                        : 'KEŞİF',
-                    style:
-                        const TextStyle(
-                      color:
-                          Colors.white,
-                      fontSize: 9,
-                      fontWeight:
-                          FontWeight.w900,
-                      letterSpacing:
-                          0.8,
-                    ),
-                  ),
-                ),
-              ),
-              if (queued)
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child:
-                      Container(
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
-                      horizontal: 10,
-                      vertical: 7,
-                    ),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(
-                        20,
-                      ),
-                    ),
-                    child:
-                        const Row(
-                      mainAxisSize:
-                          MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check,
-                          size: 14,
-                        ),
-                        SizedBox(
-                          width: 4,
-                        ),
-                        Text(
-                          'KUYRUKTA',
-                          style:
-                              TextStyle(
-                            fontSize:
-                                9,
-                            fontWeight:
-                                FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          Padding(
-            padding:
-                const EdgeInsets.all(
-              15,
-            ),
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activity.event?.title ??
-                      activity.place?.name ??
-                      '',
-                  maxLines: 2,
-                  overflow:
-                      TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(
-                    fontSize: 17,
-                    fontWeight:
-                        FontWeight.w900,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _InfoPill(
-                      icon: isEvent
-                          ? Icons
-                              .schedule_outlined
-                          : Icons
-                              .timelapse_outlined,
-                      text: isEvent
-                          ? _dateLabel(
-                              activity
-                                  .event!
-                                  .startsAt,
-                            )
-                          : _durationLabel(
-                              activity
-                                  .durationMinutes,
-                            ),
-                    ),
-                    if (locationText.isNotEmpty)
-                      _InfoPill(
-                        icon:
-                            Icons
-                                .near_me_outlined,
-                        text:
-                            locationText,
-                      ),
-                  ],
-                ),
-                if (isEvent) ...[
-                  const SizedBox(
-                    height: 8,
-                  ),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (_priceLabel(
-                        activity.event!,
-                      ).isNotEmpty)
-                        _InfoPill(
-                          icon:
-                              Icons
-                                  .payments_outlined,
-                          text:
-                              _priceLabel(
-                            activity.event!,
-                          ),
-                        ),
-                      if (activity
-                                  .event!
-                                  .category
-                                  .trim()
-                                  .isNotEmpty)
-                        _InfoPill(
-                          icon:
-                              Icons
-                                  .category_outlined,
-                          text:
-                              _eventTextCategory(
-                            activity.event!,
-                          ),
-                        ),
-                    ],
-                  ),
-                ] else if (activity.place != null) ...[
-                  const SizedBox(
-                    height: 8,
-                  ),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (activity
-                              .place!
-                              .isFree ==
-                          true)
-                        const _InfoPill(
-                          icon: Icons
-                              .local_offer_outlined,
-                          text:
-                              'Ücretsiz',
-                        ),
-                      if (activity
-                              .place!
-                              .category
-                              .trim()
-                              .isNotEmpty)
-                        _InfoPill(
-                          icon:
-                              Icons
-                                  .category_outlined,
-                          text:
-                              _placeTextCategory(
-                            activity.place!,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-                if (placeName !=
-                        null &&
-                    placeName
-                        .trim()
-                        .isNotEmpty) ...[
-                  const SizedBox(
-                    height: 9,
-                  ),
-                  Text(
-                    placeName,
-                    maxLines: 2,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        TextStyle(
-                      fontSize: 11,
-                      color: Colors
-                          .grey
-                          .shade600,
-                    ),
-                  ),
-                ],
-                const SizedBox(
-                  height: 14,
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child:
-                          OutlinedButton(
-                        onPressed:
-                            () =>
-                                _toggleQueue(
-                          activity,
-                        ),
-                        style:
-                            OutlinedButton
-                                .styleFrom(
-                          foregroundColor:
-                              Colors.black,
-                          minimumSize:
-                              const Size(
-                            0,
-                            44,
-                          ),
-                          side:
-                              BorderSide(
-                            color:
-                                queued
-                                    ? Colors.black
-                                    : Colors.grey
-                                        .shade300,
-                          ),
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              13,
-                            ),
-                          ),
-                        ),
-                        child:
-                            Text(
-                          queued
-                              ? 'Kuyruktan çıkar'
-                              : 'Kuyruğa ekle',
-                          style:
-                              const TextStyle(
-                            fontSize:
-                                11,
-                            fontWeight:
-                                FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    if (isEvent &&
-                        activity
-                                .event!
-                                .ticketUrl !=
-                            null &&
-                        activity
-                            .event!
-                            .ticketUrl!
-                            .trim()
-                            .isNotEmpty)
-                      Expanded(
-                        child:
-                            FilledButton.icon(
-                          onPressed: () =>
-                              _openTicket(
-                            activity.event!,
-                          ),
-                          icon:
-                              const Icon(
-                            Icons
-                                .confirmation_number_outlined,
-                            size: 17,
-                          ),
-                          label:
-                              const Text(
-                            'BİLET AL',
-                            style:
-                                TextStyle(
-                              fontSize:
-                                  10,
-                              fontWeight:
-                                  FontWeight.w900,
-                            ),
-                          ),
-                          style:
-                              FilledButton.styleFrom(
-                            backgroundColor:
-                                Colors.black,
-                            foregroundColor:
-                                Colors.white,
-                            minimumSize:
-                                const Size(
-                              0,
-                              44,
-                            ),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child:
-                            FilledButton(
-                          onPressed: () =>
-                              _openActivity(
-                            activity,
-                          ),
-                          style:
-                              FilledButton
-                                  .styleFrom(
-                            backgroundColor:
-                                Colors.black,
-                            foregroundColor:
-                                Colors.white,
-                            minimumSize:
-                                const Size(
-                              0,
-                              44,
-                            ),
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                13,
-                              ),
-                            ),
-                          ),
-                          child:
-                              const Text(
-                            'DETAY',
-                            style:
-                                TextStyle(
-                              fontSize:
-                                  10,
-                              fontWeight:
-                                  FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _choiceChip<T>({
     required String label,
     required bool selected,
@@ -2110,10 +1572,12 @@ class _RecommendationScreenState
         bottom: 7,
       ),
       child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) =>
-            onTap(),
+        label:
+            Text(label),
+        selected:
+            selected,
+        onSelected:
+            (_) => onTap(),
         labelStyle:
             TextStyle(
           fontSize: 12,
@@ -2146,7 +1610,8 @@ class _RecommendationScreenState
           const EdgeInsets.only(
         bottom: 20,
       ),
-      child: Column(
+      child:
+          Column(
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
@@ -2473,17 +1938,20 @@ class _RecommendationScreenState
       ),
       decoration:
           BoxDecoration(
-        color: Colors.white,
+        color:
+            Colors.white,
         borderRadius:
             BorderRadius.circular(
           17,
         ),
         border:
             Border.all(
-          color: Colors.grey.shade200,
+          color:
+              Colors.grey.shade200,
         ),
       ),
-      child: Row(
+      child:
+          Row(
         children: [
           Icon(
             _userPosition != null
@@ -2491,19 +1959,23 @@ class _RecommendationScreenState
                     .my_location_rounded
                 : Icons
                     .location_off_outlined,
-            size: 20,
+            size:
+                20,
           ),
           const SizedBox(
-            width: 10,
+            width:
+                10,
           ),
           Expanded(
-            child: Text(
+            child:
+                Text(
               _userPosition != null
                   ? 'Konumuna göre sıralanıyor.'
                   : 'Konum olmadan Ankara geneli sıralanıyor.',
               style:
                   const TextStyle(
-                fontSize: 12,
+                fontSize:
+                    12,
                 fontWeight:
                     FontWeight.w700,
               ),
@@ -2519,7 +1991,8 @@ class _RecommendationScreenState
               'KONUM',
               style:
                   TextStyle(
-                fontSize: 10,
+                fontSize:
+                    10,
                 fontWeight:
                     FontWeight.w900,
               ),
@@ -2537,7 +2010,8 @@ class _RecommendationScreenState
 
     return SafeArea(
       top: false,
-      child: Container(
+      child:
+          Container(
         padding:
             const EdgeInsets.fromLTRB(
           16,
@@ -2547,51 +2021,63 @@ class _RecommendationScreenState
         ),
         decoration:
             const BoxDecoration(
-          color: Colors.white,
+          color:
+              Colors.white,
           boxShadow: [
             BoxShadow(
               color:
                   Color(0x16000000),
-              blurRadius: 15,
+              blurRadius:
+                  15,
               offset:
                   Offset(0, -5),
             ),
           ],
         ),
-        child: Row(
+        child:
+            Row(
           children: [
             Expanded(
-              child: Column(
+              child:
+                  Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                    CrossAxisAlignment
+                        .start,
                 children: [
                   Text(
                     '${_queue.length} aktivite seçildi',
                     style:
                         const TextStyle(
-                      fontSize: 13,
+                      fontSize:
+                          13,
                       fontWeight:
-                          FontWeight.w900,
+                          FontWeight
+                              .w900,
                     ),
                   ),
                   const SizedBox(
-                    height: 3,
+                    height:
+                        3,
                   ),
                   const Text(
                     'Seçtiklerini tek rota olarak açabilirsin.',
-                    maxLines: 1,
+                    maxLines:
+                        1,
                     overflow:
-                        TextOverflow.ellipsis,
+                        TextOverflow
+                            .ellipsis,
                     style:
                         TextStyle(
-                      fontSize: 10,
+                      fontSize:
+                          10,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(
-              width: 10,
+              width:
+                  10,
             ),
             FilledButton.icon(
               onPressed:
@@ -2599,20 +2085,24 @@ class _RecommendationScreenState
               icon:
                   const Icon(
                 Icons.route,
-                size: 18,
+                size:
+                    18,
               ),
               label:
                   const Text(
                 'ROTA',
                 style:
                     TextStyle(
-                  fontSize: 10,
+                  fontSize:
+                      10,
                   fontWeight:
-                      FontWeight.w900,
+                      FontWeight
+                          .w900,
                 ),
               ),
               style:
-                  FilledButton.styleFrom(
+                  FilledButton
+                      .styleFrom(
                 backgroundColor:
                     Colors.black,
                 foregroundColor:
@@ -2625,12 +2115,14 @@ class _RecommendationScreenState
                 padding:
                     const EdgeInsets
                         .symmetric(
-                  horizontal: 14,
+                  horizontal:
+                      14,
                 ),
                 shape:
                     RoundedRectangleBorder(
                   borderRadius:
-                      BorderRadius.circular(
+                      BorderRadius
+                          .circular(
                     13,
                   ),
                 ),
@@ -2642,6 +2134,635 @@ class _RecommendationScreenState
     );
   }
 
+  Widget _buildCardImage(
+    _Activity activity,
+  ) {
+    final imageUrl =
+        activity.event?.imageUrl;
+
+    if (imageUrl == null ||
+        imageUrl.trim().isEmpty) {
+      return Container(
+        width:
+            double.infinity,
+        height:
+            155,
+        color:
+            Colors.grey.shade100,
+        child:
+            Icon(
+          activity.type ==
+                  _ActivityType.event
+              ? Icons
+                  .event_outlined
+              : Icons
+                  .place_outlined,
+          size:
+              42,
+          color:
+              Colors.black38,
+        ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      width:
+          double.infinity,
+      height:
+          155,
+      fit:
+          BoxFit.cover,
+      errorBuilder:
+          (_, __, ___) {
+        return Container(
+          width:
+              double.infinity,
+          height:
+              155,
+          color:
+              Colors.grey.shade100,
+          child:
+              Icon(
+            Icons
+                .event_outlined,
+            size:
+                42,
+            color:
+                Colors.black38,
+          ),
+        );
+      },
+      loadingBuilder:
+          (
+        context,
+        child,
+        loadingProgress,
+      ) {
+        if (loadingProgress ==
+            null) {
+          return child;
+        }
+
+        return Container(
+          width:
+              double.infinity,
+          height:
+              155,
+          color:
+              Colors.grey.shade100,
+          child:
+              const Center(
+            child:
+                SizedBox(
+              width:
+                  24,
+              height:
+                  24,
+              child:
+                  CircularProgressIndicator(
+                strokeWidth:
+                    2,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildResultCard(
+    _Activity activity,
+  ) {
+    final queued =
+        _isQueued(activity);
+
+    final isEvent =
+        activity.type ==
+            _ActivityType.event;
+
+    final distance =
+        _distanceFromUser(
+      _activityLatitude(
+        activity,
+      ),
+      _activityLongitude(
+        activity,
+      ),
+    );
+
+    final distanceText =
+        _distanceLabel(
+      distance,
+    );
+
+    final placeName =
+        activity.event?.venueName ??
+            activity.place?.address;
+
+    return Container(
+      margin:
+          const EdgeInsets.only(
+        bottom:
+            16,
+      ),
+      clipBehavior:
+          Clip.antiAlias,
+      decoration:
+          BoxDecoration(
+        color:
+            Colors.white,
+        borderRadius:
+            BorderRadius.circular(
+          22,
+        ),
+        border:
+            Border.all(
+          color:
+              queued
+                  ? Colors.black
+                  : Colors.grey
+                      .shade200,
+          width:
+              queued
+                  ? 1.4
+                  : 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color:
+                Color(0x08000000),
+            blurRadius:
+                14,
+            offset:
+                Offset(0, 5),
+          ),
+        ],
+      ),
+      child:
+          Column(
+        crossAxisAlignment:
+            CrossAxisAlignment
+                .start,
+        children: [
+          Stack(
+            children: [
+              _buildCardImage(
+                activity,
+              ),
+              Positioned(
+                left:
+                    12,
+                top:
+                    12,
+                child:
+                    Container(
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal:
+                        10,
+                    vertical:
+                        7,
+                  ),
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        Colors.black87,
+                    borderRadius:
+                        BorderRadius
+                            .circular(
+                      20,
+                    ),
+                  ),
+                  child:
+                      Text(
+                    isEvent
+                        ? 'ETKİNLİK'
+                        : 'KEŞİF',
+                    style:
+                        const TextStyle(
+                      color:
+                          Colors.white,
+                      fontSize:
+                          9,
+                      fontWeight:
+                          FontWeight
+                              .w900,
+                      letterSpacing:
+                          0.8,
+                    ),
+                  ),
+                ),
+              ),
+              if (queued)
+                Positioned(
+                  right:
+                      12,
+                  top:
+                      12,
+                  child:
+                      Container(
+                    padding:
+                        const EdgeInsets
+                            .symmetric(
+                      horizontal:
+                          10,
+                      vertical:
+                          7,
+                    ),
+                    decoration:
+                        BoxDecoration(
+                      color:
+                          Colors.white,
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        20,
+                      ),
+                    ),
+                    child:
+                        const Row(
+                      mainAxisSize:
+                          MainAxisSize
+                              .min,
+                      children: [
+                        Icon(
+                          Icons.check,
+                          size:
+                              14,
+                        ),
+                        SizedBox(
+                          width:
+                              4,
+                        ),
+                        Text(
+                          'KUYRUKTA',
+                          style:
+                              TextStyle(
+                            fontSize:
+                                9,
+                            fontWeight:
+                                FontWeight
+                                    .w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          Padding(
+            padding:
+                const EdgeInsets
+                    .all(
+              15,
+            ),
+            child:
+                Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
+              children: [
+                Text(
+                  activity.event?.title ??
+                      activity.place?.name ??
+                      '',
+                  maxLines:
+                      2,
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                  style:
+                      const TextStyle(
+                    fontSize:
+                        17,
+                    fontWeight:
+                        FontWeight
+                            .w900,
+                    height:
+                        1.15,
+                  ),
+                ),
+                const SizedBox(
+                  height:
+                      8,
+                ),
+                Wrap(
+                  spacing:
+                      6,
+                  runSpacing:
+                      6,
+                  children: [
+                    _InfoPill(
+                      icon:
+                          isEvent
+                              ? Icons
+                                  .schedule_outlined
+                              : Icons
+                                  .timelapse_outlined,
+                      text:
+                          isEvent
+                              ? _dateLabel(
+                                  activity
+                                      .event!
+                                      .startsAt,
+                                )
+                              : _durationLabel(
+                                  activity
+                                      .durationMinutes,
+                                ),
+                    ),
+                    if (distanceText
+                        .isNotEmpty)
+                      _InfoPill(
+                        icon:
+                            Icons
+                                .near_me_outlined,
+                        text:
+                            distanceText,
+                      ),
+                  ],
+                ),
+                if (isEvent) ...[
+                  const SizedBox(
+                    height:
+                        8,
+                  ),
+                  Wrap(
+                    spacing:
+                        6,
+                    runSpacing:
+                        6,
+                    children: [
+                      if (_priceLabel(
+                        activity.event!,
+                      ).isNotEmpty)
+                        _InfoPill(
+                          icon:
+                              Icons
+                                  .payments_outlined,
+                          text:
+                              _priceLabel(
+                            activity
+                                .event!,
+                          ),
+                        ),
+                      if (activity
+                          .event!
+                          .category
+                          .trim()
+                          .isNotEmpty)
+                        _InfoPill(
+                          icon:
+                              Icons
+                                  .category_outlined,
+                          text:
+                              activity
+                                  .event!
+                                  .category,
+                        ),
+                    ],
+                  ),
+                ] else if (activity.place != null) ...[
+                  const SizedBox(
+                    height:
+                        8,
+                  ),
+                  Wrap(
+                    spacing:
+                        6,
+                    runSpacing:
+                        6,
+                    children: [
+                      if (activity
+                              .place!
+                              .isFree ==
+                          true)
+                        const _InfoPill(
+                          icon:
+                              Icons
+                                  .local_offer_outlined,
+                          text:
+                              'Ücretsiz',
+                        ),
+                      if (activity
+                          .place!
+                          .category
+                          .trim()
+                          .isNotEmpty)
+                        _InfoPill(
+                          icon:
+                              Icons
+                                  .category_outlined,
+                          text:
+                              activity
+                                  .place!
+                                  .category,
+                        ),
+                    ],
+                  ),
+                ],
+                if (placeName !=
+                        null &&
+                    placeName
+                        .trim()
+                        .isNotEmpty) ...[
+                  const SizedBox(
+                    height:
+                        9,
+                  ),
+                  Text(
+                    placeName,
+                    maxLines:
+                        2,
+                    overflow:
+                        TextOverflow
+                            .ellipsis,
+                    style:
+                        TextStyle(
+                      fontSize:
+                          11,
+                      color:
+                          Colors
+                              .grey
+                              .shade600,
+                    ),
+                  ),
+                ],
+                const SizedBox(
+                  height:
+                      14,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child:
+                          OutlinedButton(
+                        onPressed:
+                            () =>
+                                _toggleQueue(
+                          activity,
+                        ),
+                        style:
+                            OutlinedButton
+                                .styleFrom(
+                          foregroundColor:
+                              Colors.black,
+                          minimumSize:
+                              const Size(
+                            0,
+                            44,
+                          ),
+                          side:
+                              BorderSide(
+                            color:
+                                queued
+                                    ? Colors.black
+                                    : Colors.grey
+                                        .shade300,
+                          ),
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              13,
+                            ),
+                          ),
+                        ),
+                        child:
+                            Text(
+                          queued
+                              ? 'Kuyruktan çıkar'
+                              : 'Kuyruğa ekle',
+                          style:
+                              const TextStyle(
+                            fontSize:
+                                11,
+                            fontWeight:
+                                FontWeight
+                                    .w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      width:
+                          8,
+                    ),
+                    Expanded(
+                      child:
+                          isEvent &&
+                                  activity
+                                          .event!
+                                          .ticketUrl !=
+                                      null &&
+                                  activity
+                                      .event!
+                                      .ticketUrl!
+                                      .trim()
+                                      .isNotEmpty
+                              ? FilledButton.icon(
+                                  onPressed:
+                                      () =>
+                                          _openTicket(
+                                    activity
+                                        .event!,
+                                  ),
+                                  icon:
+                                      const Icon(
+                                    Icons
+                                        .confirmation_number_outlined,
+                                    size:
+                                        17,
+                                  ),
+                                  label:
+                                      const Text(
+                                    'BİLET AL',
+                                    style:
+                                        TextStyle(
+                                      fontSize:
+                                          10,
+                                      fontWeight:
+                                          FontWeight
+                                              .w900,
+                                    ),
+                                  ),
+                                  style:
+                                      FilledButton
+                                          .styleFrom(
+                                    backgroundColor:
+                                        Colors.black,
+                                    foregroundColor:
+                                        Colors.white,
+                                    minimumSize:
+                                        const Size(
+                                      0,
+                                      44,
+                                    ),
+                                    shape:
+                                        RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius
+                                              .circular(
+                                        13,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : FilledButton(
+                                  onPressed:
+                                      () =>
+                                          _openActivity(
+                                    activity,
+                                  ),
+                                  style:
+                                      FilledButton
+                                          .styleFrom(
+                                    backgroundColor:
+                                        Colors.black,
+                                    foregroundColor:
+                                        Colors.white,
+                                    minimumSize:
+                                        const Size(
+                                      0,
+                                      44,
+                                    ),
+                                    shape:
+                                        RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius
+                                              .circular(
+                                        13,
+                                      ),
+                                    ),
+                                  ),
+                                  child:
+                                      const Text(
+                                    'DETAY',
+                                    style:
+                                        TextStyle(
+                                      fontSize:
+                                          10,
+                                      fontWeight:
+                                          FontWeight
+                                              .w900,
+                                    ),
+                                  ),
+                                ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -2649,12 +2770,14 @@ class _RecommendationScreenState
     return Scaffold(
       backgroundColor:
           const Color(0xFFF7F7F5),
-      appBar: AppBar(
+      appBar:
+          AppBar(
         backgroundColor:
             const Color(0xFFF7F7F5),
         surfaceTintColor:
             Colors.transparent,
-        elevation: 0,
+        elevation:
+            0,
         title:
             const Text(
           'Bugün ne yapayım?',
@@ -2667,157 +2790,175 @@ class _RecommendationScreenState
       ),
       bottomNavigationBar:
           _buildQueueBar(),
-      body: _loading
-          ? const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
-          : SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets
-                        .fromLTRB(
-                  20,
-                  8,
-                  20,
-                  10,
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child:
-                          ListView(
-                        padding:
-                            const EdgeInsets
-                                .only(
-                          bottom: 95,
-                        ),
-                        children: [
-                          const Text(
-                            'Bugünü sana göre\nbirlikte planlayalım.',
-                            style:
-                                TextStyle(
-                              fontSize: 29,
-                              fontWeight:
-                                  FontWeight.w900,
-                              height: 1.06,
-                              letterSpacing:
-                                  -0.8,
+      body:
+          _loading
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(),
+                )
+              : SafeArea(
+                  child:
+                      Padding(
+                    padding:
+                        const EdgeInsets
+                            .fromLTRB(
+                      20,
+                      8,
+                      20,
+                      10,
+                    ),
+                    child:
+                        Column(
+                      children: [
+                        Expanded(
+                          child:
+                              ListView(
+                            padding:
+                                const EdgeInsets
+                                    .only(
+                              bottom:
+                                  95,
                             ),
-                          ),
-                          const SizedBox(
-                            height: 20,
-                          ),
-                          _buildLocationStatus(),
-                          _buildFilterChips(),
-                          if (_error != null)
-                            Container(
-                              margin:
-                                  const EdgeInsets
-                                      .only(
-                                bottom: 16,
-                              ),
-                              padding:
-                                  const EdgeInsets
-                                      .all(
-                                15,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    Colors.white,
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  18,
+                            children: [
+                              const Text(
+                                'Bugünü sana göre\nbirlikte planlayalım.',
+                                style:
+                                    TextStyle(
+                                  fontSize:
+                                      29,
+                                  fontWeight:
+                                      FontWeight
+                                          .w900,
+                                  height:
+                                      1.06,
+                                  letterSpacing:
+                                      -0.8,
                                 ),
                               ),
-                              child:
-                                  Text(
-                                _error!,
+                              const SizedBox(
+                                height:
+                                    20,
                               ),
-                            ),
-                          if (_results.isNotEmpty)
-                            const Text(
-                              'ÖNERİLER',
-                              style:
-                                  TextStyle(
-                                fontSize: 11,
-                                fontWeight:
-                                    FontWeight.w900,
-                                letterSpacing:
-                                    1,
-                                color:
-                                    Colors.black54,
-                              ),
-                            ),
-                          if (_results.isNotEmpty)
-                            const SizedBox(
-                              height: 10,
-                            ),
-                          if (_results.isNotEmpty)
-                            ..._results.map(
-                              _buildResultCard,
-                            ),
-                          if (_hasSearched &&
-                              _results.isEmpty &&
-                              _error == null)
-                            Container(
-                              margin:
-                                  const EdgeInsets
-                                      .only(
-                                top: 10,
-                              ),
-                              padding:
-                                  const EdgeInsets
-                                      .all(
-                                22,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    Colors.white,
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  20,
-                                ),
-                              ),
-                              child:
-                                  const Column(
-                                children: [
-                                  Icon(
-                                    Icons
-                                        .search_off_rounded,
-                                    size:
-                                        42,
+                              _buildLocationStatus(),
+                              _buildFilterChips(),
+                              if (_error !=
+                                  null)
+                                Container(
+                                  margin:
+                                      const EdgeInsets
+                                          .only(
+                                    bottom:
+                                        16,
                                   ),
-                                  SizedBox(
-                                    height:
-                                        10,
+                                  padding:
+                                      const EdgeInsets
+                                          .all(
+                                    15,
                                   ),
-                                  Text(
-                                    'Bu kriterlere uygun sonuç bulamadım.',
-                                    textAlign:
-                                        TextAlign
-                                            .center,
-                                    style:
-                                        TextStyle(
-                                      fontWeight:
-                                          FontWeight
-                                              .w800,
+                                  decoration:
+                                      BoxDecoration(
+                                    color:
+                                        Colors.white,
+                                    borderRadius:
+                                        BorderRadius
+                                            .circular(
+                                      18,
                                     ),
                                   ),
-                                ],
+                                  child:
+                                      Text(
+                                    _error!,
+                                  ),
+                                ),
+                              if (_results
+                                  .isNotEmpty)
+                                const Text(
+                                  'ÖNERİLER',
+                                  style:
+                                      TextStyle(
+                                    fontSize:
+                                        11,
+                                    fontWeight:
+                                        FontWeight
+                                            .w900,
+                                    letterSpacing:
+                                        1,
+                                    color:
+                                        Colors
+                                            .black54,
+                                  ),
+                                ),
+                              if (_results
+                                  .isNotEmpty)
+                                const SizedBox(
+                                  height:
+                                      10,
+                                ),
+                              ..._results.map(
+                                _buildResultCard,
                               ),
-                            ),
-                        ],
-                      ),
+                              if (_hasSearched &&
+                                  _results
+                                      .isEmpty &&
+                                  _error ==
+                                      null)
+                                Container(
+                                  margin:
+                                      const EdgeInsets
+                                          .only(
+                                    top:
+                                        10,
+                                  ),
+                                  padding:
+                                      const EdgeInsets
+                                          .all(
+                                    22,
+                                  ),
+                                  decoration:
+                                      BoxDecoration(
+                                    color:
+                                        Colors.white,
+                                    borderRadius:
+                                        BorderRadius
+                                            .circular(
+                                      20,
+                                    ),
+                                  ),
+                                  child:
+                                      const Column(
+                                    children: [
+                                      Icon(
+                                        Icons
+                                            .search_off_rounded,
+                                        size:
+                                            42,
+                                      ),
+                                      SizedBox(
+                                        height:
+                                            10,
+                                      ),
+                                      Text(
+                                        'Bu kriterlere uygun sonuç bulamadım.',
+                                        textAlign:
+                                            TextAlign
+                                                .center,
+                                        style:
+                                            TextStyle(
+                                          fontWeight:
+                                              FontWeight
+                                                  .w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
       floatingActionButton:
           _buildRecommendationButton(),
       floatingActionButtonLocation:
@@ -2828,17 +2969,23 @@ class _RecommendationScreenState
 
   Widget _buildRecommendationButton() {
     return SafeArea(
-      child: Padding(
+      child:
+          Padding(
         padding:
             const EdgeInsets
                 .symmetric(
-          horizontal: 20,
+          horizontal:
+              20,
         ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 53,
+        child:
+            SizedBox(
+          width:
+              double.infinity,
+          height:
+              53,
           child:
-              FilledButton.icon(
+              FilledButton
+                  .icon(
             onPressed:
                 _generateRecommendations,
             icon:
@@ -2851,11 +2998,13 @@ class _RecommendationScreenState
               style:
                   TextStyle(
                 fontWeight:
-                    FontWeight.w900,
+                    FontWeight
+                        .w900,
               ),
             ),
             style:
-                FilledButton.styleFrom(
+                FilledButton
+                    .styleFrom(
               backgroundColor:
                   Colors.black,
               foregroundColor:
@@ -2863,7 +3012,8 @@ class _RecommendationScreenState
               shape:
                   RoundedRectangleBorder(
                 borderRadius:
-                    BorderRadius.circular(
+                    BorderRadius
+                        .circular(
                   17,
                 ),
               ),
@@ -2911,40 +3061,51 @@ class _InfoPill
       padding:
           const EdgeInsets
               .symmetric(
-        horizontal: 9,
-        vertical: 6,
+        horizontal:
+            9,
+        vertical:
+            6,
       ),
       decoration:
           BoxDecoration(
         color:
-            const Color(0xFFF4F4F2),
+            const Color(
+          0xFFF4F4F2,
+        ),
         borderRadius:
             BorderRadius.circular(
           20,
         ),
       ),
-      child: Row(
+      child:
+          Row(
         mainAxisSize:
             MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 13,
+            size:
+                13,
             color:
                 Colors.black54,
           ),
           const SizedBox(
-            width: 4,
+            width:
+                4,
           ),
           Flexible(
-            child: Text(
+            child:
+                Text(
               text,
-              maxLines: 1,
+              maxLines:
+                  1,
               overflow:
-                  TextOverflow.ellipsis,
+                  TextOverflow
+                      .ellipsis,
               style:
                   const TextStyle(
-                fontSize: 10,
+                fontSize:
+                    10,
                 fontWeight:
                     FontWeight.w700,
               ),
