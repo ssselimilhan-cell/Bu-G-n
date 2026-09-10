@@ -10,21 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Sync Ankara events
+      - name: Ticketmaster verilerini çek ve Supabase'e aktar
         env:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        shell: bash
         run: |
           set -euo pipefail
 
           echo "Ticketmaster → Supabase senkronizasyonu başlıyor..."
 
-          NOW_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          if [ -z "${TICKETMASTER_API_KEY}" ]; then
+            echo "HATA: TICKETMASTER_API_KEY secret bulunamadı."
+            exit 1
+          fi
 
-          curl -sS --fail-with-body \
-            --get \
-            "https://app.ticketmaster.com/discovery/v2/events.json" \
+          if [ -z "${SUPABASE_URL}" ]; then
+            echo "HATA: SUPABASE_URL secret bulunamadı."
+            exit 1
+          fi
+
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "HATA: SUPABASE_SERVICE_ROLE_KEY secret bulunamadı."
+            exit 1
+          fi
+
+          NOW_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          echo "Ticketmaster'dan Ankara etkinlikleri alınıyor..."
+
+          curl --silent --show-error --fail-with-body \
+            --get "https://app.ticketmaster.com/discovery/v2/events.json" \
             --data-urlencode "apikey=${TICKETMASTER_API_KEY}" \
             --data-urlencode "locale=*" \
             --data-urlencode "city=ankara" \
@@ -32,97 +49,163 @@ jobs:
             --data-urlencode "startDateTime=${NOW_UTC}" \
             --data-urlencode "size=200" \
             --data-urlencode "sort=date,asc" \
-            -o ticketmaster.json
+            --output ticketmaster.json
 
-          echo "Ticketmaster cevabı alındı."
+          echo "Ticketmaster API cevabı alındı."
 
-          EVENT_COUNT=$(jq '._embedded.events // [] | length' ticketmaster.json)
+          EVENT_COUNT="$(jq '._embedded.events // [] | length' ticketmaster.json)"
 
-          echo "Ticketmaster'dan gelen etkinlik sayısı: ${EVENT_COUNT}"
+          echo "Ticketmaster'dan gelen kayıt sayısı: ${EVENT_COUNT}"
 
           if [ "${EVENT_COUNT}" -eq 0 ]; then
             echo "Ankara için etkinlik bulunamadı."
             exit 0
           fi
 
-          jq -c '
-            (._embedded.events // [])
-            | map(
-                {
+          echo "Etkinlik kayıtları hazırlanıyor..."
+
+          jq --arg syncedAt "${NOW_UTC}" '
+            [
+              (._embedded.events // [])[]
+              | select(.id != null)
+              | select(.name != null)
+              | select(.dates.start.dateTime != null)
+              | {
                   external_id: .id,
                   external_source: "ticketmaster",
+
                   title: .name,
+
                   description: (
-                    if (.description // "") != ""
-                    then .description
-                    else null
-                    end
+                    .description
+                    // .pleaseNote
+                    // null
                   ),
+
                   category: (
                     .classifications[0].segment.name
                     // "Etkinlik"
                   ),
+
                   subcategory: (
                     .classifications[0].genre.name
                     // null
                   ),
+
                   city: "Ankara",
+
                   starts_at: .dates.start.dateTime,
+
                   ends_at: (
                     .dates.end.dateTime
                     // null
                   ),
+
                   price_min: (
                     .priceRanges[0].min
                     // null
                   ),
+
                   price_max: (
                     .priceRanges[0].max
                     // null
                   ),
-                  ticket_url: (.url // null),
-                  source_url: (.url // null),
+
+                  ticket_url: (
+                    .url
+                    // null
+                  ),
+
+                  source_url: (
+                    .url
+                    // null
+                  ),
+
                   image_url: (
-                    .images[0].url
-                    // null
-                  ),
-                  venue_name: (
-                    ._embedded.venues[0].name
-                    // null
-                  ),
-                  venue_address: (
                     (
-                      ._embedded.venues[0].address.line1
-                      // ""
-                    )
-                    + (
-                      if (. _embedded.venues[0].postalCode // "") != ""
-                      then
-                        ", " + ._embedded.venues[0].postalCode
-                      else
-                        ""
-                      end
-                    )
+                      .images
+                      // []
+                    )[0].url
+                    // null
                   ),
+
+                  venue_name: (
+                    (
+                      ._embedded.venues
+                      // []
+                    )[0].name
+                    // null
+                  ),
+
+                  venue_address: (
+                    [
+                      (
+                        (
+                          ._embedded.venues
+                          // []
+                        )[0].address.line1
+                        // null
+                      ),
+                      (
+                        (
+                          ._embedded.venues
+                          // []
+                        )[0].postalCode
+                        // null
+                      ),
+                      (
+                        (
+                          ._embedded.venues
+                          // []
+                        )[0].city.name
+                        // null
+                      )
+                    ]
+                    | map(select(. != null and . != ""))
+                    | join(", ")
+                  ),
+
                   trust_score: 95,
                   popularity_score: 0,
                   recommendation_score: 0,
+
                   is_active: true,
-                  last_synced_at: "'"${NOW_UTC}"'"
+
+                  last_synced_at: $syncedAt
                 }
-              )
+            ]
           ' ticketmaster.json > ticketmaster_events.json
 
-          echo "Supabase'e aktarım başlıyor..."
+          PREPARED_COUNT="$(jq 'length' ticketmaster_events.json)"
 
-          RESPONSE=$(curl -sS --fail-with-body \
-            -X POST \
-            "${SUPABASE_URL}/rest/v1/events?on_conflict=external_source,external_id" \
-            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: resolution=merge-duplicates,return=minimal" \
-            --data-binary @ticketmaster_events.json)
+          echo "Supabase'e aktarılacak kayıt sayısı: ${PREPARED_COUNT}"
 
-          echo "Supabase aktarımı tamamlandı."
-          echo "${RESPONSE}"
+          if [ "${PREPARED_COUNT}" -eq 0 ]; then
+            echo "Aktarılabilir etkinlik bulunamadı."
+            exit 0
+          fi
+
+          echo "Supabase'e upsert işlemi başlıyor..."
+
+          HTTP_STATUS="$(
+            curl --silent --show-error \
+              --output supabase_response.json \
+              --write-out "%{http_code}" \
+              --request POST \
+              "${SUPABASE_URL}/rest/v1/events?on_conflict=external_source,external_id" \
+              --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              --header "Content-Type: application/json" \
+              --header "Prefer: resolution=merge-duplicates,return=minimal" \
+              --data-binary @ticketmaster_events.json
+          )"
+
+          if [ "${HTTP_STATUS}" -lt 200 ] || [ "${HTTP_STATUS}" -ge 300 ]; then
+            echo "HATA: Supabase HTTP durum kodu: ${HTTP_STATUS}"
+            cat supabase_response.json
+            exit 1
+          fi
+
+          echo "Supabase aktarımı başarılı. HTTP ${HTTP_STATUS}"
+
+          echo "Ticketmaster senkronizasyonu tamamlandı."
