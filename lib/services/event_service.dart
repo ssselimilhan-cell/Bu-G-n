@@ -13,6 +13,7 @@ class EventService {
     final now = DateTime.now();
 
     final start = now;
+
     final end = DateTime(
       now.year,
       now.month,
@@ -45,16 +46,23 @@ class EventService {
       now.month,
       now.day,
     ).subtract(
-      Duration(days: dayFromMonday),
+      Duration(
+        days: dayFromMonday,
+      ),
     );
 
     final nextMonday = monday.add(
-      const Duration(days: 7),
+      const Duration(
+        days: 7,
+      ),
     );
 
     final start = now;
+
     final end = nextMonday.subtract(
-      const Duration(milliseconds: 1),
+      const Duration(
+        milliseconds: 1,
+      ),
     );
 
     return _getEvents(
@@ -84,8 +92,11 @@ class EventService {
           );
 
     final start = now;
+
     final end = nextMonth.subtract(
-      const Duration(milliseconds: 1),
+      const Duration(
+        milliseconds: 1,
+      ),
     );
 
     return _getEvents(
@@ -104,7 +115,9 @@ class EventService {
     final now = DateTime.now();
 
     final end = now.add(
-      Duration(days: days),
+      Duration(
+        days: days,
+      ),
     );
 
     return _getEvents(
@@ -141,11 +154,16 @@ class EventService {
           ticket_url,
           venue_name,
           venue_address,
+          latitude,
+          longitude,
           trust_score,
           recommendation_score,
           is_active
         ''')
-        .inFilter('id', idList)
+        .inFilter(
+          'id',
+          idList,
+        )
         .order(
           'starts_at',
           ascending: true,
@@ -154,6 +172,12 @@ class EventService {
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Event.fromMap)
+        .where(
+          (event) =>
+              event.startsAt.isAfter(
+            DateTime.now(),
+          ),
+        )
         .toList();
   }
 
@@ -180,12 +204,20 @@ class EventService {
           ticket_url,
           venue_name,
           venue_address,
+          latitude,
+          longitude,
           trust_score,
           recommendation_score,
           is_active
         ''')
-        .eq('city', city)
-        .eq('is_active', true)
+        .eq(
+          'city',
+          city,
+        )
+        .eq(
+          'is_active',
+          true,
+        )
         .gte(
           'starts_at',
           start.toIso8601String(),
@@ -210,8 +242,8 @@ class EventService {
         .where(
           (event) =>
               event.startsAt.isAfter(
-                DateTime.now(),
-              ),
+            DateTime.now(),
+          ),
         )
         .toList();
   }

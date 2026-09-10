@@ -16,6 +16,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         shell: bash
+
         run: |
           set -euo pipefail
 
@@ -70,6 +71,7 @@ jobs:
               | select(.id != null)
               | select(.name != null)
               | select(.dates.start.dateTime != null)
+
               | {
                   external_id: .id,
                   external_source: "ticketmaster",
@@ -161,12 +163,35 @@ jobs:
                         // null
                       )
                     ]
-                    | map(select(. != null and . != ""))
+                    | map(
+                        select(
+                          . != null
+                          and . != ""
+                        )
+                      )
                     | join(", ")
                   ),
 
+                  latitude: (
+                    (
+                      ._embedded.venues
+                      // []
+                    )[0].location.latitude
+                    // null
+                  ),
+
+                  longitude: (
+                    (
+                      ._embedded.venues
+                      // []
+                    )[0].location.longitude
+                    // null
+                  ),
+
                   trust_score: 95,
+
                   popularity_score: 0,
+
                   recommendation_score: 0,
 
                   is_active: true,
