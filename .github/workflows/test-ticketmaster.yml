@@ -1,0 +1,37 @@
+name: Test Ticketmaster API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ticketmaster:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ticketmaster API test
+        env:
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+        run: |
+          set -e
+
+          echo "Ticketmaster API test başlıyor..."
+
+          curl -sS --fail-with-body \
+            --get "https://app.ticketmaster.com/discovery/v2/events.json" \
+            --data-urlencode "apikey=${TICKETMASTER_API_KEY}" \
+            --data-urlencode "city=ankara" \
+            --data-urlencode "countryCode=TR" \
+            --data-urlencode "locale=*" \
+            --data-urlencode "size=20" \
+            -o ticketmaster.json
+
+          echo "API cevabı alındı."
+
+          if jq -e '._embedded.events' ticketmaster.json > /dev/null 2>&1; then
+            TOTAL=$(jq '._embedded.events | length' ticketmaster.json)
+            echo "Gelen etkinlik sayısı: ${TOTAL}"
+          else
+            echo "Etkinlik listesi bulunamadı."
+            cat ticketmaster.json
+            exit 1
+          fi
