@@ -47,6 +47,14 @@ enum _ActivityType {
   place,
 }
 
+enum _DateScope {
+  today,
+  tomorrow,
+  week,
+  month,
+  selected,
+}
+
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({
     super.key,
@@ -59,11 +67,8 @@ class RecommendationScreen extends StatefulWidget {
 
 class _RecommendationScreenState
     extends State<RecommendationScreen> {
-  final EventService _eventService =
-      EventService();
-
-  final PlaceService _placeService =
-      PlaceService();
+  final EventService _eventService = EventService();
+  final PlaceService _placeService = PlaceService();
 
   Set<CompanionType> _companions = {
     CompanionType.any,
@@ -87,13 +92,14 @@ class _RecommendationScreenState
   bool _locationLoading = false;
   bool _hasSearched = false;
 
+  _DateScope _dateScope = _DateScope.today;
+  DateTime? _selectedDate;
+
   String? _error;
 
-  List<_Activity> _results =
-      <_Activity>[];
+  List<_Activity> _results = <_Activity>[];
 
-  final List<_Activity> _queue =
-      <_Activity>[];
+  final List<_Activity> _queue = <_Activity>[];
 
   @override
   void initState() {
@@ -103,8 +109,7 @@ class _RecommendationScreenState
 
   Future<void> _tryGetLocationSilently() async {
     try {
-      final position =
-          await _getLocation(
+      final position = await _getLocation(
         requestPermission: false,
       );
 
@@ -124,41 +129,32 @@ class _RecommendationScreenState
     required bool requestPermission,
   }) async {
     final enabled =
-        await Geolocator
-            .isLocationServiceEnabled();
+        await Geolocator.isLocationServiceEnabled();
 
     if (!enabled) {
       return null;
     }
 
     var permission =
-        await Geolocator
-            .checkPermission();
+        await Geolocator.checkPermission();
 
-    if (permission ==
-        LocationPermission.denied) {
+    if (permission == LocationPermission.denied) {
       if (!requestPermission) {
         return null;
       }
 
       permission =
-          await Geolocator
-              .requestPermission();
+          await Geolocator.requestPermission();
     }
 
-    if (permission ==
-            LocationPermission.denied ||
-        permission ==
-            LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       return null;
     }
 
-    return Geolocator
-        .getCurrentPosition(
-      locationSettings:
-          const LocationSettings(
-        accuracy:
-            LocationAccuracy.medium,
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
       ),
     );
   }
@@ -173,8 +169,7 @@ class _RecommendationScreenState
     });
 
     try {
-      final position =
-          await _getLocation(
+      final position = await _getLocation(
         requestPermission: true,
       );
 
@@ -197,124 +192,184 @@ class _RecommendationScreenState
     }
   }
 
-  void _toggleCompanion(
-    CompanionType value,
+  Set<T> _toggleSelection<T>(
+    Set<T> current,
+    T value,
+    T any,
   ) {
-    setState(() {
-      if (value ==
-          CompanionType.any) {
-        _companions = {
-          CompanionType.any,
-        };
-        return;
-      }
+    if (value == any) {
+      return {any};
+    }
 
-      _companions.remove(
+    final next = {...current}..remove(any);
+
+    if (!next.add(value)) {
+      next.remove(value);
+    }
+
+    return next.isEmpty ? {any} : next;
+  }
+
+  void _toggleCompanion(CompanionType value) {
+    setState(() {
+      _companions = _toggleSelection(
+        _companions,
+        value,
         CompanionType.any,
       );
-
-      if (_companions.contains(value)) {
-        _companions.remove(value);
-      } else {
-        _companions.add(value);
-      }
-
-      if (_companions.isEmpty) {
-        _companions = {
-          CompanionType.any,
-        };
-      }
     });
   }
 
-  void _toggleBudget(
-    BudgetType value,
-  ) {
+  void _toggleBudget(BudgetType value) {
     setState(() {
-      if (value ==
-          BudgetType.any) {
-        _budgets = {
-          BudgetType.any,
-        };
-        return;
-      }
-
-      _budgets.remove(
+      _budgets = _toggleSelection(
+        _budgets,
+        value,
         BudgetType.any,
       );
-
-      if (_budgets.contains(value)) {
-        _budgets.remove(value);
-      } else {
-        _budgets.add(value);
-      }
-
-      if (_budgets.isEmpty) {
-        _budgets = {
-          BudgetType.any,
-        };
-      }
     });
   }
 
-  void _toggleDuration(
-    DurationType value,
-  ) {
+  void _toggleDuration(DurationType value) {
     setState(() {
-      if (value ==
-          DurationType.any) {
-        _durations = {
-          DurationType.any,
-        };
-        return;
-      }
-
-      _durations.remove(
+      _durations = _toggleSelection(
+        _durations,
+        value,
         DurationType.any,
       );
-
-      if (_durations.contains(value)) {
-        _durations.remove(value);
-      } else {
-        _durations.add(value);
-      }
-
-      if (_durations.isEmpty) {
-        _durations = {
-          DurationType.any,
-        };
-      }
     });
   }
 
-  void _toggleInterest(
-    InterestType value,
-  ) {
+  void _toggleInterest(InterestType value) {
     setState(() {
-      if (value ==
-          InterestType.any) {
-        _interests = {
-          InterestType.any,
-        };
+      _interests = _toggleSelection(
+        _interests,
+        value,
+        InterestType.any,
+      );
+    });
+  }
+
+  bool _sameDay(DateTime a, DateTime b) {
+    return a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day;
+  }
+
+  bool _eventMatchesDateScope(Event event) {
+    final date = event.startsAt.toLocal();
+    final now = DateTime.now();
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final eventDay = DateTime(
+      date.year,
+      date.month,
+      date.day,
+    );
+
+    switch (_dateScope) {
+      case _DateScope.today:
+        return _sameDay(eventDay, today);
+
+      case _DateScope.tomorrow:
+        return _sameDay(
+          eventDay,
+          today.add(
+            const Duration(days: 1),
+          ),
+        );
+
+      case _DateScope.week:
+        final daysUntilSunday =
+            DateTime.sunday - today.weekday;
+
+        final lastDay = today.add(
+          Duration(days: daysUntilSunday),
+        );
+
+        return !eventDay.isBefore(today) &&
+            !eventDay.isAfter(lastDay);
+
+      case _DateScope.month:
+        return date.year == now.year &&
+            date.month == now.month &&
+            !eventDay.isBefore(today);
+
+      case _DateScope.selected:
+        return _selectedDate != null &&
+            _sameDay(
+              eventDay,
+              _selectedDate!,
+            );
+    }
+  }
+
+  int get _eventFetchDays {
+    if (_dateScope != _DateScope.selected ||
+        _selectedDate == null) {
+      return 31;
+    }
+
+    final now = DateTime.now();
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final target = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+    );
+
+    return target.difference(today).inDays + 1;
+  }
+
+  Future<void> _selectDateScope(
+    _DateScope scope,
+  ) async {
+    if (scope == _DateScope.selected) {
+      final now = DateTime.now();
+
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: _selectedDate ?? now,
+        firstDate: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ),
+        lastDate: DateTime(
+          now.year + 1,
+          now.month,
+          now.day,
+        ),
+        helpText:
+            'Program yapmak istediğin tarihi seç',
+      );
+
+      if (picked == null || !mounted) {
         return;
       }
 
-      _interests.remove(
-        InterestType.any,
-      );
+      setState(() {
+        _selectedDate = picked;
+        _dateScope = _DateScope.selected;
+      });
+    } else {
+      setState(() {
+        _dateScope = scope;
+      });
+    }
 
-      if (_interests.contains(value)) {
-        _interests.remove(value);
-      } else {
-        _interests.add(value);
-      }
-
-      if (_interests.isEmpty) {
-        _interests = {
-          InterestType.any,
-        };
-      }
-    });
+    await _generateRecommendations();
   }
 
   Future<void> _generateRecommendations() async {
@@ -328,69 +383,55 @@ class _RecommendationScreenState
     await _refreshLocation();
 
     try {
-      final response =
-          await Future.wait<Object>([
-        _eventService
-            .getUpcomingEvents(
+      final response = await Future.wait<Object>([
+        _eventService.getUpcomingEvents(
           city: 'Ankara',
-          days: 31,
+          days: _eventFetchDays,
           limit: 200,
         ),
-        _placeService.getPlaces(
-          city: 'Ankara',
-          limit: 100,
-        ),
+        if (_dateScope == _DateScope.today)
+          _placeService.getPlaces(
+            city: 'Ankara',
+            limit: 100,
+          ),
       ]);
 
-      final events =
-          response[0] as List<Event>;
-
-      final places =
-          response[1] as List<Place>;
-
-      final activities =
-          <_Activity>[];
+      final events = response[0] as List<Event>;
+      final activities = <_Activity>[];
 
       for (final event in events) {
-        final item =
-            _makeEventActivity(
-          event,
-        );
+        if (!_eventMatchesDateScope(event)) {
+          continue;
+        }
+
+        final item = _makeEventActivity(event);
 
         if (item != null) {
           activities.add(item);
         }
       }
 
-      for (final place in places) {
-        final item =
-            _makePlaceActivity(
-          place,
-        );
+      if (_dateScope == _DateScope.today) {
+        final places = response[1] as List<Place>;
 
-        if (item != null) {
-          activities.add(item);
+        for (final place in places) {
+          final item = _makePlaceActivity(place);
+
+          if (item != null) {
+            activities.add(item);
+          }
         }
       }
 
       activities.sort(
-        (a, b) =>
-            b.score.compareTo(
-          a.score,
-        ),
+        (a, b) => b.score.compareTo(a.score),
       );
 
-      final unique =
-          <String>{};
+      final unique = <String>{};
+      final filtered = <_Activity>[];
 
-      final filtered =
-          <_Activity>[];
-
-      for (final activity
-          in activities) {
-        if (!unique.add(
-          activity.id,
-        )) {
+      for (final activity in activities) {
+        if (!unique.add(activity.id)) {
           continue;
         }
 
@@ -425,17 +466,7 @@ class _RecommendationScreenState
   _Activity? _makeEventActivity(
     Event event,
   ) {
-    final start =
-        event.startsAt.toLocal();
-
-    if (!start.isAfter(
-      DateTime.now(),
-    )) {
-      return null;
-    }
-
-    final score =
-        _scoreEvent(event);
+    final score = _scoreEvent(event);
 
     if (score <= 0) {
       return null;
@@ -445,8 +476,7 @@ class _RecommendationScreenState
       type: _ActivityType.event,
       id: event.id,
       score: score,
-      durationMinutes:
-          _eventDuration(event),
+      durationMinutes: _eventDuration(event),
       event: event,
       place: null,
     );
@@ -455,8 +485,7 @@ class _RecommendationScreenState
   _Activity? _makePlaceActivity(
     Place place,
   ) {
-    final score =
-        _scorePlace(place);
+    final score = _scorePlace(place);
 
     if (score <= 0) {
       return null;
@@ -466,46 +495,31 @@ class _RecommendationScreenState
       type: _ActivityType.place,
       id: place.id,
       score: score,
-      durationMinutes:
-          _placeDuration(place),
+      durationMinutes: _placeDuration(place),
       event: null,
       place: place,
     );
   }
 
-  int _placeDuration(
-    Place place,
-  ) {
-    final value =
-        place.visitDurationMin;
+  int _placeDuration(Place place) {
+    final value = place.visitDurationMin;
 
-    if (value == null ||
-        value <= 0) {
+    if (value == null || value <= 0) {
       return 120;
     }
 
-    return value.clamp(
-      30,
-      600,
-    );
+    return value.clamp(30, 600);
   }
 
-  int _eventDuration(
-    Event event,
-  ) {
-    final start =
-        event.startsAt.toLocal();
+  int _eventDuration(Event event) {
+    final start = event.startsAt.toLocal();
+    final end = event.endsAt?.toLocal();
 
-    final end =
-        event.endsAt?.toLocal();
-
-    if (end != null &&
-        end.isAfter(start)) {
+    if (end != null && end.isAfter(start)) {
       final minutes =
           end.difference(start).inMinutes;
 
-      if (minutes >= 20 &&
-          minutes <= 600) {
+      if (minutes >= 20 && minutes <= 600) {
         return minutes;
       }
     }
@@ -513,9 +527,7 @@ class _RecommendationScreenState
     return 120;
   }
 
-  double _scoreEvent(
-    Event event,
-  ) {
+  double _scoreEvent(Event event) {
     if (!_matchesInterestForEvent(event)) {
       return 0;
     }
@@ -532,19 +544,14 @@ class _RecommendationScreenState
 
     double score = 50;
 
-    final text =
-        _eventText(event);
+    final text = _eventText(event);
 
-    if (_interests.contains(
-      InterestType.any,
-    )) {
+    if (_interests.contains(InterestType.any)) {
       score += 10;
     }
 
-    for (final interest
-        in _interests) {
-      if (interest ==
-          InterestType.any) {
+    for (final interest in _interests) {
+      if (interest == InterestType.any) {
         continue;
       }
 
@@ -556,13 +563,10 @@ class _RecommendationScreenState
       }
     }
 
-    final minutesUntil =
-        event.startsAt
-            .toLocal()
-            .difference(
-              DateTime.now(),
-            )
-            .inMinutes;
+    final minutesUntil = event.startsAt
+        .toLocal()
+        .difference(DateTime.now())
+        .inMinutes;
 
     if (minutesUntil <= 180) {
       score += 20;
@@ -572,29 +576,20 @@ class _RecommendationScreenState
       score += 7;
     }
 
-    score +=
-        _eventBudgetScore(event);
+    score += _eventBudgetScore(event);
+    score += _companionScoreForEvent(text);
 
-    score +=
-        _companionScoreForEvent(
-      text,
-    );
-
-    score +=
-        _locationScore(
+    score += _locationScore(
       event.latitude,
       event.longitude,
     );
 
-    score +=
-        event.trustScore / 10;
+    score += event.trustScore / 10;
 
     return score;
   }
 
-  double _scorePlace(
-    Place place,
-  ) {
+  double _scorePlace(Place place) {
     if (!_matchesInterestForPlace(place)) {
       return 0;
     }
@@ -611,19 +606,14 @@ class _RecommendationScreenState
 
     double score = 45;
 
-    final text =
-        _placeText(place);
+    final text = _placeText(place);
 
-    if (_interests.contains(
-      InterestType.any,
-    )) {
+    if (_interests.contains(InterestType.any)) {
       score += 10;
     }
 
-    for (final interest
-        in _interests) {
-      if (interest ==
-          InterestType.any) {
+    for (final interest in _interests) {
+      if (interest == InterestType.any) {
         continue;
       }
 
@@ -636,9 +626,7 @@ class _RecommendationScreenState
       }
     }
 
-    if (_budgets.contains(
-      BudgetType.any,
-    )) {
+    if (_budgets.contains(BudgetType.any)) {
       score += 8;
     }
 
@@ -650,26 +638,19 @@ class _RecommendationScreenState
       score += 10;
     }
 
-    score +=
-        _companionScoreForPlace(
-      place,
-    );
+    score += _companionScoreForPlace(place);
 
-    score +=
-        _locationScore(
+    score += _locationScore(
       place.latitude,
       place.longitude,
     );
 
-    score +=
-        place.trustScore / 10;
+    score += place.trustScore / 10;
 
     return score;
   }
 
-  String _eventText(
-    Event event,
-  ) {
+  String _eventText(Event event) {
     return [
       event.title,
       event.category,
@@ -678,9 +659,7 @@ class _RecommendationScreenState
     ].join(' ').toLowerCase();
   }
 
-  String _placeText(
-    Place place,
-  ) {
+  String _placeText(Place place) {
     return [
       place.name,
       place.category,
@@ -694,12 +673,32 @@ class _RecommendationScreenState
     String text,
     List<String> values,
   ) {
-    final source =
-        text.toLowerCase();
+    final source = text.toLowerCase();
 
     for (final value in values) {
-      if (source.contains(
-        value.toLowerCase(),
+      if (source.contains(value.toLowerCase())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _matchesInterestForEvent(Event event) {
+    if (_interests.contains(InterestType.any)) {
+      return true;
+    }
+
+    final text = _eventText(event);
+
+    for (final interest in _interests) {
+      if (interest == InterestType.any) {
+        continue;
+      }
+
+      if (_eventMatchesInterest(
+        text,
+        interest,
       )) {
         return true;
       }
@@ -708,22 +707,21 @@ class _RecommendationScreenState
     return false;
   }
 
-  bool _matchesInterestForEvent(
-    Event event,
-  ) {
-    if (_interests.contains(
-      InterestType.any,
-    )) {
+  bool _matchesInterestForPlace(Place place) {
+    if (_interests.contains(InterestType.any)) {
       return true;
     }
 
-    final text =
-        _eventText(event);
+    final text = _placeText(place);
 
-    for (final interest
-        in _interests) {
-      if (_eventMatchesInterest(
+    for (final interest in _interests) {
+      if (interest == InterestType.any) {
+        continue;
+      }
+
+      if (_placeMatchesInterest(
         text,
+        place,
         interest,
       )) {
         return true;
@@ -746,13 +744,15 @@ class _RecommendationScreenState
           text,
           [
             'müzik',
-            'music',
             'konser',
-            'concert',
+            'music',
             'jazz',
             'rock',
             'pop',
+            'dj',
             'festival',
+            'sahne',
+            'opera',
           ],
         );
 
@@ -761,9 +761,10 @@ class _RecommendationScreenState
           text,
           [
             'sinema',
-            'cinema',
             'film',
             'movie',
+            'vizyon',
+            'gösterim',
           ],
         );
 
@@ -773,11 +774,10 @@ class _RecommendationScreenState
           [
             'doğa',
             'nature',
-            'outdoor',
-            'göl',
-            'lake',
-            'orman',
-            'forest',
+            'yürüyüş',
+            'trekking',
+            'kamp',
+            'piknik',
           ],
         );
 
@@ -787,7 +787,8 @@ class _RecommendationScreenState
           [
             'park',
             'bahçe',
-            'garden',
+            'botanik',
+            'mesire',
           ],
         );
 
@@ -796,14 +797,12 @@ class _RecommendationScreenState
           text,
           [
             'kültür',
-            'culture',
-            'sanat',
-            'art',
             'tiyatro',
-            'theatre',
-            'theater',
             'sergi',
-            'exhibition',
+            'sanat',
+            'edebiyat',
+            'söyleşi',
+            'konferans',
           ],
         );
 
@@ -812,12 +811,10 @@ class _RecommendationScreenState
           text,
           [
             'tarih',
-            'history',
             'tarihi',
-            'historic',
-            'kale',
-            'castle',
-            'anıt',
+            'osmanlı',
+            'cumhuriyet',
+            'arkeoloji',
           ],
         );
 
@@ -833,32 +830,6 @@ class _RecommendationScreenState
       case InterestType.any:
         return true;
     }
-  }
-
-  bool _matchesInterestForPlace(
-    Place place,
-  ) {
-    if (_interests.contains(
-      InterestType.any,
-    )) {
-      return true;
-    }
-
-    final text =
-        _placeText(place);
-
-    for (final interest
-        in _interests) {
-      if (_placeMatchesInterest(
-        text,
-        place,
-        interest,
-      )) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   bool _placeMatchesInterest(
@@ -868,33 +839,42 @@ class _RecommendationScreenState
   ) {
     switch (interest) {
       case InterestType.event:
-      case InterestType.music:
         return false;
+
+      case InterestType.music:
+        return _containsAny(
+          text,
+          [
+            'müzik',
+            'konser',
+            'jazz',
+            'rock',
+            'bar',
+            'sahne',
+          ],
+        );
 
       case InterestType.cinema:
         return _containsAny(
           text,
           [
             'sinema',
-            'cinema',
             'film',
-            'movie',
           ],
         );
 
       case InterestType.nature:
-        return place.outdoor == true ||
-            _containsAny(
-              text,
-              [
-                'doğa',
-                'nature',
-                'göl',
-                'lake',
-                'orman',
-                'forest',
-              ],
-            );
+        return _containsAny(
+          text,
+          [
+            'doğa',
+            'nature',
+            'orman',
+            'piknik',
+            'mesire',
+            'botanik',
+          ],
+        );
 
       case InterestType.park:
         return _containsAny(
@@ -902,7 +882,7 @@ class _RecommendationScreenState
           [
             'park',
             'bahçe',
-            'garden',
+            'mesire',
           ],
         );
 
@@ -911,11 +891,9 @@ class _RecommendationScreenState
           text,
           [
             'kültür',
-            'culture',
             'sanat',
-            'art',
-            'galeri',
-            'gallery',
+            'tiyatro',
+            'sergi',
           ],
         );
 
@@ -924,12 +902,8 @@ class _RecommendationScreenState
           text,
           [
             'tarih',
-            'history',
             'tarihi',
-            'historic',
-            'kale',
-            'castle',
-            'anıt',
+            'arkeoloji',
           ],
         );
 
@@ -947,227 +921,224 @@ class _RecommendationScreenState
     }
   }
 
-  bool _matchesBudgetForEvent(
-    Event event,
-  ) {
-    if (_budgets.contains(
-      BudgetType.any,
-    )) {
+  bool _matchesBudgetForEvent(Event event) {
+    if (_budgets.contains(BudgetType.any)) {
       return true;
     }
 
-    final price =
-        event.priceMin ??
-            event.priceMax;
+    final min = event.priceMin;
+    final max = event.priceMax;
 
-    final free =
-        (event.priceMin == null ||
-            event.priceMin == 0) &&
-        (event.priceMax == null ||
-            event.priceMax == 0);
-
-    for (final budget
-        in _budgets) {
-      if (budget ==
-              BudgetType.free &&
-          free) {
+    if (_budgets.contains(BudgetType.free)) {
+      if ((min == null || min == 0) &&
+          (max == null || max == 0)) {
         return true;
       }
+    }
 
-      if (price == null &&
-          (budget ==
-                  BudgetType.low ||
-              budget ==
-                  BudgetType.medium)) {
-        return true;
-      }
+    final price = min ?? max;
 
-      if (budget ==
-              BudgetType.low &&
-          price != null &&
-          price <= 1000) {
-        return true;
-      }
+    if (price == null) {
+      return false;
+    }
 
-      if (budget ==
-              BudgetType.medium &&
-          price != null &&
-          price <= 2500) {
-        return true;
-      }
+    if (_budgets.contains(BudgetType.low) &&
+        price <= 300) {
+      return true;
+    }
+
+    if (_budgets.contains(BudgetType.medium) &&
+        price <= 1000) {
+      return true;
     }
 
     return false;
   }
 
-  bool _matchesBudgetForPlace(
-    Place place,
-  ) {
-    if (_budgets.contains(
-      BudgetType.any,
-    )) {
+  bool _matchesBudgetForPlace(Place place) {
+    if (_budgets.contains(BudgetType.any)) {
       return true;
     }
 
-    if (_budgets.contains(
-          BudgetType.free,
-        ) &&
+    if (_budgets.contains(BudgetType.free) &&
         place.isFree == true) {
       return true;
     }
 
-    if (_budgets.contains(
-      BudgetType.low,
-    )) {
+    if (_budgets.contains(BudgetType.low)) {
       return true;
     }
 
-    if (_budgets.contains(
-      BudgetType.medium,
-    )) {
+    if (_budgets.contains(BudgetType.medium)) {
       return true;
     }
 
     return false;
   }
 
-  double _eventBudgetScore(
-    Event event,
-  ) {
-    final price =
-        event.priceMin ??
-            event.priceMax;
-
-    if (price == null ||
-        price == 0) {
-      return 20;
+  bool _matchesDuration(int minutes) {
+    if (_durations.contains(DurationType.any)) {
+      return true;
     }
 
-    if (price <= 500) {
-      return 15;
+    if (_durations.contains(DurationType.short) &&
+        minutes >= 60 &&
+        minutes <= 120) {
+      return true;
     }
 
-    if (price <= 1000) {
+    if (_durations.contains(DurationType.medium) &&
+        minutes > 120 &&
+        minutes <= 300) {
+      return true;
+    }
+
+    if (_durations.contains(DurationType.fullDay) &&
+        minutes > 300) {
+      return true;
+    }
+
+    return false;
+  }
+
+  double _eventBudgetScore(Event event) {
+    if (_budgets.contains(BudgetType.any)) {
       return 8;
     }
 
-    if (price <= 2500) {
-      return 3;
+    final min = event.priceMin;
+    final max = event.priceMax;
+
+    if ((min == null || min == 0) &&
+        (max == null || max == 0)) {
+      return _budgets.contains(BudgetType.free)
+          ? 18
+          : 4;
     }
 
-    return -5;
-  }
+    final price = min ?? max;
 
-  bool _matchesDuration(
-    int minutes,
-  ) {
-    if (_durations.contains(
-      DurationType.any,
-    )) {
-      return true;
+    if (price == null) {
+      return 0;
     }
 
-    for (final duration
-        in _durations) {
-      switch (duration) {
-        case DurationType.short:
-          if (minutes <= 120) {
-            return true;
-          }
-          break;
-
-        case DurationType.medium:
-          if (minutes >= 120 &&
-              minutes <= 300) {
-            return true;
-          }
-          break;
-
-        case DurationType.fullDay:
-          if (minutes >= 300) {
-            return true;
-          }
-          break;
-
-        case DurationType.any:
-          return true;
-      }
+    if (_budgets.contains(BudgetType.low) &&
+        price <= 300) {
+      return 12;
     }
 
-    return false;
+    if (_budgets.contains(BudgetType.medium) &&
+        price <= 1000) {
+      return 8;
+    }
+
+    return 0;
   }
 
   double _companionScoreForEvent(
     String text,
   ) {
-    if (_companions.contains(
-      CompanionType.any,
-    )) {
+    if (_companions.contains(CompanionType.any)) {
       return 8;
     }
 
     double score = 0;
 
-    if (_companions.contains(
-      CompanionType.family,
-    )) {
-      if (_containsAny(
-        text,
-        [
-          'aile',
-          'family',
-          'çocuk',
-          'kids',
-          'child',
-        ],
-      )) {
-        score += 22;
-      }
+    if (_companions.contains(CompanionType.solo) &&
+        _containsAny(
+          text,
+          [
+            'atölye',
+            'sergi',
+            'sinema',
+            'konser',
+            'müze',
+          ],
+        )) {
+      score += 8;
     }
 
-    if (_companions.contains(
-      CompanionType.couple,
-    )) {
-      score += 7;
+    if (_companions.contains(CompanionType.couple) &&
+        _containsAny(
+          text,
+          [
+            'romantik',
+            'çift',
+            'konser',
+            'tiyatro',
+            'sinema',
+            'yemek',
+          ],
+        )) {
+      score += 8;
     }
 
-    if (_companions.contains(
-      CompanionType.solo,
-    )) {
-      score += 6;
+    if (_companions.contains(CompanionType.family) &&
+        _containsAny(
+          text,
+          [
+            'çocuk',
+            'aile',
+            'family',
+            'çocuklar',
+            'atölye',
+            'park',
+          ],
+        )) {
+      score += 10;
     }
 
     return score;
   }
 
-  double _companionScoreForPlace(
-    Place place,
-  ) {
-    if (_companions.contains(
-      CompanionType.any,
-    )) {
+  double _companionScoreForPlace(Place place) {
+    if (_companions.contains(CompanionType.any)) {
       return 8;
     }
 
+    final text = _placeText(place);
     double score = 0;
 
-    if (_companions.contains(
-          CompanionType.family,
-        ) &&
-        place.kidsFriendly == true) {
-      score += 30;
+    if (_companions.contains(CompanionType.family) &&
+        _containsAny(
+          text,
+          [
+            'aile',
+            'çocuk',
+            'park',
+            'oyun',
+            'hayvanat',
+          ],
+        )) {
+      score += 10;
     }
 
-    if (_companions.contains(
-      CompanionType.couple,
-    )) {
-      score += 7;
+    if (_companions.contains(CompanionType.couple) &&
+        _containsAny(
+          text,
+          [
+            'romantik',
+            'manzara',
+            'kafe',
+            'restoran',
+            'sinema',
+          ],
+        )) {
+      score += 8;
     }
 
-    if (_companions.contains(
-      CompanionType.solo,
-    )) {
-      score += 6;
+    if (_companions.contains(CompanionType.solo) &&
+        _containsAny(
+          text,
+          [
+            'müze',
+            'sergi',
+            'park',
+            'kafe',
+            'kitap',
+          ],
+        )) {
+      score += 8;
     }
 
     return score;
@@ -1177,101 +1148,74 @@ class _RecommendationScreenState
     double? latitude,
     double? longitude,
   ) {
-    final position =
-        _userPosition;
-
-    if (position == null ||
+    if (_userPosition == null ||
         latitude == null ||
         longitude == null) {
       return 0;
     }
 
-    final distance =
-        Geolocator.distanceBetween(
-          position.latitude,
-          position.longitude,
-          latitude,
-          longitude,
-        ) /
-            1000;
+    final distance = Geolocator.distanceBetween(
+      _userPosition!.latitude,
+      _userPosition!.longitude,
+      latitude,
+      longitude,
+    );
 
-    if (distance <= 2) {
-      return 40;
+    if (distance <= 2000) {
+      return 12;
     }
 
-    if (distance <= 5) {
-      return 30;
+    if (distance <= 5000) {
+      return 8;
     }
 
-    if (distance <= 10) {
-      return 20;
+    if (distance <= 10000) {
+      return 4;
     }
 
-    if (distance <= 15) {
-      return 10;
-    }
-
-    if (distance <= 25) {
-      return 0;
-    }
-
-    return -15;
+    return 0;
   }
 
   double? _distanceFromUser(
     double? latitude,
     double? longitude,
   ) {
-    final position =
-        _userPosition;
-
-    if (position == null ||
+    if (_userPosition == null ||
         latitude == null ||
         longitude == null) {
       return null;
     }
 
     return Geolocator.distanceBetween(
-          position.latitude,
-          position.longitude,
-          latitude,
-          longitude,
-        ) /
-        1000;
+      _userPosition!.latitude,
+      _userPosition!.longitude,
+      latitude,
+      longitude,
+    );
   }
 
-  String _distanceLabel(
-    double? distanceKm,
-  ) {
-    if (distanceKm == null) {
+  String _distanceLabel(double? meters) {
+    if (meters == null) {
       return '';
     }
 
-    if (distanceKm < 1) {
-      return '${(distanceKm * 1000).round()} m';
+    if (meters < 1000) {
+      return '${meters.round()} m';
     }
 
-    return '${distanceKm.toStringAsFixed(1)} km';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  String _priceLabel(
-    Event event,
-  ) {
-    final min =
-        event.priceMin;
+  String _eventPriceLabel(Event event) {
+    final min = event.priceMin;
+    final max = event.priceMax;
 
-    final max =
-        event.priceMax;
-
-    if (min == null &&
-        max == null) {
+    if (min == null && max == null) {
       return '';
     }
 
-    if ((min == null ||
-            min == 0) &&
-        (max == null ||
-            max == 0)) {
+    if ((min == null || min == 0) &&
+        (max == null || max == 0)) {
       return 'Ücretsiz';
     }
 
@@ -1281,32 +1225,21 @@ class _RecommendationScreenState
       return '${_formatPrice(min)}–${_formatPrice(max)} TL';
     }
 
-    final price =
-        min ?? max!;
+    final price = min ?? max!;
 
     return '${_formatPrice(price)} TL';
   }
 
-  String _formatPrice(
-    double value,
-  ) {
-    if (value ==
-        value.roundToDouble()) {
-      return value
-          .round()
-          .toString();
+  String _formatPrice(double value) {
+    if (value == value.roundToDouble()) {
+      return value.round().toString();
     }
 
-    return value.toStringAsFixed(
-      0,
-    );
+    return value.toStringAsFixed(0);
   }
 
-  String _dateLabel(
-    DateTime dateTime,
-  ) {
-    final local =
-        dateTime.toLocal();
+  String _dateLabel(DateTime dateTime) {
+    final local = dateTime.toLocal();
 
     const months = [
       'Oca',
@@ -1330,18 +1263,13 @@ class _RecommendationScreenState
         '${local.minute.toString().padLeft(2, '0')}';
   }
 
-  String _durationLabel(
-    int minutes,
-  ) {
+  String _durationLabel(int minutes) {
     if (minutes < 60) {
       return '$minutes dk';
     }
 
-    final hours =
-        minutes ~/ 60;
-
-    final remaining =
-        minutes % 60;
+    final hours = minutes ~/ 60;
+    final remaining = minutes % 60;
 
     if (remaining == 0) {
       return '$hours saat';
@@ -1350,22 +1278,16 @@ class _RecommendationScreenState
     return '$hours s $remaining dk';
   }
 
-  bool _isQueued(
-    _Activity activity,
-  ) {
+  bool _isQueued(_Activity activity) {
     return _queue.any(
       (item) => item.id == activity.id,
     );
   }
 
-  void _toggleQueue(
-    _Activity activity,
-  ) {
+  void _toggleQueue(_Activity activity) {
     setState(() {
-      final index =
-          _queue.indexWhere(
-        (item) =>
-            item.id == activity.id,
+      final index = _queue.indexWhere(
+        (item) => item.id == activity.id,
       );
 
       if (index >= 0) {
@@ -1390,14 +1312,10 @@ class _RecommendationScreenState
         activity.place?.longitude;
   }
 
-  Future<void> _openTicket(
-    Event event,
-  ) async {
-    final url =
-        event.ticketUrl;
+  Future<void> _openTicket(Event event) async {
+    final url = event.ticketUrl;
 
-    if (url == null ||
-        url.trim().isEmpty) {
+    if (url == null || url.trim().isEmpty) {
       _showMessage(
         'Bu etkinlik için bilet bağlantısı bulunmuyor.',
       );
@@ -1405,8 +1323,7 @@ class _RecommendationScreenState
     }
 
     try {
-      final uri =
-          Uri.tryParse(url);
+      final uri = Uri.tryParse(url);
 
       if (uri == null) {
         _showMessage(
@@ -1415,11 +1332,9 @@ class _RecommendationScreenState
         return;
       }
 
-      final opened =
-          await launchUrl(
+      final opened = await launchUrl(
         uri,
-        mode:
-            LaunchMode.externalApplication,
+        mode: LaunchMode.externalApplication,
       );
 
       if (!opened) {
@@ -1435,20 +1350,13 @@ class _RecommendationScreenState
   }
 
   Future<void> _buildRoute() async {
-    final navigable =
-        _queue
-            .where(
-              (activity) =>
-                  _activityLatitude(
-                    activity,
-                  ) !=
-                      null &&
-                  _activityLongitude(
-                    activity,
-                  ) !=
-                      null,
-            )
-            .toList();
+    final navigable = _queue
+        .where(
+          (activity) =>
+              _activityLatitude(activity) != null &&
+              _activityLongitude(activity) != null,
+        )
+        .toList();
 
     if (navigable.isEmpty) {
       _showMessage(
@@ -1461,23 +1369,21 @@ class _RecommendationScreenState
         '${_activityLatitude(navigable.last)},'
         '${_activityLongitude(navigable.last)}';
 
-    final waypoints =
-        navigable.length > 2
-            ? navigable
-                .sublist(
-                  0,
-                  navigable.length - 1,
-                )
-                .map(
-                  (item) =>
-                      '${_activityLatitude(item)},'
-                      '${_activityLongitude(item)}',
-                )
-                .join('|')
-            : null;
+    final waypoints = navigable.length > 2
+        ? navigable
+            .sublist(
+              0,
+              navigable.length - 1,
+            )
+            .map(
+              (item) =>
+                  '${_activityLatitude(item)},'
+                  '${_activityLongitude(item)}',
+            )
+            .join('|')
+        : null;
 
-    final parameters =
-        <String, String>{
+    final parameters = <String, String>{
       'api': '1',
       'destination': destination,
       'travelmode': 'driving',
@@ -1485,8 +1391,7 @@ class _RecommendationScreenState
 
     if (waypoints != null &&
         waypoints.isNotEmpty) {
-      parameters['waypoints'] =
-          waypoints;
+      parameters['waypoints'] = waypoints;
     }
 
     final uri = Uri.https(
@@ -1496,34 +1401,25 @@ class _RecommendationScreenState
     );
 
     try {
-      final opened =
-          await launchUrl(
+      final opened = await launchUrl(
         uri,
-        mode:
-            LaunchMode.externalApplication,
+        mode: LaunchMode.externalApplication,
       );
 
       if (!opened) {
-        _showMessage(
-          'Harita açılamadı.',
-        );
+        _showMessage('Harita açılamadı.');
       }
     } catch (_) {
-      _showMessage(
-        'Rota açılamadı.',
-      );
+      _showMessage('Rota açılamadı.');
     }
   }
 
-  void _openActivity(
-    _Activity activity,
-  ) {
+  void _openActivity(_Activity activity) {
     if (activity.event != null) {
       Navigator.push(
         context,
         MaterialPageRoute<void>(
-          builder: (_) =>
-              EventDetailScreen(
+          builder: (_) => EventDetailScreen(
             event: activity.event!,
           ),
         ),
@@ -1535,8 +1431,7 @@ class _RecommendationScreenState
       Navigator.push(
         context,
         MaterialPageRoute<void>(
-          builder: (_) =>
-              PlaceDetailScreen(
+          builder: (_) => PlaceDetailScreen(
             place: activity.place!,
           ),
         ),
@@ -1544,9 +1439,7 @@ class _RecommendationScreenState
     }
   }
 
-  void _showMessage(
-    String message,
-  ) {
+  void _showMessage(String message) {
     if (!mounted) {
       return;
     }
@@ -1560,39 +1453,30 @@ class _RecommendationScreenState
       );
   }
 
-  Widget _choiceChip<T>({
+  Widget _choiceChip({
     required String label,
     required bool selected,
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding:
-          const EdgeInsets.only(
+      padding: const EdgeInsets.only(
         right: 7,
         bottom: 7,
       ),
       child: ChoiceChip(
-        label:
-            Text(label),
-        selected:
-            selected,
-        onSelected:
-            (_) => onTap(),
-        labelStyle:
-            TextStyle(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        labelStyle: TextStyle(
           fontSize: 12,
-          fontWeight:
-              FontWeight.w700,
+          fontWeight: FontWeight.w700,
           color: selected
               ? Colors.white
               : Colors.black,
         ),
-        selectedColor:
-            Colors.black,
-        backgroundColor:
-            Colors.white,
-        side:
-            BorderSide(
+        selectedColor: Colors.black,
+        backgroundColor: Colors.white,
+        side: BorderSide(
           color: selected
               ? Colors.black
               : Colors.grey.shade300,
@@ -1606,32 +1490,122 @@ class _RecommendationScreenState
     Widget child,
   ) {
     return Padding(
-      padding:
-          const EdgeInsets.only(
+      padding: const EdgeInsets.only(
         bottom: 20,
       ),
-      child:
-          Column(
+      child: Column(
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style:
-                const TextStyle(
+            style: const TextStyle(
               fontSize: 11,
-              fontWeight:
-                  FontWeight.w900,
+              fontWeight: FontWeight.w900,
               letterSpacing: 1,
-              color:
-                  Colors.black54,
+              color: Colors.black54,
             ),
           ),
-          const SizedBox(
-            height: 9,
-          ),
+          const SizedBox(height: 9),
           child,
         ],
+      ),
+    );
+  }
+
+  String _shortDateLabel(DateTime date) {
+    const months = [
+      'Oca',
+      'Şub',
+      'Mar',
+      'Nis',
+      'May',
+      'Haz',
+      'Tem',
+      'Ağu',
+      'Eyl',
+      'Eki',
+      'Kas',
+      'Ara',
+    ];
+
+    return '${date.day} ${months[date.month - 1]}';
+  }
+
+  String _dateScopeLabel() {
+    switch (_dateScope) {
+      case _DateScope.today:
+        return 'Bugün';
+
+      case _DateScope.tomorrow:
+        return 'Yarın';
+
+      case _DateScope.week:
+        return 'Bu hafta';
+
+      case _DateScope.month:
+        return 'Bu ay';
+
+      case _DateScope.selected:
+        return _selectedDate == null
+            ? 'Tarih seç'
+            : _shortDateLabel(_selectedDate!);
+    }
+  }
+
+  Widget _buildDateFilters() {
+    return _section(
+      'NE ZAMAN?',
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _choiceChip(
+              label: 'Bugün',
+              selected:
+                  _dateScope == _DateScope.today,
+              onTap: () => _selectDateScope(
+                _DateScope.today,
+              ),
+            ),
+            _choiceChip(
+              label: 'Yarın',
+              selected:
+                  _dateScope == _DateScope.tomorrow,
+              onTap: () => _selectDateScope(
+                _DateScope.tomorrow,
+              ),
+            ),
+            _choiceChip(
+              label: 'Bu hafta',
+              selected:
+                  _dateScope == _DateScope.week,
+              onTap: () => _selectDateScope(
+                _DateScope.week,
+              ),
+            ),
+            _choiceChip(
+              label: 'Bu ay',
+              selected:
+                  _dateScope == _DateScope.month,
+              onTap: () => _selectDateScope(
+                _DateScope.month,
+              ),
+            ),
+            _choiceChip(
+              label: _dateScope == _DateScope.selected
+                  ? _shortDateLabel(
+                      _selectedDate!,
+                    )
+                  : 'Tarih seç',
+              selected:
+                  _dateScope == _DateScope.selected,
+              onTap: () => _selectDateScope(
+                _DateScope.selected,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1646,50 +1620,42 @@ class _RecommendationScreenState
           Wrap(
             children: [
               _choiceChip(
-                label:
-                    'Tek başıma',
+                label: 'Tek başıma',
                 selected:
                     _companions.contains(
                   CompanionType.solo,
                 ),
-                onTap: () =>
-                    _toggleCompanion(
+                onTap: () => _toggleCompanion(
                   CompanionType.solo,
                 ),
               ),
               _choiceChip(
-                label:
-                    'İki kişi',
+                label: 'İki kişi',
                 selected:
                     _companions.contains(
                   CompanionType.couple,
                 ),
-                onTap: () =>
-                    _toggleCompanion(
+                onTap: () => _toggleCompanion(
                   CompanionType.couple,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Aile',
+                label: 'Aile',
                 selected:
                     _companions.contains(
                   CompanionType.family,
                 ),
-                onTap: () =>
-                    _toggleCompanion(
+                onTap: () => _toggleCompanion(
                   CompanionType.family,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Farketmez',
+                label: 'Farketmez',
                 selected:
                     _companions.contains(
                   CompanionType.any,
                 ),
-                onTap: () =>
-                    _toggleCompanion(
+                onTap: () => _toggleCompanion(
                   CompanionType.any,
                 ),
               ),
@@ -1701,50 +1667,42 @@ class _RecommendationScreenState
           Wrap(
             children: [
               _choiceChip(
-                label:
-                    'Ücretsiz',
+                label: 'Ücretsiz',
                 selected:
                     _budgets.contains(
                   BudgetType.free,
                 ),
-                onTap: () =>
-                    _toggleBudget(
+                onTap: () => _toggleBudget(
                   BudgetType.free,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Ekonomik',
+                label: 'Ekonomik',
                 selected:
                     _budgets.contains(
                   BudgetType.low,
                 ),
-                onTap: () =>
-                    _toggleBudget(
+                onTap: () => _toggleBudget(
                   BudgetType.low,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Orta bütçe',
+                label: 'Orta bütçe',
                 selected:
                     _budgets.contains(
                   BudgetType.medium,
                 ),
-                onTap: () =>
-                    _toggleBudget(
+                onTap: () => _toggleBudget(
                   BudgetType.medium,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Farketmez',
+                label: 'Farketmez',
                 selected:
                     _budgets.contains(
                   BudgetType.any,
                 ),
-                onTap: () =>
-                    _toggleBudget(
+                onTap: () => _toggleBudget(
                   BudgetType.any,
                 ),
               ),
@@ -1756,50 +1714,42 @@ class _RecommendationScreenState
           Wrap(
             children: [
               _choiceChip(
-                label:
-                    '1-2 saat',
+                label: '1-2 saat',
                 selected:
                     _durations.contains(
                   DurationType.short,
                 ),
-                onTap: () =>
-                    _toggleDuration(
+                onTap: () => _toggleDuration(
                   DurationType.short,
                 ),
               ),
               _choiceChip(
-                label:
-                    '3-5 saat',
+                label: '3-5 saat',
                 selected:
                     _durations.contains(
                   DurationType.medium,
                 ),
-                onTap: () =>
-                    _toggleDuration(
+                onTap: () => _toggleDuration(
                   DurationType.medium,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Tüm gün',
+                label: 'Tüm gün',
                 selected:
                     _durations.contains(
                   DurationType.fullDay,
                 ),
-                onTap: () =>
-                    _toggleDuration(
+                onTap: () => _toggleDuration(
                   DurationType.fullDay,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Farketmez',
+                label: 'Farketmez',
                 selected:
                     _durations.contains(
                   DurationType.any,
                 ),
-                onTap: () =>
-                    _toggleDuration(
+                onTap: () => _toggleDuration(
                   DurationType.any,
                 ),
               ),
@@ -1811,110 +1761,92 @@ class _RecommendationScreenState
           Wrap(
             children: [
               _choiceChip(
-                label:
-                    'Etkinlik',
+                label: 'Etkinlik',
                 selected:
                     _interests.contains(
                   InterestType.event,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.event,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Müzik',
+                label: 'Müzik',
                 selected:
                     _interests.contains(
                   InterestType.music,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.music,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Sinema',
+                label: 'Sinema',
                 selected:
                     _interests.contains(
                   InterestType.cinema,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.cinema,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Doğa',
+                label: 'Doğa',
                 selected:
                     _interests.contains(
                   InterestType.nature,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.nature,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Park',
+                label: 'Park',
                 selected:
                     _interests.contains(
                   InterestType.park,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.park,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Tarih',
+                label: 'Tarih',
                 selected:
                     _interests.contains(
                   InterestType.history,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.history,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Müze',
+                label: 'Müze',
                 selected:
                     _interests.contains(
                   InterestType.museum,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.museum,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Kültür',
+                label: 'Kültür',
                 selected:
                     _interests.contains(
                   InterestType.culture,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.culture,
                 ),
               ),
               _choiceChip(
-                label:
-                    'Farketmez',
+                label: 'Farketmez',
                 selected:
                     _interests.contains(
                   InterestType.any,
                 ),
-                onTap: () =>
-                    _toggleInterest(
+                onTap: () => _toggleInterest(
                   InterestType.any,
                 ),
               ),
@@ -1927,74 +1859,49 @@ class _RecommendationScreenState
 
   Widget _buildLocationStatus() {
     return Container(
-      margin:
-          const EdgeInsets.only(
+      margin: const EdgeInsets.only(
         bottom: 18,
       ),
-      padding:
-          const EdgeInsets.symmetric(
+      padding: const EdgeInsets.symmetric(
         horizontal: 13,
         vertical: 11,
       ),
-      decoration:
-          BoxDecoration(
-        color:
-            Colors.white,
-        borderRadius:
-            BorderRadius.circular(
-          17,
-        ),
-        border:
-            Border.all(
-          color:
-              Colors.grey.shade200,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: Colors.grey.shade200,
         ),
       ),
-      child:
-          Row(
+      child: Row(
         children: [
           Icon(
             _userPosition != null
-                ? Icons
-                    .my_location_rounded
-                : Icons
-                    .location_off_outlined,
-            size:
-                20,
+                ? Icons.my_location_rounded
+                : Icons.location_off_outlined,
+            size: 20,
           ),
-          const SizedBox(
-            width:
-                10,
-          ),
+          const SizedBox(width: 10),
           Expanded(
-            child:
-                Text(
+            child: Text(
               _userPosition != null
                   ? 'Konumuna göre sıralanıyor.'
                   : 'Konum olmadan Ankara geneli sıralanıyor.',
-              style:
-                  const TextStyle(
-                fontSize:
-                    12,
-                fontWeight:
-                    FontWeight.w700,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
           TextButton(
-            onPressed:
-                _locationLoading
-                    ? null
-                    : _refreshLocation,
-            child:
-                const Text(
+            onPressed: _locationLoading
+                ? null
+                : _refreshLocation,
+            child: const Text(
               'KONUM',
-              style:
-                  TextStyle(
-                fontSize:
-                    10,
-                fontWeight:
-                    FontWeight.w900,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -2010,121 +1917,76 @@ class _RecommendationScreenState
 
     return SafeArea(
       top: false,
-      child:
-          Container(
-        padding:
-            const EdgeInsets.fromLTRB(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
           16,
           10,
           16,
           10,
         ),
-        decoration:
-            const BoxDecoration(
-          color:
-              Colors.white,
+        decoration: const BoxDecoration(
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color:
-                  Color(0x16000000),
-              blurRadius:
-                  15,
-              offset:
-                  Offset(0, -5),
+              color: Color(0x16000000),
+              blurRadius: 15,
+              offset: Offset(0, -5),
             ),
           ],
         ),
-        child:
-            Row(
+        child: Row(
           children: [
             Expanded(
-              child:
-                  Column(
+              child: Column(
                 crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     '${_queue.length} aktivite seçildi',
-                    style:
-                        const TextStyle(
-                      fontSize:
-                          13,
-                      fontWeight:
-                          FontWeight
-                              .w900,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(
-                    height:
-                        3,
-                  ),
+                  const SizedBox(height: 3),
                   const Text(
                     'Seçtiklerini tek rota olarak açabilirsin.',
-                    maxLines:
-                        1,
+                    maxLines: 1,
                     overflow:
-                        TextOverflow
-                            .ellipsis,
-                    style:
-                        TextStyle(
-                      fontSize:
-                          10,
+                        TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(
-              width:
-                  10,
-            ),
+            const SizedBox(width: 10),
             FilledButton.icon(
-              onPressed:
-                  _buildRoute,
-              icon:
-                  const Icon(
+              onPressed: _buildRoute,
+              icon: const Icon(
                 Icons.route,
-                size:
-                    18,
+                size: 18,
               ),
-              label:
-                  const Text(
+              label: const Text(
                 'ROTA',
-                style:
-                    TextStyle(
-                  fontSize:
-                      10,
-                  fontWeight:
-                      FontWeight
-                          .w900,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              style:
-                  FilledButton
-                      .styleFrom(
-                backgroundColor:
-                    Colors.black,
-                foregroundColor:
-                    Colors.white,
-                minimumSize:
-                    const Size(
-                  0,
-                  45,
-                ),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 45),
                 padding:
-                    const EdgeInsets
-                        .symmetric(
-                  horizontal:
-                      14,
+                    const EdgeInsets.symmetric(
+                  horizontal: 14,
                 ),
                 shape:
                     RoundedRectangleBorder(
                   borderRadius:
-                      BorderRadius
-                          .circular(
-                    13,
-                  ),
+                      BorderRadius.circular(13),
                 ),
               ),
             ),
@@ -2137,92 +1999,57 @@ class _RecommendationScreenState
   Widget _buildCardImage(
     _Activity activity,
   ) {
-    final imageUrl =
-        activity.event?.imageUrl;
+    final imageUrl = activity.event?.imageUrl;
 
     if (imageUrl == null ||
         imageUrl.trim().isEmpty) {
       return Container(
-        width:
-            double.infinity,
-        height:
-            155,
-        color:
-            Colors.grey.shade100,
-        child:
-            Icon(
-          activity.type ==
-                  _ActivityType.event
-              ? Icons
-                  .event_outlined
-              : Icons
-                  .place_outlined,
-          size:
-              42,
-          color:
-              Colors.black38,
+        width: double.infinity,
+        height: 155,
+        color: Colors.grey.shade100,
+        child: Icon(
+          activity.type == _ActivityType.event
+              ? Icons.event_outlined
+              : Icons.place_outlined,
+          size: 42,
+          color: Colors.black38,
         ),
       );
     }
 
     return Image.network(
       imageUrl,
-      width:
-          double.infinity,
-      height:
-          155,
-      fit:
-          BoxFit.cover,
-      errorBuilder:
-          (_, __, ___) {
+      width: double.infinity,
+      height: 155,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) {
         return Container(
-          width:
-              double.infinity,
-          height:
-              155,
-          color:
-              Colors.grey.shade100,
-          child:
-              Icon(
-            Icons
-                .event_outlined,
-            size:
-                42,
-            color:
-                Colors.black38,
+          width: double.infinity,
+          height: 155,
+          color: Colors.grey.shade100,
+          child: const Icon(
+            Icons.event_outlined,
+            size: 42,
+            color: Colors.black38,
           ),
         );
       },
       loadingBuilder:
-          (
-        context,
-        child,
-        loadingProgress,
-      ) {
-        if (loadingProgress ==
-            null) {
+          (context, child, loadingProgress) {
+        if (loadingProgress == null) {
           return child;
         }
 
         return Container(
-          width:
-              double.infinity,
-          height:
-              155,
-          color:
-              Colors.grey.shade100,
-          child:
-              const Center(
-            child:
-                SizedBox(
-              width:
-                  24,
-              height:
-                  24,
-              child:
-                  CircularProgressIndicator(
-                strokeWidth:
-                    2,
+          width: double.infinity,
+          height: 155,
+          color: Colors.grey.shade100,
+          child: const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
               ),
             ),
           ),
@@ -2234,177 +2061,108 @@ class _RecommendationScreenState
   Widget _buildResultCard(
     _Activity activity,
   ) {
-    final queued =
-        _isQueued(activity);
-
+    final queued = _isQueued(activity);
     final isEvent =
-        activity.type ==
-            _ActivityType.event;
+        activity.type == _ActivityType.event;
 
-    final distance =
-        _distanceFromUser(
-      _activityLatitude(
-        activity,
-      ),
-      _activityLongitude(
-        activity,
-      ),
+    final distance = _distanceFromUser(
+      _activityLatitude(activity),
+      _activityLongitude(activity),
     );
 
     final distanceText =
-        _distanceLabel(
-      distance,
-    );
+        _distanceLabel(distance);
 
     final placeName =
         activity.event?.venueName ??
             activity.place?.address;
 
     return Container(
-      margin:
-          const EdgeInsets.only(
-        bottom:
-            16,
+      margin: const EdgeInsets.only(
+        bottom: 16,
       ),
-      clipBehavior:
-          Clip.antiAlias,
-      decoration:
-          BoxDecoration(
-        color:
-            Colors.white,
-        borderRadius:
-            BorderRadius.circular(
-          22,
-        ),
-        border:
-            Border.all(
-          color:
-              queued
-                  ? Colors.black
-                  : Colors.grey
-                      .shade200,
-          width:
-              queued
-                  ? 1.4
-                  : 1,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: queued
+              ? Colors.black
+              : Colors.grey.shade200,
+          width: queued ? 1.4 : 1,
         ),
         boxShadow: const [
           BoxShadow(
-            color:
-                Color(0x08000000),
-            blurRadius:
-                14,
-            offset:
-                Offset(0, 5),
+            color: Color(0x08000000),
+            blurRadius: 14,
+            offset: Offset(0, 5),
           ),
         ],
       ),
-      child:
-          Column(
+      child: Column(
         crossAxisAlignment:
-            CrossAxisAlignment
-                .start,
+            CrossAxisAlignment.start,
         children: [
           Stack(
             children: [
-              _buildCardImage(
-                activity,
-              ),
+              _buildCardImage(activity),
               Positioned(
-                left:
-                    12,
-                top:
-                    12,
-                child:
-                    Container(
+                left: 12,
+                top: 12,
+                child: Container(
                   padding:
-                      const EdgeInsets
-                          .symmetric(
-                    horizontal:
-                        10,
-                    vertical:
-                        7,
+                      const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
                   ),
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        Colors.black87,
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
                     borderRadius:
-                        BorderRadius
-                            .circular(
-                      20,
-                    ),
+                        BorderRadius.circular(20),
                   ),
-                  child:
-                      Text(
+                  child: Text(
                     isEvent
                         ? 'ETKİNLİK'
                         : 'KEŞİF',
-                    style:
-                        const TextStyle(
-                      color:
-                          Colors.white,
-                      fontSize:
-                          9,
-                      fontWeight:
-                          FontWeight
-                              .w900,
-                      letterSpacing:
-                          0.8,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ),
               ),
               if (queued)
                 Positioned(
-                  right:
-                      12,
-                  top:
-                      12,
-                  child:
-                      Container(
+                  right: 12,
+                  top: 12,
+                  child: Container(
                     padding:
-                        const EdgeInsets
-                            .symmetric(
-                      horizontal:
-                          10,
-                      vertical:
-                          7,
+                        const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
                     ),
-                    decoration:
-                        BoxDecoration(
-                      color:
-                          Colors.white,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius:
-                          BorderRadius
-                              .circular(
-                        20,
-                      ),
+                          BorderRadius.circular(20),
                     ),
-                    child:
-                        const Row(
+                    child: const Row(
                       mainAxisSize:
-                          MainAxisSize
-                              .min,
+                          MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.check,
-                          size:
-                              14,
+                          size: 14,
                         ),
-                        SizedBox(
-                          width:
-                              4,
-                        ),
+                        SizedBox(width: 4),
                         Text(
                           'KUYRUKTA',
-                          style:
-                              TextStyle(
-                            fontSize:
-                                9,
+                          style: TextStyle(
+                            fontSize: 9,
                             fontWeight:
-                                FontWeight
-                                    .w900,
+                                FontWeight.w900,
                           ),
                         ),
                       ],
@@ -2414,99 +2172,63 @@ class _RecommendationScreenState
             ],
           ),
           Padding(
-            padding:
-                const EdgeInsets
-                    .all(
-              15,
-            ),
-            child:
-                Column(
+            padding: const EdgeInsets.all(15),
+            child: Column(
               crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   activity.event?.title ??
                       activity.place?.name ??
                       '',
-                  maxLines:
-                      2,
-                  overflow:
-                      TextOverflow
-                          .ellipsis,
-                  style:
-                      const TextStyle(
-                    fontSize:
-                        17,
-                    fontWeight:
-                        FontWeight
-                            .w900,
-                    height:
-                        1.15,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
                   ),
                 ),
-                const SizedBox(
-                  height:
-                      8,
-                ),
+                const SizedBox(height: 8),
                 Wrap(
-                  spacing:
-                      6,
-                  runSpacing:
-                      6,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     _InfoPill(
-                      icon:
-                          isEvent
-                              ? Icons
-                                  .schedule_outlined
-                              : Icons
-                                  .timelapse_outlined,
-                      text:
-                          isEvent
-                              ? _dateLabel(
-                                  activity
-                                      .event!
-                                      .startsAt,
-                                )
-                              : _durationLabel(
-                                  activity
-                                      .durationMinutes,
-                                ),
+                      icon: isEvent
+                          ? Icons.schedule_outlined
+                          : Icons.timelapse_outlined,
+                      text: isEvent
+                          ? _dateLabel(
+                              activity.event!.startsAt,
+                            )
+                          : _durationLabel(
+                              activity.durationMinutes,
+                            ),
                     ),
-                    if (distanceText
-                        .isNotEmpty)
+                    if (distanceText.isNotEmpty)
                       _InfoPill(
                         icon:
-                            Icons
-                                .near_me_outlined,
-                        text:
-                            distanceText,
+                            Icons.near_me_outlined,
+                        text: distanceText,
                       ),
                   ],
                 ),
-                if (isEvent) ...[
-                  const SizedBox(
-                    height:
-                        8,
-                  ),
+                if (isEvent &&
+                    activity.event != null) ...[
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing:
-                        6,
-                    runSpacing:
-                        6,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      if (_priceLabel(
+                      if (_eventPriceLabel(
                         activity.event!,
                       ).isNotEmpty)
                         _InfoPill(
-                          icon:
-                              Icons
-                                  .payments_outlined,
-                          text:
-                              _priceLabel(
-                            activity
-                                .event!,
+                          icon: Icons
+                              .local_offer_outlined,
+                          text: _eventPriceLabel(
+                            activity.event!,
                           ),
                         ),
                       if (activity
@@ -2515,37 +2237,25 @@ class _RecommendationScreenState
                           .trim()
                           .isNotEmpty)
                         _InfoPill(
-                          icon:
-                              Icons
-                                  .category_outlined,
-                          text:
-                              activity
-                                  .event!
-                                  .category,
+                          icon: Icons
+                              .category_outlined,
+                          text: activity
+                              .event!
+                              .category,
                         ),
                     ],
                   ),
                 ] else if (activity.place != null) ...[
-                  const SizedBox(
-                    height:
-                        8,
-                  ),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing:
-                        6,
-                    runSpacing:
-                        6,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      if (activity
-                              .place!
-                              .isFree ==
-                          true)
+                      if (activity.place!.isFree == true)
                         const _InfoPill(
-                          icon:
-                              Icons
-                                  .local_offer_outlined,
-                          text:
-                              'Ücretsiz',
+                          icon: Icons
+                              .local_offer_outlined,
+                          text: 'Ücretsiz',
                         ),
                       if (activity
                           .place!
@@ -2553,205 +2263,139 @@ class _RecommendationScreenState
                           .trim()
                           .isNotEmpty)
                         _InfoPill(
-                          icon:
-                              Icons
-                                  .category_outlined,
+                          icon: Icons
+                              .category_outlined,
                           text:
-                              activity
-                                  .place!
-                                  .category,
+                              activity.place!.category,
                         ),
                     ],
                   ),
                 ],
-                if (placeName !=
-                        null &&
-                    placeName
-                        .trim()
-                        .isNotEmpty) ...[
-                  const SizedBox(
-                    height:
-                        9,
-                  ),
+                if (placeName != null &&
+                    placeName.trim().isNotEmpty) ...[
+                  const SizedBox(height: 9),
                   Text(
                     placeName,
-                    maxLines:
-                        2,
-                    overflow:
-                        TextOverflow
-                            .ellipsis,
-                    style:
-                        TextStyle(
-                      fontSize:
-                          11,
-                      color:
-                          Colors
-                              .grey
-                              .shade600,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
                     ),
                   ),
                 ],
-                const SizedBox(
-                  height:
-                      14,
-                ),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
-                      child:
-                          OutlinedButton(
-                        onPressed:
-                            () =>
-                                _toggleQueue(
-                          activity,
-                        ),
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            _toggleQueue(activity),
                         style:
-                            OutlinedButton
-                                .styleFrom(
+                            OutlinedButton.styleFrom(
                           foregroundColor:
                               Colors.black,
                           minimumSize:
-                              const Size(
-                            0,
-                            44,
-                          ),
-                          side:
-                              BorderSide(
-                            color:
-                                queued
-                                    ? Colors.black
-                                    : Colors.grey
-                                        .shade300,
+                              const Size(0, 44),
+                          side: BorderSide(
+                            color: queued
+                                ? Colors.black
+                                : Colors.grey
+                                    .shade300,
                           ),
                           shape:
                               RoundedRectangleBorder(
                             borderRadius:
-                                BorderRadius
-                                    .circular(
+                                BorderRadius.circular(
                               13,
                             ),
                           ),
                         ),
-                        child:
-                            Text(
+                        child: Text(
                           queued
                               ? 'Kuyruktan çıkar'
                               : 'Kuyruğa ekle',
-                          style:
-                              const TextStyle(
-                            fontSize:
-                                11,
+                          style: const TextStyle(
+                            fontSize: 11,
                             fontWeight:
-                                FontWeight
-                                    .w800,
+                                FontWeight.w800,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      width:
-                          8,
-                    ),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child:
-                          isEvent &&
-                                  activity
-                                          .event!
-                                          .ticketUrl !=
-                                      null &&
-                                  activity
-                                      .event!
-                                      .ticketUrl!
-                                      .trim()
-                                      .isNotEmpty
-                              ? FilledButton.icon(
-                                  onPressed:
-                                      () =>
-                                          _openTicket(
-                                    activity
-                                        .event!,
-                                  ),
-                                  icon:
-                                      const Icon(
-                                    Icons
-                                        .confirmation_number_outlined,
-                                    size:
-                                        17,
-                                  ),
-                                  label:
-                                      const Text(
-                                    'BİLET AL',
-                                    style:
-                                        TextStyle(
-                                      fontSize:
-                                          10,
-                                      fontWeight:
-                                          FontWeight
-                                              .w900,
-                                    ),
-                                  ),
-                                  style:
-                                      FilledButton
-                                          .styleFrom(
-                                    backgroundColor:
-                                        Colors.black,
-                                    foregroundColor:
-                                        Colors.white,
-                                    minimumSize:
-                                        const Size(
-                                      0,
-                                      44,
-                                    ),
-                                    shape:
-                                        RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(
-                                        13,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : FilledButton(
-                                  onPressed:
-                                      () =>
-                                          _openActivity(
-                                    activity,
-                                  ),
-                                  style:
-                                      FilledButton
-                                          .styleFrom(
-                                    backgroundColor:
-                                        Colors.black,
-                                    foregroundColor:
-                                        Colors.white,
-                                    minimumSize:
-                                        const Size(
-                                      0,
-                                      44,
-                                    ),
-                                    shape:
-                                        RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(
-                                        13,
-                                      ),
-                                    ),
-                                  ),
-                                  child:
-                                      const Text(
-                                    'DETAY',
-                                    style:
-                                        TextStyle(
-                                      fontSize:
-                                          10,
-                                      fontWeight:
-                                          FontWeight
-                                              .w900,
-                                    ),
+                      child: isEvent &&
+                              activity.event!.ticketUrl !=
+                                  null &&
+                              activity.event!.ticketUrl!
+                                  .trim()
+                                  .isNotEmpty
+                          ? FilledButton.icon(
+                              onPressed: () =>
+                                  _openTicket(
+                                activity.event!,
+                              ),
+                              icon: const Icon(
+                                Icons
+                                    .confirmation_number_outlined,
+                                size: 17,
+                              ),
+                              label: const Text(
+                                'BİLET AL',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight:
+                                      FontWeight.w900,
+                                ),
+                              ),
+                              style:
+                                  FilledButton.styleFrom(
+                                backgroundColor:
+                                    Colors.black,
+                                foregroundColor:
+                                    Colors.white,
+                                minimumSize:
+                                    const Size(0, 44),
+                                shape:
+                                    RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    13,
                                   ),
                                 ),
+                              ),
+                            )
+                          : FilledButton(
+                              onPressed: () =>
+                                  _openActivity(
+                                activity,
+                              ),
+                              style:
+                                  FilledButton.styleFrom(
+                                backgroundColor:
+                                    Colors.black,
+                                foregroundColor:
+                                    Colors.white,
+                                minimumSize:
+                                    const Size(0, 44),
+                                shape:
+                                    RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    13,
+                                  ),
+                                ),
+                              ),
+                              child: const Text(
+                                'DETAY',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight:
+                                      FontWeight.w900,
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -2764,258 +2408,182 @@ class _RecommendationScreenState
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
           const Color(0xFFF7F7F5),
-      appBar:
-          AppBar(
+      appBar: AppBar(
         backgroundColor:
             const Color(0xFFF7F7F5),
         surfaceTintColor:
             Colors.transparent,
-        elevation:
-            0,
-        title:
-            const Text(
-          'Bugün ne yapayım?',
-          style:
-              TextStyle(
-            fontWeight:
-                FontWeight.w800,
+        elevation: 0,
+        title: Text(
+          _dateScope == _DateScope.today
+              ? 'Bugün ne yapayım?'
+              : _dateScopeLabel(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
       bottomNavigationBar:
           _buildQueueBar(),
-      body:
-          _loading
-              ? const Center(
-                  child:
-                      CircularProgressIndicator(),
-                )
-              : SafeArea(
-                  child:
-                      Padding(
-                    padding:
-                        const EdgeInsets
-                            .fromLTRB(
-                      20,
-                      8,
-                      20,
-                      10,
-                    ),
-                    child:
-                        Column(
-                      children: [
-                        Expanded(
-                          child:
-                              ListView(
-                            padding:
-                                const EdgeInsets
-                                    .only(
-                              bottom:
-                                  95,
-                            ),
-                            children: [
-                              const Text(
-                                'Bugünü sana göre\nbirlikte planlayalım.',
-                                style:
-                                    TextStyle(
-                                  fontSize:
-                                      29,
-                                  fontWeight:
-                                      FontWeight
-                                          .w900,
-                                  height:
-                                      1.06,
-                                  letterSpacing:
-                                      -0.8,
-                                ),
-                              ),
-                              const SizedBox(
-                                height:
-                                    20,
-                              ),
-                              _buildLocationStatus(),
-                              _buildFilterChips(),
-                              if (_error !=
-                                  null)
-                                Container(
-                                  margin:
-                                      const EdgeInsets
-                                          .only(
-                                    bottom:
-                                        16,
-                                  ),
-                                  padding:
-                                      const EdgeInsets
-                                          .all(
-                                    15,
-                                  ),
-                                  decoration:
-                                      BoxDecoration(
-                                    color:
-                                        Colors.white,
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(
-                                      18,
-                                    ),
-                                  ),
-                                  child:
-                                      Text(
-                                    _error!,
-                                  ),
-                                ),
-                              if (_results
-                                  .isNotEmpty)
-                                const Text(
-                                  'ÖNERİLER',
-                                  style:
-                                      TextStyle(
-                                    fontSize:
-                                        11,
-                                    fontWeight:
-                                        FontWeight
-                                            .w900,
-                                    letterSpacing:
-                                        1,
-                                    color:
-                                        Colors
-                                            .black54,
-                                  ),
-                                ),
-                              if (_results
-                                  .isNotEmpty)
-                                const SizedBox(
-                                  height:
-                                      10,
-                                ),
-                              ..._results.map(
-                                _buildResultCard,
-                              ),
-                              if (_hasSearched &&
-                                  _results
-                                      .isEmpty &&
-                                  _error ==
-                                      null)
-                                Container(
-                                  margin:
-                                      const EdgeInsets
-                                          .only(
-                                    top:
-                                        10,
-                                  ),
-                                  padding:
-                                      const EdgeInsets
-                                          .all(
-                                    22,
-                                  ),
-                                  decoration:
-                                      BoxDecoration(
-                                    color:
-                                        Colors.white,
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(
-                                      20,
-                                    ),
-                                  ),
-                                  child:
-                                      const Column(
-                                    children: [
-                                      Icon(
-                                        Icons
-                                            .search_off_rounded,
-                                        size:
-                                            42,
-                                      ),
-                                      SizedBox(
-                                        height:
-                                            10,
-                                      ),
-                                      Text(
-                                        'Bu kriterlere uygun sonuç bulamadım.',
-                                        textAlign:
-                                            TextAlign
-                                                .center,
-                                        style:
-                                            TextStyle(
-                                          fontWeight:
-                                              FontWeight
-                                                  .w800,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+      body: _loading
+          ? const Center(
+              child:
+                  CircularProgressIndicator(),
+            )
+          : SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  10,
                 ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding:
+                            const EdgeInsets.only(
+                          bottom: 95,
+                        ),
+                        children: [
+                          Text(
+                            _dateScope ==
+                                    _DateScope.today
+                                ? 'Bugünü sana göre\nbirlikte planlayalım.'
+                                : '${_dateScopeLabel()} için\nprogramını birlikte planlayalım.',
+                            style: const TextStyle(
+                              fontSize: 29,
+                              fontWeight:
+                                  FontWeight.w900,
+                              height: 1.06,
+                              letterSpacing: -0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildLocationStatus(),
+                          _buildDateFilters(),
+                          _buildFilterChips(),
+                          if (_error != null)
+                            Container(
+                              margin:
+                                  const EdgeInsets.only(
+                                bottom: 16,
+                              ),
+                              padding:
+                                  const EdgeInsets.all(
+                                15,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  18,
+                                ),
+                              ),
+                              child: Text(_error!),
+                            ),
+                          if (_results.isNotEmpty)
+                            const Text(
+                              'ÖNERİLER',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight:
+                                    FontWeight.w900,
+                                letterSpacing: 1,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          if (_results.isNotEmpty)
+                            const SizedBox(height: 10),
+                          ..._results.map(
+                            _buildResultCard,
+                          ),
+                          if (_hasSearched &&
+                              _results.isEmpty &&
+                              _error == null)
+                            Container(
+                              margin:
+                                  const EdgeInsets.only(
+                                top: 10,
+                              ),
+                              padding:
+                                  const EdgeInsets.all(
+                                22,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  20,
+                                ),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(
+                                    Icons
+                                        .search_off_rounded,
+                                    size: 42,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Bu kriterlere uygun sonuç bulamadım.',
+                                    textAlign:
+                                        TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight:
+                                          FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
       floatingActionButton:
           _buildRecommendationButton(),
       floatingActionButtonLocation:
-          FloatingActionButtonLocation
-              .centerFloat,
+          FloatingActionButtonLocation.centerFloat,
     );
   }
 
   Widget _buildRecommendationButton() {
     return SafeArea(
-      child:
-          Padding(
-        padding:
-            const EdgeInsets
-                .symmetric(
-          horizontal:
-              20,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
         ),
-        child:
-            SizedBox(
-          width:
-              double.infinity,
-          height:
-              53,
-          child:
-              FilledButton
-                  .icon(
+        child: SizedBox(
+          width: double.infinity,
+          height: 53,
+          child: FilledButton.icon(
             onPressed:
                 _generateRecommendations,
-            icon:
-                const Icon(
+            icon: const Icon(
               Icons.auto_awesome,
             ),
-            label:
-                const Text(
+            label: const Text(
               'BANA PLAN ÖNER',
-              style:
-                  TextStyle(
-                fontWeight:
-                    FontWeight
-                        .w900,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
               ),
             ),
-            style:
-                FilledButton
-                    .styleFrom(
-              backgroundColor:
-                  Colors.black,
-              foregroundColor:
-                  Colors.white,
-              shape:
-                  RoundedRectangleBorder(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
                 borderRadius:
-                    BorderRadius
-                        .circular(
-                  17,
-                ),
+                    BorderRadius.circular(17),
               ),
             ),
           ),
@@ -3043,8 +2611,7 @@ class _Activity {
   });
 }
 
-class _InfoPill
-    extends StatelessWidget {
+class _InfoPill extends StatelessWidget {
   final IconData icon;
   final String text;
 
@@ -3054,60 +2621,34 @@ class _InfoPill
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets
-              .symmetric(
-        horizontal:
-            9,
-        vertical:
-            6,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 9,
+        vertical: 6,
       ),
-      decoration:
-          BoxDecoration(
-        color:
-            const Color(
-          0xFFF4F4F2,
-        ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F4F2),
         borderRadius:
-            BorderRadius.circular(
-          20,
-        ),
+            BorderRadius.circular(20),
       ),
-      child:
-          Row(
-        mainAxisSize:
-            MainAxisSize.min,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size:
-                13,
-            color:
-                Colors.black54,
+            size: 13,
+            color: Colors.black54,
           ),
-          const SizedBox(
-            width:
-                4,
-          ),
+          const SizedBox(width: 4),
           Flexible(
-            child:
-                Text(
+            child: Text(
               text,
-              maxLines:
-                  1,
-              overflow:
-                  TextOverflow
-                      .ellipsis,
-              style:
-                  const TextStyle(
-                fontSize:
-                    10,
-                fontWeight:
-                    FontWeight.w700,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
