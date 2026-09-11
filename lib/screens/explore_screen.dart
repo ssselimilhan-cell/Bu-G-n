@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
 import 'event_detail_screen.dart';
+import 'place_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -22,12 +22,16 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen>
     with SingleTickerProviderStateMixin {
   final PlaceService _placeService = PlaceService();
+
   final EventService _eventService = EventService();
 
   late final TabController _tabController;
 
-  List<Place> _places = [];
-  List<Event> _events = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Place> _places = <Place>[];
+
+  List<Event> _events = <Event>[];
 
   bool _placesLoading = true;
   bool _eventsLoading = true;
@@ -37,6 +41,8 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   late String? _selectedCategory;
 
+  String _searchText = '';
+
   final List<String> _categories = const [
     'Tümü',
     'Doğa',
@@ -44,27 +50,63 @@ class _ExploreScreenState extends State<ExploreScreen>
     'Tarih',
     'Müze',
     'Kültür',
+    'Sinema',
   ];
 
   @override
   void initState() {
     super.initState();
 
-    _selectedCategory = widget.initialCategory;
+    _selectedCategory = _normalizeInitialCategory(
+      widget.initialCategory,
+    );
 
     _tabController = TabController(
       length: 2,
       vsync: this,
     );
 
+    _searchController.addListener(
+      _onSearchChanged,
+    );
+
     _loadPlaces();
     _loadEvents();
+  }
+
+  String? _normalizeInitialCategory(
+    String? category,
+  ) {
+    if (category == null) {
+      return null;
+    }
+
+    if (_categories.contains(category)) {
+      return category == 'Tümü' ? null : category;
+    }
+
+    return null;
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.removeListener(
+      _onSearchChanged,
+    );
+    _searchController.dispose();
+
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _searchText = _searchController.text.trim().toLowerCase();
+    });
   }
 
   Future<void> _loadPlaces() async {
@@ -80,14 +122,18 @@ class _ExploreScreenState extends State<ExploreScreen>
         limit: 100,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _places = places;
         _placesLoading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _placesLoading = false;
@@ -105,18 +151,22 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final events = await _eventService.getUpcomingEvents(
         city: 'Ankara',
-        days: 14,
-        limit: 100,
+        days: 31,
+        limit: 200,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _events = events;
         _eventsLoading = false;
       });
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         _eventsLoading = false;
@@ -125,17 +175,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  Future<void> _refreshAll() async {
-    await Future.wait([
-      _loadPlaces(),
-      _loadEvents(),
-    ]);
-  }
+  Future<void> _selectCategory(
+    String category,
+  ) async {
+    final newCategory = category == 'Tümü' ? null : category;
 
-  Future<void> _selectCategory(String category) async {
     setState(() {
-      _selectedCategory =
-          category == 'Tümü' ? null : category;
+      _selectedCategory = newCategory;
     });
 
     await _loadPlaces();
@@ -149,8 +195,55 @@ class _ExploreScreenState extends State<ExploreScreen>
     return _selectedCategory ?? 'Ankara’yı keşfet';
   }
 
+  List<Place> get _filteredPlaces {
+    if (_searchText.isEmpty) {
+      return _places;
+    }
+
+    return _places.where(
+      (place) {
+        final text = [
+          place.name,
+          place.category,
+          place.placeType ?? '',
+          place.shortDescription ?? '',
+          place.address ?? '',
+          ...place.tags,
+        ].join(' ').toLowerCase();
+
+        return text.contains(
+          _searchText,
+        );
+      },
+    ).toList();
+  }
+
+  List<Event> get _filteredEvents {
+    if (_searchText.isEmpty) {
+      return _events;
+    }
+
+    return _events.where(
+      (event) {
+        final text = [
+          event.title,
+          event.category,
+          event.description ?? '',
+          event.venueName ?? '',
+          event.address ?? '',
+        ].join(' ').toLowerCase();
+
+        return text.contains(
+          _searchText,
+        );
+      },
+    ).toList();
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
@@ -182,12 +275,72 @@ class _ExploreScreenState extends State<ExploreScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildPlacesTab(),
-          _buildEventsTab(),
-        ],
+      body: SafeArea(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildPlacesTab(),
+            _buildEventsTab(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBox({
+    required String hint,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        6,
+      ),
+      child: TextField(
+        controller: _searchController,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+          ),
+          suffixIcon: _searchText.isNotEmpty
+              ? IconButton(
+                  onPressed: _searchController.clear,
+                  icon: const Icon(
+                    Icons.clear,
+                  ),
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(
+              16,
+            ),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(
+              16,
+            ),
+            borderSide: BorderSide(
+              color: Colors.grey.shade200,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(
+              16,
+            ),
+            borderSide: const BorderSide(
+              color: Colors.black,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -197,35 +350,45 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     return Column(
       children: [
-        SizedBox(
-          height: 58,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            scrollDirection: Axis.horizontal,
-            itemCount: _categories.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final category = _categories[index];
+        _buildSearchBox(
+          hint: 'Ankara’da yer ara...',
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            4,
+            16,
+            8,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: _categories.map(
+                (category) {
+                  final isSelected = selected == category;
 
-              return ChoiceChip(
-                label: Text(category),
-                selected: selected == category,
-                onSelected: (_) =>
-                    _selectCategory(category),
-                selectedColor: Colors.black,
-                backgroundColor: Colors.white,
-                labelStyle: TextStyle(
-                  color: selected == category
-                      ? Colors.white
-                      : Colors.black,
-                  fontWeight: FontWeight.w700,
-                ),
-              );
-            },
+                  return ChoiceChip(
+                    label: Text(category),
+                    selected: isSelected,
+                    onSelected: (_) => _selectCategory(
+                      category,
+                    ),
+                    selectedColor: Colors.black,
+                    backgroundColor: Colors.white,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? Colors.black : Colors.grey.shade300,
+                    ),
+                  );
+                },
+              ).toList(),
+            ),
           ),
         ),
         Expanded(
@@ -243,46 +406,36 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
 
     if (_placesError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 42,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _placesError!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _loadPlaces,
-                child: const Text('Tekrar dene'),
-              ),
-            ],
-          ),
-        ),
+      return _buildErrorState(
+        message: _placesError!,
+        onRetry: _loadPlaces,
       );
     }
 
-    if (_places.isEmpty) {
+    final places = _filteredPlaces;
+
+    if (places.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadPlaces,
         child: ListView(
-          physics:
-              const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 180),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(
+              height: 150,
+            ),
             Center(
-              child: Text(
-                'Bu kategoride henüz yer yok.',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                ),
+                child: Text(
+                  _searchText.isNotEmpty
+                      ? 'Aramana uygun yer bulunamadı.'
+                      : 'Bu kategoride henüz yer yok.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -294,21 +447,25 @@ class _ExploreScreenState extends State<ExploreScreen>
     return RefreshIndicator(
       onRefresh: _loadPlaces,
       child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           16,
-          8,
+          6,
           16,
           24,
         ),
-        itemCount: _places.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
+        itemCount: places.length,
+        separatorBuilder: (_, __) => const SizedBox(
+          height: 12,
+        ),
         itemBuilder: (context, index) {
-          final place = _places[index];
+          final place = places[index];
 
           return _PlaceCard(
             place: place,
-            onTap: () => _showPlaceDetails(place),
+            onTap: () => _openPlace(
+              place,
+            ),
           );
         },
       ),
@@ -316,6 +473,19 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildEventsTab() {
+    return Column(
+      children: [
+        _buildSearchBox(
+          hint: 'Etkinliklerde ara...',
+        ),
+        Expanded(
+          child: _buildEventsContent(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEventsContent() {
     if (_eventsLoading) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -323,50 +493,34 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
 
     if (_eventsError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 42,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _eventsError!,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _loadEvents,
-                child: const Text('Tekrar dene'),
-              ),
-            ],
-          ),
-        ),
+      return _buildErrorState(
+        message: _eventsError!,
+        onRetry: _loadEvents,
       );
     }
 
-    if (_events.isEmpty) {
+    final events = _filteredEvents;
+
+    if (events.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadEvents,
         child: ListView(
-          physics:
-              const AlwaysScrollableScrollPhysics(),
-          children: const [
-            SizedBox(height: 180),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(
+              height: 150,
+            ),
             Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 32,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
                 ),
                 child: Text(
-                  'Önümüzdeki günlerde Ankara için etkinlik bulunamadı.',
+                  _searchText.isNotEmpty
+                      ? 'Aramana uygun etkinlik bulunamadı.'
+                      : 'Önümüzdeki 31 gün içinde Ankara için etkinlik bulunamadı.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -380,117 +534,92 @@ class _ExploreScreenState extends State<ExploreScreen>
     return RefreshIndicator(
       onRefresh: _loadEvents,
       child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           16,
-          14,
+          8,
           16,
           24,
         ),
-        itemCount: _events.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
+        itemCount: events.length,
+        separatorBuilder: (_, __) => const SizedBox(
+          height: 12,
+        ),
         itemBuilder: (context, index) {
-          final event = _events[index];
+          final event = events[index];
 
           return _EventCard(
             event: event,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      EventDetailScreen(
-                    event: event,
-                  ),
-                ),
-              );
-            },
+            onTap: () => _openEvent(
+              event,
+            ),
           );
         },
       ),
     );
   }
 
-  void _showPlaceDetails(Place place) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
-              24,
+  Widget _buildErrorState({
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(
+          24,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 42,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  place.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  place.category,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (place.shortDescription != null)
-                  Text(
-                    place.shortDescription!,
-                    style: const TextStyle(
-                      height: 1.4,
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                if (place.address != null)
-                  Text(place.address!),
-                if (place.visitDurationMin != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Yaklaşık ${place.visitDurationMin} dakika',
-                  ),
-                ],
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
+            const SizedBox(
+              height: 12,
+            ),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(
+              height: 12,
+            ),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text(
+                'Tekrar dene',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '${place.name} için navigasyonu birazdan ekleyeceğiz.',
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.navigation_outlined,
-                    ),
-                    label: const Text(
-                      'Yol tarifi',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  void _openPlace(
+    Place place,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => PlaceDetailScreen(
+          place: place,
+        ),
+      ),
+    );
+  }
+
+  void _openEvent(
+    Event event,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => EventDetailScreen(
+          event: event,
+        ),
+      ),
     );
   }
 }
@@ -504,93 +633,201 @@ class _PlaceCard extends StatelessWidget {
     required this.onTap,
   });
 
+  IconData _iconForCategory() {
+    final category = place.category.toLowerCase();
+
+    if (category.contains(
+          'doğa',
+        ) ||
+        category.contains(
+          'nature',
+        )) {
+      return Icons.park_outlined;
+    }
+
+    if (category.contains(
+          'park',
+        ) ||
+        category.contains(
+          'bahçe',
+        )) {
+      return Icons.grass_outlined;
+    }
+
+    if (category.contains(
+          'müze',
+        ) ||
+        category.contains(
+          'museum',
+        )) {
+      return Icons.museum_outlined;
+    }
+
+    if (category.contains(
+          'tarih',
+        ) ||
+        category.contains(
+          'history',
+        )) {
+      return Icons.account_balance_outlined;
+    }
+
+    if (category.contains(
+          'kültür',
+        ) ||
+        category.contains(
+          'culture',
+        )) {
+      return Icons.theater_comedy_outlined;
+    }
+
+    if (category.contains(
+          'sinema',
+        ) ||
+        category.contains(
+          'cinema',
+        )) {
+      return Icons.movie_outlined;
+    }
+
+    return Icons.place_outlined;
+  }
+
+  Widget _buildImage() {
+    return Container(
+      color: Colors.grey.shade100,
+      child: Icon(
+        _iconForCategory(),
+        size: 31,
+        color: Colors.black54,
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(
+        20,
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(
+          20,
+        ),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(
+              20,
+            ),
             border: Border.all(
               color: Colors.grey.shade200,
             ),
           ),
+          clipBehavior: Clip.antiAlias,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius:
-                      BorderRadius.circular(17),
-                ),
-                child: Icon(
-                  place.category == 'Doğa'
-                      ? Icons.park_outlined
-                      : place.category == 'Müze'
-                          ? Icons.museum_outlined
-                          : place.category == 'Tarih'
-                              ? Icons.account_balance_outlined
-                              : Icons.place_outlined,
-                  size: 31,
-                ),
+              SizedBox(
+                width: 92,
+                height: 118,
+                child: _buildImage(),
               ),
-              const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      place.category.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade600,
-                        fontWeight:
-                            FontWeight.w800,
-                        letterSpacing: 0.8,
+                child: Padding(
+                  padding: const EdgeInsets.all(
+                    14,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              place.category.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                          if (place.verified)
+                            const Icon(
+                              Icons.verified_outlined,
+                              size: 16,
+                            ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      place.name,
-                      maxLines: 2,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(
+                        height: 6,
                       ),
-                    ),
-                    if (place.shortDescription !=
-                        null) ...[
-                      const SizedBox(height: 6),
                       Text(
-                        place.shortDescription!,
+                        place.name,
                         maxLines: 2,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              Colors.grey.shade600,
-                          height: 1.3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
                         ),
                       ),
+                      if (place.shortDescription != null) ...[
+                        const SizedBox(
+                          height: 7,
+                        ),
+                        Text(
+                          place.shortDescription!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(
+                        height: 8,
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 5,
+                        children: [
+                          if (place.isFree == true)
+                            const _SmallPill(
+                              icon: Icons.local_offer_outlined,
+                              text: 'Ücretsiz',
+                            ),
+                          if (place.visitDurationMin != null)
+                            _SmallPill(
+                              icon: Icons.schedule_outlined,
+                              text: '${place.visitDurationMin} dk',
+                            ),
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.black54,
+              const SizedBox(
+                width: 5,
+              ),
+              const Padding(
+                padding: EdgeInsets.only(
+                  right: 10,
+                ),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.black45,
+                ),
               ),
             ],
           ),
@@ -610,28 +847,48 @@ class _EventCard extends StatelessWidget {
   });
 
   String _dateText() {
-    return DateFormat(
-      'd MMM · HH:mm',
-      'tr_TR',
-    ).format(event.startsAt.toLocal());
+    final value = event.startsAt.toLocal();
+
+    final day = value.day.toString().padLeft(
+          2,
+          '0',
+        );
+
+    final month = value.month.toString().padLeft(
+          2,
+          '0',
+        );
+
+    final year = value.year.toString();
+
+    final hour = value.hour.toString().padLeft(
+          2,
+          '0',
+        );
+
+    final minute = value.minute.toString().padLeft(
+          2,
+          '0',
+        );
+
+    return '$day.$month.$year · '
+        '$hour:$minute';
   }
 
   String _priceText() {
     final min = event.priceMin;
+
     final max = event.priceMax;
 
     if (min == null && max == null) {
       return '';
     }
 
-    if (min == 0 &&
-        (max == null || max == 0)) {
+    if ((min == null || min == 0) && (max == null || max == 0)) {
       return 'Ücretsiz';
     }
 
-    if (min != null &&
-        max != null &&
-        min != max) {
+    if (min != null && max != null && min != max) {
       return '${min.round()}-${max.round()} TL';
     }
 
@@ -644,208 +901,176 @@ class _EventCard extends StatelessWidget {
     return '${price.round()} TL';
   }
 
-  IconData _categoryIcon() {
+  IconData _iconForCategory() {
     final value = event.category.toLowerCase();
 
     if (value.contains('music') ||
-        value.contains('müzik')) {
+        value.contains('müzik') ||
+        value.contains('konser')) {
       return Icons.music_note_outlined;
     }
 
-    if (value.contains('sports') ||
-        value.contains('spor')) {
+    if (value.contains('sport') || value.contains('spor')) {
       return Icons.sports_basketball_outlined;
     }
 
-    if (value.contains('arts') ||
-        value.contains('kültür') ||
-        value.contains('theatre') ||
-        value.contains('tiyatro')) {
+    if (value.contains('theatre') ||
+        value.contains('theater') ||
+        value.contains('tiyatro') ||
+        value.contains('culture') ||
+        value.contains('kültür')) {
       return Icons.theater_comedy_outlined;
     }
 
     if (value.contains('film') ||
-        value.contains('movie')) {
-      return Icons.local_movies_outlined;
+        value.contains('movie') ||
+        value.contains('sinema')) {
+      return Icons.movie_outlined;
     }
 
     return Icons.event_outlined;
   }
 
+  Widget _buildImage() {
+    final imageUrl = event.imageUrl;
+
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      return Center(
+        child: Icon(
+          _iconForCategory(),
+          size: 34,
+          color: Colors.black54,
+        ),
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Center(
+        child: Icon(
+          _iconForCategory(),
+          size: 34,
+          color: Colors.black54,
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final priceText = _priceText();
+  Widget build(
+    BuildContext context,
+  ) {
+    final price = _priceText();
 
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(
+        20,
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(
+          20,
+        ),
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(
+              20,
+            ),
             border: Border.all(
               color: Colors.grey.shade200,
             ),
           ),
+          clipBehavior: Clip.antiAlias,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
                 width: 92,
-                height: 126,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius:
-                      const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    bottomLeft:
-                        Radius.circular(20),
-                  ),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: event.imageUrl == null
-                    ? Center(
-                        child: Icon(
-                          _categoryIcon(),
-                          size: 34,
-                        ),
-                      )
-                    : Image.network(
-                        event.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) {
-                          return Center(
-                            child: Icon(
-                              _categoryIcon(),
-                              size: 34,
-                            ),
-                          );
-                        },
-                      ),
+                height: 132,
+                color: Colors.grey.shade100,
+                child: _buildImage(),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(
+                    14,
+                  ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              event.category
-                                  .toUpperCase(),
+                              event.category.toUpperCase(),
                               maxLines: 1,
-                              overflow:
-                                  TextOverflow
-                                      .ellipsis,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 9,
-                                color: Colors
-                                    .grey.shade600,
-                                fontWeight:
-                                    FontWeight.w900,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w900,
                                 letterSpacing: 0.7,
                               ),
                             ),
                           ),
-                          if (priceText.isNotEmpty)
+                          if (price.isNotEmpty)
                             Text(
-                              priceText,
-                              style:
-                                  const TextStyle(
-                                fontSize: 11,
-                                fontWeight:
-                                    FontWeight.w800,
+                              price,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(
+                        height: 6,
+                      ),
                       Text(
                         event.title,
                         maxLines: 3,
-                        overflow:
-                            TextOverflow.ellipsis,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           height: 1.1,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.schedule_outlined,
-                            size: 15,
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              _dateText(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors
-                                    .grey.shade700,
-                                fontWeight:
-                                    FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                      const SizedBox(
+                        height: 9,
+                      ),
+                      _EventInfoRow(
+                        icon: Icons.schedule_outlined,
+                        text: _dateText(),
                       ),
                       if (event.venueName != null &&
-                          event.venueName!
-                              .trim()
-                              .isNotEmpty) ...[
-                        const SizedBox(height: 5),
-                        Row(
-                          crossAxisAlignment:
-                              CrossAxisAlignment
-                                  .start,
-                          children: [
-                            const Icon(
-                              Icons
-                                  .location_on_outlined,
-                              size: 15,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                event.venueName!,
-                                maxLines: 2,
-                                overflow:
-                                    TextOverflow
-                                        .ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors
-                                      .grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ],
+                          event.venueName!.trim().isNotEmpty) ...[
+                        const SizedBox(
+                          height: 5,
+                        ),
+                        _EventInfoRow(
+                          icon: Icons.location_on_outlined,
+                          text: event.venueName!,
                         ),
                       ],
-                      const SizedBox(height: 10),
+                      const SizedBox(
+                        height: 9,
+                      ),
                       const Row(
                         children: [
                           Text(
                             'DETAYLAR',
                             style: TextStyle(
                               fontSize: 10,
-                              fontWeight:
-                                  FontWeight.w900,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: 0.6,
                             ),
                           ),
-                          SizedBox(width: 4),
+                          SizedBox(
+                            width: 4,
+                          ),
                           Icon(
                             Icons.arrow_forward,
                             size: 13,
@@ -856,10 +1081,107 @@ class _EventCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const Padding(
+                padding: EdgeInsets.only(
+                  right: 10,
+                ),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.black45,
+                ),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SmallPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _SmallPill({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 5,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F3F1),
+        borderRadius: BorderRadius.circular(
+          15,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12,
+            color: Colors.black54,
+          ),
+          const SizedBox(
+            width: 3,
+          ),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _EventInfoRow({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 15,
+          color: Colors.black54,
+        ),
+        const SizedBox(
+          width: 5,
+        ),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
