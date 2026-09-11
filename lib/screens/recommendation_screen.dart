@@ -61,12 +61,10 @@ super.key,
 });
 
 @override
-State<RecommendationScreen> createState() =>
-_RecommendationScreenState();
+State<RecommendationScreen> createState() => _RecommendationScreenState();
 }
 
-class _RecommendationScreenState
-extends State<RecommendationScreen> {
+class _RecommendationScreenState extends State<RecommendationScreen> {
 final EventService _eventService = EventService();
 final PlaceService _placeService = PlaceService();
 
@@ -107,6 +105,25 @@ super.initState();
 _tryGetLocationSilently();
 }
 
+DateTime _startOfDay(DateTime date) {
+final local = date.toLocal();
+
+```
+return DateTime(
+  local.year,
+  local.month,
+  local.day,
+);
+```
+
+}
+
+DateTime _endOfDay(DateTime date) {
+return _startOfDay(date).add(
+const Duration(days: 1),
+);
+}
+
 Future<void> _tryGetLocationSilently() async {
 try {
 final position = await _getLocation(
@@ -131,29 +148,25 @@ requestPermission: false,
 Future<Position?> _getLocation({
 required bool requestPermission,
 }) async {
-final enabled =
-await Geolocator.isLocationServiceEnabled();
+final enabled = await Geolocator.isLocationServiceEnabled();
 
 ```
 if (!enabled) {
   return null;
 }
 
-var permission =
-    await Geolocator.checkPermission();
+var permission = await Geolocator.checkPermission();
 
 if (permission == LocationPermission.denied) {
   if (!requestPermission) {
     return null;
   }
 
-  permission =
-      await Geolocator.requestPermission();
+  permission = await Geolocator.requestPermission();
 }
 
 if (permission == LocationPermission.denied ||
-    permission ==
-        LocationPermission.deniedForever) {
+    permission == LocationPermission.deniedForever) {
   return null;
 }
 
@@ -344,29 +357,21 @@ setState(() {
 
 Future<void> _selectCustomDate() async {
 final now = DateTime.now();
+final firstDate = _startOfDay(now);
+final currentCustomDate = _customDate ?? firstDate;
 
 ```
-final initialDate =
-    _customDate ?? now;
+final initialDate = currentCustomDate.isBefore(firstDate)
+    ? firstDate
+    : currentCustomDate;
 
-final firstDate = DateTime(
-  now.year,
-  now.month,
-  now.day,
+final lastDate = firstDate.add(
+  const Duration(days: 365),
 );
 
-final lastDate = DateTime(
-  now.year + 2,
-  12,
-  31,
-);
-
-final selected =
-    await showDatePicker(
+final selected = await showDatePicker(
   context: context,
-  initialDate: initialDate.isBefore(firstDate)
-      ? firstDate
-      : initialDate,
+  initialDate: initialDate,
   firstDate: firstDate,
   lastDate: lastDate,
   locale: const Locale('tr', 'TR'),
@@ -375,18 +380,13 @@ final selected =
   confirmText: 'SEÇ',
 );
 
-if (selected == null ||
-    !mounted) {
+if (selected == null || !mounted) {
   return;
 }
 
 setState(() {
   _dateFilter = _DateFilter.custom;
-  _customDate = DateTime(
-    selected.year,
-    selected.month,
-    selected.day,
-  );
+  _customDate = _startOfDay(selected);
   _results = <_Activity>[];
   _hasSearched = false;
   _error = null;
@@ -395,32 +395,8 @@ setState(() {
 
 }
 
-DateTime _startOfDay(
-DateTime date,
-) {
-final local = date.toLocal();
-
-```
-return DateTime(
-  local.year,
-  local.month,
-  local.day,
-);
-```
-
-}
-
-DateTime _endOfDay(
-DateTime date,
-) {
-return _startOfDay(date).add(
-const Duration(days: 1),
-);
-}
-
 DateTimeRange _selectedDateRange() {
-final now = DateTime.now();
-final today = _startOfDay(now);
+final today = _startOfDay(DateTime.now());
 
 ```
 switch (_dateFilter) {
@@ -431,8 +407,7 @@ switch (_dateFilter) {
     );
 
   case _DateFilter.tomorrow:
-    final tomorrow =
-        today.add(
+    final tomorrow = today.add(
       const Duration(days: 1),
     );
 
@@ -442,22 +417,17 @@ switch (_dateFilter) {
     );
 
   case _DateFilter.thisWeek:
-    final daysFromMonday =
-        today.weekday - 1;
-
-    final start = today.subtract(
+    final monday = today.subtract(
       Duration(
-        days: daysFromMonday,
+        days: today.weekday - DateTime.monday,
       ),
     );
 
-    final end = start.add(
-      const Duration(days: 7),
-    );
-
     return DateTimeRange(
-      start: start,
-      end: end,
+      start: monday,
+      end: monday.add(
+        const Duration(days: 7),
+      ),
     );
 
   case _DateFilter.thisMonth:
@@ -479,15 +449,11 @@ switch (_dateFilter) {
     );
 
   case _DateFilter.custom:
-    final selected =
-        _customDate ?? today;
-
-    final start =
-        _startOfDay(selected);
+    final selected = _customDate ?? today;
 
     return DateTimeRange(
-      start: start,
-      end: _endOfDay(start),
+      start: _startOfDay(selected),
+      end: _endOfDay(selected),
     );
 }
 ```
@@ -512,9 +478,7 @@ return 'Bugün';
   case _DateFilter.custom:
     return _customDate == null
         ? 'Tarih Seç'
-        : _shortDateLabel(
-            _customDate!,
-          );
+        : _shortDateLabel(_customDate!);
 }
 ```
 
@@ -541,9 +505,7 @@ const months = [
 ```
 final local = date.toLocal();
 
-return '${local.day} '
-    '${months[local.month - 1]} '
-    '${local.year}';
+return '${local.day} ${months[local.month - 1]} ${local.year}';
 ```
 
 }
@@ -551,18 +513,12 @@ return '${local.day} '
 bool _isEventInSelectedDate(
 Event event,
 ) {
-final range =
-_selectedDateRange();
+final range = _selectedDateRange();
+final start = event.startsAt.toLocal();
+final end = event.endsAt?.toLocal();
 
 ```
-final start =
-    event.startsAt.toLocal();
-
-final end =
-    event.endsAt?.toLocal();
-
-if (end != null &&
-    end.isAfter(start)) {
+if (end != null && end.isAfter(start)) {
   return start.isBefore(range.end) &&
       end.isAfter(range.start);
 }
@@ -585,12 +541,11 @@ _results = <_Activity>[];
 await _refreshLocation();
 
 try {
-  final response =
-      await Future.wait<Object>([
+  final response = await Future.wait<Object>([
     _eventService.getUpcomingEvents(
       city: 'Ankara',
-      days: 31,
-      limit: 200,
+      days: 366,
+      limit: 500,
     ),
     _placeService.getPlaces(
       city: 'Ankara',
@@ -598,18 +553,12 @@ try {
     ),
   ]);
 
-  final events =
-      response[0] as List<Event>;
-
-  final places =
-      response[1] as List<Place>;
-
-  final activities =
-      <_Activity>[];
+  final events = response[0] as List<Event>;
+  final places = response[1] as List<Place>;
+  final activities = <_Activity>[];
 
   for (final event in events) {
-    final item =
-        _makeEventActivity(event);
+    final item = _makeEventActivity(event);
 
     if (item != null) {
       activities.add(item);
@@ -617,8 +566,7 @@ try {
   }
 
   for (final place in places) {
-    final item =
-        _makePlaceActivity(place);
+    final item = _makePlaceActivity(place);
 
     if (item != null) {
       activities.add(item);
@@ -626,21 +574,14 @@ try {
   }
 
   activities.sort(
-    (a, b) =>
-        b.score.compareTo(a.score),
+    (a, b) => b.score.compareTo(a.score),
   );
 
-  final unique =
-      <String>{};
+  final unique = <String>{};
+  final filtered = <_Activity>[];
 
-  final filtered =
-      <_Activity>[];
-
-  for (final activity
-      in activities) {
-    if (!unique.add(
-      activity.id,
-    )) {
+  for (final activity in activities) {
+    if (!unique.add(activity.id)) {
       continue;
     }
 
@@ -666,8 +607,7 @@ try {
 
   setState(() {
     _loading = false;
-    _error =
-        'Öneriler alınırken bir sorun oluştu.';
+    _error = 'Öneriler alınırken bir sorun oluştu.';
   });
 }
 ```
@@ -677,13 +617,10 @@ try {
 _Activity? _makeEventActivity(
 Event event,
 ) {
-final start =
-event.startsAt.toLocal();
+final start = event.startsAt.toLocal();
 
 ```
-if (!start.isAfter(
-  DateTime.now(),
-)) {
+if (!start.isAfter(DateTime.now())) {
   return null;
 }
 
@@ -691,8 +628,7 @@ if (!_isEventInSelectedDate(event)) {
   return null;
 }
 
-final score =
-    _scoreEvent(event);
+final score = _scoreEvent(event);
 
 if (score <= 0) {
   return null;
@@ -702,8 +638,7 @@ return _Activity(
   type: _ActivityType.event,
   id: event.id,
   score: score,
-  durationMinutes:
-      _eventDuration(event),
+  durationMinutes: _eventDuration(event),
   event: event,
   place: null,
 );
@@ -714,8 +649,7 @@ return _Activity(
 _Activity? _makePlaceActivity(
 Place place,
 ) {
-final score =
-_scorePlace(place);
+final score = _scorePlace(place);
 
 ```
 if (score <= 0) {
@@ -726,8 +660,7 @@ return _Activity(
   type: _ActivityType.place,
   id: place.id,
   score: score,
-  durationMinutes:
-      _placeDuration(place),
+  durationMinutes: _placeDuration(place),
   event: null,
   place: place,
 );
@@ -738,19 +671,14 @@ return _Activity(
 int _placeDuration(
 Place place,
 ) {
-final value =
-place.visitDurationMin;
+final value = place.visitDurationMin;
 
 ```
-if (value == null ||
-    value <= 0) {
+if (value == null || value <= 0) {
   return 120;
 }
 
-return value.clamp(
-  30,
-  600,
-);
+return value.clamp(30, 600).toInt();
 ```
 
 }
@@ -758,20 +686,14 @@ return value.clamp(
 int _eventDuration(
 Event event,
 ) {
-final start =
-event.startsAt.toLocal();
+final start = event.startsAt.toLocal();
+final end = event.endsAt?.toLocal();
 
 ```
-final end =
-    event.endsAt?.toLocal();
+if (end != null && end.isAfter(start)) {
+  final minutes = end.difference(start).inMinutes;
 
-if (end != null &&
-    end.isAfter(start)) {
-  final minutes =
-      end.difference(start).inMinutes;
-
-  if (minutes >= 20 &&
-      minutes <= 600) {
+  if (minutes >= 20 && minutes <= 600) {
     return minutes;
   }
 }
@@ -784,60 +706,39 @@ return 120;
 double _scoreEvent(
 Event event,
 ) {
-if (!_matchesInterestForEvent(
-event,
-)) {
+if (!_matchesInterestForEvent(event)) {
 return 0;
 }
 
 ```
-if (!_matchesBudgetForEvent(
-  event,
-)) {
+if (!_matchesBudgetForEvent(event)) {
   return 0;
 }
 
-if (!_matchesDuration(
-  _eventDuration(event),
-)) {
+if (!_matchesDuration(_eventDuration(event))) {
   return 0;
 }
 
 double score = 50;
 
-final text =
-    _eventText(event);
+final text = _eventText(event);
 
-if (_interests.contains(
-  InterestType.any,
-)) {
+if (_interests.contains(InterestType.any)) {
   score += 10;
 }
 
-for (final interest
-    in _interests) {
-  if (interest ==
-      InterestType.any) {
+for (final interest in _interests) {
+  if (interest == InterestType.any) {
     continue;
   }
 
-  if (_eventMatchesInterest(
-    text,
-    interest,
-  )) {
+  if (_eventMatchesInterest(text, interest)) {
     score += 45;
   }
 }
 
-final start =
-    event.startsAt.toLocal();
-
-final minutesUntil =
-    start
-        .difference(
-          DateTime.now(),
-        )
-        .inMinutes;
+final start = event.startsAt.toLocal();
+final minutesUntil = start.difference(DateTime.now()).inMinutes;
 
 if (minutesUntil <= 180) {
   score += 20;
@@ -847,22 +748,13 @@ if (minutesUntil <= 180) {
   score += 7;
 }
 
-score +=
-    _eventBudgetScore(event);
-
-score +=
-    _companionScoreForEvent(
-  text,
-);
-
-score +=
-    _locationScore(
+score += _eventBudgetScore(event);
+score += _companionScoreForEvent(text);
+score += _locationScore(
   event.latitude,
   event.longitude,
 );
-
-score +=
-    event.trustScore / 10;
+score += event.trustScore / 10;
 
 return score;
 ```
@@ -872,40 +764,29 @@ return score;
 double _scorePlace(
 Place place,
 ) {
-if (!_matchesInterestForPlace(
-place,
-)) {
+if (!_matchesInterestForPlace(place)) {
 return 0;
 }
 
 ```
-if (!_matchesBudgetForPlace(
-  place,
-)) {
+if (!_matchesBudgetForPlace(place)) {
   return 0;
 }
 
-if (!_matchesDuration(
-  _placeDuration(place),
-)) {
+if (!_matchesDuration(_placeDuration(place))) {
   return 0;
 }
 
 double score = 45;
 
-final text =
-    _placeText(place);
+final text = _placeText(place);
 
-if (_interests.contains(
-  InterestType.any,
-)) {
+if (_interests.contains(InterestType.any)) {
   score += 10;
 }
 
-for (final interest
-    in _interests) {
-  if (interest ==
-      InterestType.any) {
+for (final interest in _interests) {
+  if (interest == InterestType.any) {
     continue;
   }
 
@@ -918,9 +799,7 @@ for (final interest
   }
 }
 
-if (_budgets.contains(
-  BudgetType.any,
-)) {
+if (_budgets.contains(BudgetType.any)) {
   score += 8;
 }
 
@@ -932,19 +811,12 @@ if (place.verified) {
   score += 10;
 }
 
-score +=
-    _companionScoreForPlace(
-  place,
-);
-
-score +=
-    _locationScore(
+score += _companionScoreForPlace(place);
+score += _locationScore(
   place.latitude,
   place.longitude,
 );
-
-score +=
-    place.trustScore / 10;
+score += place.trustScore / 10;
 
 return score;
 ```
@@ -977,22 +849,15 @@ place.shortDescription ?? '',
 bool _matchesInterestForEvent(
 Event event,
 ) {
-if (_interests.contains(
-InterestType.any,
-)) {
+if (_interests.contains(InterestType.any)) {
 return true;
 }
 
 ```
-final text =
-    _eventText(event);
+final text = _eventText(event);
 
-for (final interest
-    in _interests) {
-  if (_eventMatchesInterest(
-    text,
-    interest,
-  )) {
+for (final interest in _interests) {
+  if (_eventMatchesInterest(text, interest)) {
     return true;
   }
 }
@@ -1110,18 +975,14 @@ return true;
 bool _matchesInterestForPlace(
 Place place,
 ) {
-if (_interests.contains(
-InterestType.any,
-)) {
+if (_interests.contains(InterestType.any)) {
 return true;
 }
 
 ```
-final text =
-    _placeText(place);
+final text = _placeText(place);
 
-for (final interest
-    in _interests) {
+for (final interest in _interests) {
   if (_placeMatchesInterest(
     text,
     place,
@@ -1228,48 +1089,32 @@ return false;
 bool _matchesBudgetForEvent(
 Event event,
 ) {
-if (_budgets.contains(
-BudgetType.any,
-)) {
+if (_budgets.contains(BudgetType.any)) {
 return true;
 }
 
 ```
-final price =
-    event.priceMin ??
-        event.priceMax;
+final price = event.priceMin ?? event.priceMax;
 
-final free =
-    (event.priceMin == null ||
-        event.priceMin == 0) &&
-    (event.priceMax == null ||
-        event.priceMax == 0);
+final free = (event.priceMin == null || event.priceMin == 0) &&
+    (event.priceMax == null || event.priceMax == 0);
 
-for (final budget
-    in _budgets) {
-  if (budget ==
-          BudgetType.free &&
-      free) {
+for (final budget in _budgets) {
+  if (budget == BudgetType.free && free) {
     return true;
   }
 
   if (price == null) {
-    if (budget ==
-            BudgetType.low ||
-        budget ==
-            BudgetType.medium) {
+    if (budget == BudgetType.low ||
+        budget == BudgetType.medium) {
       return true;
     }
   } else {
-    if (budget ==
-            BudgetType.low &&
-        price <= 1000) {
+    if (budget == BudgetType.low && price <= 1000) {
       return true;
     }
 
-    if (budget ==
-            BudgetType.medium &&
-        price <= 2500) {
+    if (budget == BudgetType.medium && price <= 2500) {
       return true;
     }
   }
@@ -1283,29 +1128,21 @@ return false;
 bool _matchesBudgetForPlace(
 Place place,
 ) {
-if (_budgets.contains(
-BudgetType.any,
-)) {
+if (_budgets.contains(BudgetType.any)) {
 return true;
 }
 
 ```
-if (_budgets.contains(
-      BudgetType.free,
-    ) &&
+if (_budgets.contains(BudgetType.free) &&
     place.isFree == true) {
   return true;
 }
 
-if (_budgets.contains(
-  BudgetType.low,
-)) {
+if (_budgets.contains(BudgetType.low)) {
   return true;
 }
 
-if (_budgets.contains(
-  BudgetType.medium,
-)) {
+if (_budgets.contains(BudgetType.medium)) {
   return true;
 }
 
@@ -1317,13 +1154,10 @@ return false;
 double _eventBudgetScore(
 Event event,
 ) {
-final price =
-event.priceMin ??
-event.priceMax;
+final price = event.priceMin ?? event.priceMax;
 
 ```
-if (price == null ||
-    price == 0) {
+if (price == null || price == 0) {
   return 20;
 }
 
@@ -1347,15 +1181,12 @@ return -5;
 bool _matchesDuration(
 int minutes,
 ) {
-if (_durations.contains(
-DurationType.any,
-)) {
+if (_durations.contains(DurationType.any)) {
 return true;
 }
 
 ```
-for (final duration
-    in _durations) {
+for (final duration in _durations) {
   switch (duration) {
     case DurationType.short:
       if (minutes <= 120) {
@@ -1364,8 +1195,7 @@ for (final duration
       break;
 
     case DurationType.medium:
-      if (minutes >= 120 &&
-          minutes <= 300) {
+      if (minutes >= 120 && minutes <= 300) {
         return true;
       }
       break;
@@ -1389,18 +1219,14 @@ return false;
 double _companionScoreForEvent(
 String text,
 ) {
-if (_companions.contains(
-CompanionType.any,
-)) {
+if (_companions.contains(CompanionType.any)) {
 return 8;
 }
 
 ```
 double score = 0;
 
-if (_companions.contains(
-  CompanionType.family,
-)) {
+if (_companions.contains(CompanionType.family)) {
   if (_containsAny(
     text,
     [
@@ -1415,15 +1241,11 @@ if (_companions.contains(
   }
 }
 
-if (_companions.contains(
-  CompanionType.couple,
-)) {
+if (_companions.contains(CompanionType.couple)) {
   score += 7;
 }
 
-if (_companions.contains(
-  CompanionType.solo,
-)) {
+if (_companions.contains(CompanionType.solo)) {
   score += 6;
 }
 
@@ -1435,31 +1257,23 @@ return score;
 double _companionScoreForPlace(
 Place place,
 ) {
-if (_companions.contains(
-CompanionType.any,
-)) {
+if (_companions.contains(CompanionType.any)) {
 return 8;
 }
 
 ```
 double score = 0;
 
-if (_companions.contains(
-      CompanionType.family,
-    ) &&
+if (_companions.contains(CompanionType.family) &&
     place.kidsFriendly == true) {
   score += 30;
 }
 
-if (_companions.contains(
-  CompanionType.couple,
-)) {
+if (_companions.contains(CompanionType.couple)) {
   score += 7;
 }
 
-if (_companions.contains(
-  CompanionType.solo,
-)) {
+if (_companions.contains(CompanionType.solo)) {
   score += 6;
 }
 
@@ -1472,8 +1286,7 @@ double _locationScore(
 double? latitude,
 double? longitude,
 ) {
-final position =
-_userPosition;
+final position = _userPosition;
 
 ```
 if (position == null ||
@@ -1482,14 +1295,13 @@ if (position == null ||
   return 0;
 }
 
-final distance =
-    Geolocator.distanceBetween(
+final distance = Geolocator.distanceBetween(
       position.latitude,
       position.longitude,
       latitude,
       longitude,
     ) /
-        1000;
+    1000;
 
 if (distance <= 2) {
   return 40;
@@ -1520,8 +1332,7 @@ double? _distanceFromUser(
 double? latitude,
 double? longitude,
 ) {
-final position =
-_userPosition;
+final position = _userPosition;
 
 ```
 if (position == null ||
@@ -1561,15 +1372,11 @@ return '${distanceKm.toStringAsFixed(1)} km';
 String _priceLabel(
 Event event,
 ) {
-final min =
-event.priceMin;
+final min = event.priceMin;
+final max = event.priceMax;
 
 ```
-final max =
-    event.priceMax;
-
-if (min == null &&
-    max == null) {
+if (min == null && max == null) {
   return '';
 }
 
@@ -1584,8 +1391,7 @@ if (min != null &&
   return '${_formatPrice(min)}–${_formatPrice(max)} TL';
 }
 
-final price =
-    min ?? max!;
+final price = min ?? max!;
 
 return '${_formatPrice(price)} TL';
 ```
@@ -1608,8 +1414,7 @@ return value.toStringAsFixed(0);
 String _dateLabel(
 DateTime dateTime,
 ) {
-final local =
-dateTime.toLocal();
+final local = dateTime.toLocal();
 
 ```
 const months = [
@@ -1627,9 +1432,7 @@ const months = [
   'Ara',
 ];
 
-return '${local.day} '
-    '${months[local.month - 1]} '
-    '${local.year} · '
+return '${local.day} ${months[local.month - 1]} ${local.year} · '
     '${local.hour.toString().padLeft(2, '0')}:'
     '${local.minute.toString().padLeft(2, '0')}';
 ```
@@ -1644,11 +1447,8 @@ return '$minutes dk';
 }
 
 ```
-final hours =
-    minutes ~/ 60;
-
-final remaining =
-    minutes % 60;
+final hours = minutes ~/ 60;
+final remaining = minutes % 60;
 
 if (remaining == 0) {
   return '$hours saat';
@@ -1671,10 +1471,8 @@ void _toggleQueue(
 _Activity activity,
 ) {
 setState(() {
-final index =
-_queue.indexWhere(
-(item) =>
-item.id == activity.id,
+final index = _queue.indexWhere(
+(item) => item.id == activity.id,
 );
 
 ```
@@ -1691,26 +1489,22 @@ item.id == activity.id,
 double? _activityLatitude(
 _Activity activity,
 ) {
-return activity.event?.latitude ??
-activity.place?.latitude;
+return activity.event?.latitude ?? activity.place?.latitude;
 }
 
 double? _activityLongitude(
 _Activity activity,
 ) {
-return activity.event?.longitude ??
-activity.place?.longitude;
+return activity.event?.longitude ?? activity.place?.longitude;
 }
 
 Future<void> _openTicket(
 Event event,
 ) async {
-final url =
-event.ticketUrl;
+final url = event.ticketUrl;
 
 ```
-if (url == null ||
-    url.trim().isEmpty) {
+if (url == null || url.trim().isEmpty) {
   _showMessage(
     'Bu etkinlik için bilet bağlantısı bulunmuyor.',
   );
@@ -1718,8 +1512,7 @@ if (url == null ||
 }
 
 try {
-  final uri =
-      Uri.tryParse(url);
+  final uri = Uri.tryParse(url);
 
   if (uri == null) {
     _showMessage(
@@ -1728,11 +1521,9 @@ try {
     return;
   }
 
-  final opened =
-      await launchUrl(
+  final opened = await launchUrl(
     uri,
-    mode:
-        LaunchMode.externalApplication,
+    mode: LaunchMode.externalApplication,
   );
 
   if (!opened) {
@@ -1750,16 +1541,11 @@ try {
 }
 
 Future<void> _buildRoute() async {
-final navigable =
-_queue
+final navigable = _queue
 .where(
 (activity) =>
-_activityLatitude(
-activity,
-) != null &&
-_activityLongitude(
-activity,
-) != null,
+_activityLatitude(activity) != null &&
+_activityLongitude(activity) != null,
 )
 .toList();
 
@@ -1775,32 +1561,28 @@ final destination =
     '${_activityLatitude(navigable.last)},'
     '${_activityLongitude(navigable.last)}';
 
-final waypoints =
-    navigable.length > 2
-        ? navigable
-            .sublist(
-              0,
-              navigable.length - 1,
-            )
-            .map(
-              (item) =>
-                  '${_activityLatitude(item)},'
-                  '${_activityLongitude(item)}',
-            )
-            .join('|')
-        : null;
+final waypoints = navigable.length > 2
+    ? navigable
+        .sublist(
+          0,
+          navigable.length - 1,
+        )
+        .map(
+          (item) =>
+              '${_activityLatitude(item)},'
+              '${_activityLongitude(item)}',
+        )
+        .join('|')
+    : null;
 
-final parameters =
-    <String, String>{
+final parameters = <String, String>{
   'api': '1',
   'destination': destination,
   'travelmode': 'driving',
 };
 
-if (waypoints != null &&
-    waypoints.isNotEmpty) {
-  parameters['waypoints'] =
-      waypoints;
+if (waypoints != null && waypoints.isNotEmpty) {
+  parameters['waypoints'] = waypoints;
 }
 
 final uri = Uri.https(
@@ -1810,11 +1592,9 @@ final uri = Uri.https(
 );
 
 try {
-  final opened =
-      await launchUrl(
+  final opened = await launchUrl(
     uri,
-    mode:
-        LaunchMode.externalApplication,
+    mode: LaunchMode.externalApplication,
   );
 
   if (!opened) {
@@ -1838,8 +1618,7 @@ if (activity.event != null) {
 Navigator.push(
 context,
 MaterialPageRoute<void>(
-builder: (*) =>
-EventDetailScreen(
+builder: (*) => EventDetailScreen(
 event: activity.event!,
 ),
 ),
@@ -1852,8 +1631,7 @@ if (activity.place != null) {
   Navigator.push(
     context,
     MaterialPageRoute<void>(
-      builder: (_) =>
-          PlaceDetailScreen(
+      builder: (_) => PlaceDetailScreen(
         place: activity.place!,
       ),
     ),
@@ -1898,13 +1676,11 @@ bool _containsAny(
 String text,
 List<String> terms,
 ) {
-final normalized =
-text.toLowerCase();
+final normalized = text.toLowerCase();
 
 ```
 return terms.any(
-  (term) =>
-      normalized.contains(
+  (term) => normalized.contains(
     term.toLowerCase(),
   ),
 );
@@ -1915,25 +1691,20 @@ return terms.any(
 Widget _buildCardImage(
 _Activity activity,
 ) {
-final imageUrl =
-activity.event?.imageUrl;
+final imageUrl = activity.event?.imageUrl;
 
 ```
-if (imageUrl == null ||
-    imageUrl.trim().isEmpty) {
+if (imageUrl == null || imageUrl.trim().isEmpty) {
   return Container(
     width: double.infinity,
     height: 155,
-    color:
-        Colors.grey.shade100,
+    color: Colors.grey.shade100,
     child: Icon(
-      activity.type ==
-              _ActivityType.event
+      activity.type == _ActivityType.event
           ? Icons.event_outlined
           : Icons.place_outlined,
       size: 42,
-      color:
-          Colors.black38,
+      color: Colors.black38,
     ),
   );
 }
@@ -1943,48 +1714,38 @@ return Image.network(
   width: double.infinity,
   height: 155,
   fit: BoxFit.cover,
-  errorBuilder:
-      (_, __, ___) {
+  errorBuilder: (_, __, ___) {
     return Container(
       width: double.infinity,
       height: 155,
-      color:
-          Colors.grey.shade100,
+      color: Colors.grey.shade100,
       child: Icon(
-        activity.type ==
-                _ActivityType.event
+        activity.type == _ActivityType.event
             ? Icons.event_outlined
             : Icons.place_outlined,
         size: 42,
-        color:
-            Colors.black38,
+        color: Colors.black38,
       ),
     );
   },
-  loadingBuilder:
-      (
+  loadingBuilder: (
     context,
     child,
     loadingProgress,
   ) {
-    if (loadingProgress ==
-        null) {
+    if (loadingProgress == null) {
       return child;
     }
 
     return Container(
       width: double.infinity,
       height: 155,
-      color:
-          Colors.grey.shade100,
-      child:
-          const Center(
-        child:
-            SizedBox(
+      color: Colors.grey.shade100,
+      child: const Center(
+        child: SizedBox(
           width: 24,
           height: 24,
-          child:
-              CircularProgressIndicator(
+          child: CircularProgressIndicator(
             strokeWidth: 2,
           ),
         ),
@@ -1999,106 +1760,65 @@ return Image.network(
 Widget _buildResultCard(
 _Activity activity,
 ) {
-final queued =
-_isQueued(activity);
+final queued = _isQueued(activity);
+final isEvent = activity.type == _ActivityType.event;
 
 ```
-final isEvent =
-    activity.type ==
-        _ActivityType.event;
-
-final distance =
-    _distanceFromUser(
-  _activityLatitude(
-    activity,
-  ),
-  _activityLongitude(
-    activity,
-  ),
+final distance = _distanceFromUser(
+  _activityLatitude(activity),
+  _activityLongitude(activity),
 );
 
-final locationText =
-    _distanceLabel(
-  distance,
-);
+final locationText = _distanceLabel(distance);
 
 final placeName =
-    activity.event?.venueName ??
-        activity.place?.address;
+    activity.event?.venueName ?? activity.place?.address;
 
 return Container(
-  margin:
-      const EdgeInsets.only(
+  margin: const EdgeInsets.only(
     bottom: 16,
   ),
-  clipBehavior:
-      Clip.antiAlias,
-  decoration:
-      BoxDecoration(
+  clipBehavior: Clip.antiAlias,
+  decoration: BoxDecoration(
     color: Colors.white,
-    borderRadius:
-        BorderRadius.circular(
-      22,
-    ),
-    border:
-        Border.all(
-      color: queued
-          ? Colors.black
-          : Colors.grey.shade200,
-      width:
-          queued ? 1.4 : 1,
+    borderRadius: BorderRadius.circular(22),
+    border: Border.all(
+      color: queued ? Colors.black : Colors.grey.shade200,
+      width: queued ? 1.4 : 1,
     ),
     boxShadow: const [
       BoxShadow(
-        color:
-            Color(0x08000000),
+        color: Color(0x08000000),
         blurRadius: 14,
-        offset:
-            Offset(0, 5),
+        offset: Offset(0, 5),
       ),
     ],
   ),
   child: Column(
-    crossAxisAlignment:
-        CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Stack(
         children: [
-          _buildCardImage(
-            activity,
-          ),
+          _buildCardImage(activity),
           Positioned(
             left: 12,
             top: 12,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: 10,
                 vertical: 7,
               ),
-              decoration:
-                  BoxDecoration(
-                color:
-                    Colors.black87,
-                borderRadius:
-                    BorderRadius.circular(
-                  20,
-                ),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(20),
               ),
-              child:
-                  Text(
-                isEvent
-                    ? 'ETKİNLİK'
-                    : 'KEŞİF',
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.white,
+              child: Text(
+                isEvent ? 'ETKİNLİK' : 'KEŞİF',
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 9,
-                  fontWeight:
-                      FontWeight.w900,
-                  letterSpacing:
-                      0.8,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
                 ),
               ),
             ),
@@ -2107,26 +1827,17 @@ return Container(
             Positioned(
               right: 12,
               top: 12,
-              child:
-                  Container(
-                padding:
-                    const EdgeInsets.symmetric(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 7,
                 ),
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(
-                    20,
-                  ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child:
-                    const Row(
-                  mainAxisSize:
-                      MainAxisSize.min,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.check,
@@ -2137,12 +1848,9 @@ return Container(
                     ),
                     Text(
                       'KUYRUKTA',
-                      style:
-                          TextStyle(
-                        fontSize:
-                            9,
-                        fontWeight:
-                            FontWeight.w900,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
@@ -2152,26 +1860,19 @@ return Container(
         ],
       ),
       Padding(
-        padding:
-            const EdgeInsets.all(
-          15,
-        ),
+        padding: const EdgeInsets.all(15),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               activity.event?.title ??
                   activity.place?.name ??
                   '',
               maxLines: 2,
-              overflow:
-                  TextOverflow.ellipsis,
-              style:
-                  const TextStyle(
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
                 fontSize: 17,
-                fontWeight:
-                    FontWeight.w900,
+                fontWeight: FontWeight.w900,
                 height: 1.15,
               ),
             ),
@@ -2184,28 +1885,20 @@ return Container(
               children: [
                 _InfoPill(
                   icon: isEvent
-                      ? Icons
-                          .schedule_outlined
-                      : Icons
-                          .timelapse_outlined,
+                      ? Icons.schedule_outlined
+                      : Icons.timelapse_outlined,
                   text: isEvent
                       ? _dateLabel(
-                          activity
-                              .event!
-                              .startsAt,
+                          activity.event!.startsAt,
                         )
                       : _durationLabel(
-                          activity
-                              .durationMinutes,
+                          activity.durationMinutes,
                         ),
                 ),
                 if (locationText.isNotEmpty)
                   _InfoPill(
-                    icon:
-                        Icons
-                            .near_me_outlined,
-                    text:
-                        locationText,
+                    icon: Icons.near_me_outlined,
+                    text: locationText,
                   ),
               ],
             ),
@@ -2217,29 +1910,15 @@ return Container(
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  if (_priceLabel(
-                    activity.event!,
-                  ).isNotEmpty)
+                  if (_priceLabel(activity.event!).isNotEmpty)
                     _InfoPill(
-                      icon:
-                          Icons
-                              .payments_outlined,
-                      text:
-                          _priceLabel(
-                        activity.event!,
-                      ),
+                      icon: Icons.payments_outlined,
+                      text: _priceLabel(activity.event!),
                     ),
-                  if (activity
-                      .event!
-                      .category
-                      .trim()
-                      .isNotEmpty)
+                  if (activity.event!.category.trim().isNotEmpty)
                     _InfoPill(
-                      icon:
-                          Icons
-                              .category_outlined,
-                      text:
-                          _eventTextCategory(
+                      icon: Icons.category_outlined,
+                      text: _eventTextCategory(
                         activity.event!,
                       ),
                     ),
@@ -2253,27 +1932,15 @@ return Container(
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  if (activity
-                          .place!
-                          .isFree ==
-                      true)
+                  if (activity.place!.isFree == true)
                     const _InfoPill(
-                      icon: Icons
-                          .local_offer_outlined,
-                      text:
-                          'Ücretsiz',
+                      icon: Icons.local_offer_outlined,
+                      text: 'Ücretsiz',
                     ),
-                  if (activity
-                      .place!
-                      .category
-                      .trim()
-                      .isNotEmpty)
+                  if (activity.place!.category.trim().isNotEmpty)
                     _InfoPill(
-                      icon:
-                          Icons
-                              .category_outlined,
-                      text:
-                          _placeTextCategory(
+                      icon: Icons.category_outlined,
+                      text: _placeTextCategory(
                         activity.place!,
                       ),
                     ),
@@ -2281,22 +1948,17 @@ return Container(
               ),
             ],
             if (placeName != null &&
-                placeName
-                    .trim()
-                    .isNotEmpty) ...[
+                placeName.trim().isNotEmpty) ...[
               const SizedBox(
                 height: 9,
               ),
               Text(
                 placeName,
                 maxLines: 2,
-                overflow:
-                    TextOverflow.ellipsis,
-                style:
-                    TextStyle(
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
                   fontSize: 11,
-                  color:
-                      Colors.grey.shade600,
+                  color: Colors.grey.shade600,
                 ),
               ),
             ],
@@ -2306,49 +1968,30 @@ return Container(
             Row(
               children: [
                 Expanded(
-                  child:
-                      OutlinedButton(
-                    onPressed: () =>
-                        _toggleQueue(
-                      activity,
-                    ),
-                    style:
-                        OutlinedButton
-                            .styleFrom(
-                      foregroundColor:
-                          Colors.black,
-                      minimumSize:
-                          const Size(
+                  child: OutlinedButton(
+                    onPressed: () => _toggleQueue(activity),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size(
                         0,
                         44,
                       ),
-                      side:
-                          BorderSide(
+                      side: BorderSide(
                         color: queued
                             ? Colors.black
-                            : Colors.grey
-                                .shade300,
+                            : Colors.grey.shade300,
                       ),
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius
-                                .circular(
-                          13,
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
                       ),
                     ),
-                    child:
-                        Text(
+                    child: Text(
                       queued
                           ? 'Kuyruktan çıkar'
                           : 'Kuyruğa ekle',
-                      style:
-                          const TextStyle(
-                        fontSize:
-                            11,
-                        fontWeight:
-                            FontWeight.w800,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -2357,98 +2000,57 @@ return Container(
                   width: 8,
                 ),
                 if (isEvent &&
-                    activity
-                            .event!
-                            .ticketUrl !=
-                        null &&
-                    activity
-                        .event!
-                        .ticketUrl!
-                        .trim()
-                        .isNotEmpty)
+                    activity.event!.ticketUrl != null &&
+                    activity.event!.ticketUrl!.trim().isNotEmpty)
                   Expanded(
-                    child:
-                        FilledButton.icon(
-                      onPressed: () =>
-                          _openTicket(
+                    child: FilledButton.icon(
+                      onPressed: () => _openTicket(
                         activity.event!,
                       ),
-                      icon:
-                          const Icon(
-                        Icons
-                            .confirmation_number_outlined,
+                      icon: const Icon(
+                        Icons.confirmation_number_outlined,
                         size: 17,
                       ),
-                      label:
-                          const Text(
+                      label: const Text(
                         'BİLET AL',
-                        style:
-                            TextStyle(
-                          fontSize:
-                              10,
-                          fontWeight:
-                              FontWeight.w900,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      style:
-                          FilledButton.styleFrom(
-                        backgroundColor:
-                            Colors.black,
-                        foregroundColor:
-                            Colors.white,
-                        minimumSize:
-                            const Size(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(
                           0,
                           44,
                         ),
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            13,
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
                         ),
                       ),
                     ),
                   )
                 else
                   Expanded(
-                    child:
-                        FilledButton(
-                      onPressed: () =>
-                          _openActivity(
-                        activity,
-                      ),
-                      style:
-                          FilledButton.styleFrom(
-                        backgroundColor:
-                            Colors.black,
-                        foregroundColor:
-                            Colors.white,
-                        minimumSize:
-                            const Size(
+                    child: FilledButton(
+                      onPressed: () => _openActivity(activity),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(
                           0,
                           44,
                         ),
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            13,
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
                         ),
                       ),
-                      child:
-                          const Text(
+                      child: const Text(
                         'DETAY',
-                        style:
-                            TextStyle(
-                          fontSize:
-                              10,
-                          fontWeight:
-                              FontWeight.w900,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
@@ -2471,31 +2073,22 @@ required bool selected,
 required VoidCallback onTap,
 }) {
 return Padding(
-padding:
-const EdgeInsets.only(
+padding: const EdgeInsets.only(
 right: 7,
 bottom: 7,
 ),
 child: ChoiceChip(
 label: Text(label),
 selected: selected,
-onSelected: (*) =>
-onTap(),
-labelStyle:
-TextStyle(
+onSelected: (*) => onTap(),
+labelStyle: TextStyle(
 fontSize: 12,
-fontWeight:
-FontWeight.w700,
-color: selected
-? Colors.white
-: Colors.black,
+fontWeight: FontWeight.w700,
+color: selected ? Colors.white : Colors.black,
 ),
-selectedColor:
-Colors.black,
-backgroundColor:
-Colors.white,
-side:
-BorderSide(
+selectedColor: Colors.black,
+backgroundColor: Colors.white,
+side: BorderSide(
 color: selected
 ? Colors.black
 : Colors.grey.shade300,
@@ -2509,24 +2102,19 @@ String title,
 Widget child,
 ) {
 return Padding(
-padding:
-const EdgeInsets.only(
+padding: const EdgeInsets.only(
 bottom: 20,
 ),
 child: Column(
-crossAxisAlignment:
-CrossAxisAlignment.start,
+crossAxisAlignment: CrossAxisAlignment.start,
 children: [
 Text(
 title,
-style:
-const TextStyle(
+style: const TextStyle(
 fontSize: 11,
-fontWeight:
-FontWeight.w900,
+fontWeight: FontWeight.w900,
 letterSpacing: 1,
-color:
-Colors.black54,
+color: Colors.black54,
 ),
 ),
 const SizedBox(
@@ -2542,75 +2130,57 @@ Widget _buildDateFilters() {
 return _section(
 'NE ZAMAN?',
 Column(
-crossAxisAlignment:
-CrossAxisAlignment.start,
+crossAxisAlignment: CrossAxisAlignment.start,
 children: [
 SingleChildScrollView(
-scrollDirection:
-Axis.horizontal,
+scrollDirection: Axis.horizontal,
 child: Row(
 children: [
 _dateChoice(
 label: 'Bugün',
-filter:
-_DateFilter.today,
+filter: _DateFilter.today,
 ),
 _dateChoice(
 label: 'Yarın',
-filter:
-_DateFilter.tomorrow,
+filter: _DateFilter.tomorrow,
 ),
 _dateChoice(
 label: 'Bu Hafta',
-filter:
-_DateFilter.thisWeek,
+filter: _DateFilter.thisWeek,
 ),
 _dateChoice(
 label: 'Bu Ay',
-filter:
-_DateFilter.thisMonth,
+filter: _DateFilter.thisMonth,
 ),
 _dateChoice(
 label: 'Tarih Seç',
-filter:
-_DateFilter.custom,
-icon:
-Icons.calendar_month_outlined,
+filter: _DateFilter.custom,
+icon: Icons.calendar_month_outlined,
 ),
 ],
 ),
 ),
-if (_dateFilter ==
-_DateFilter.custom &&
+if (_dateFilter == _DateFilter.custom &&
 _customDate != null)
 Padding(
-padding:
-const EdgeInsets.only(
+padding: const EdgeInsets.only(
 top: 8,
 ),
 child: Container(
 width: double.infinity,
-padding:
-const EdgeInsets.symmetric(
+padding: const EdgeInsets.symmetric(
 horizontal: 13,
 vertical: 11,
 ),
-decoration:
-BoxDecoration(
-color:
-Colors.black,
-borderRadius:
-BorderRadius.circular(
-14,
-),
+decoration: BoxDecoration(
+color: Colors.black,
+borderRadius: BorderRadius.circular(14),
 ),
 child: Row(
 children: [
 const Icon(
-Icons
-.event_available_outlined,
-color:
-Colors.white,
+Icons.event_available_outlined,
+color: Colors.white,
 size: 18,
 ),
 const SizedBox(
@@ -2619,37 +2189,26 @@ width: 8,
 Expanded(
 child: Text(
 'Seçilen tarih: ${_shortDateLabel(_customDate!)}',
-style:
-const TextStyle(
-color:
-Colors.white,
+style: const TextStyle(
+color: Colors.white,
 fontSize: 12,
-fontWeight:
-FontWeight.w800,
+fontWeight: FontWeight.w800,
 ),
 ),
 ),
 TextButton(
-onPressed:
-_selectCustomDate,
-style:
-TextButton.styleFrom(
-foregroundColor:
-Colors.white,
-padding:
-const EdgeInsets
-.symmetric(
+onPressed: _selectCustomDate,
+style: TextButton.styleFrom(
+foregroundColor: Colors.white,
+padding: const EdgeInsets.symmetric(
 horizontal: 8,
 ),
 ),
-child:
-const Text(
+child: const Text(
 'DEĞİŞTİR',
-style:
-TextStyle(
+style: TextStyle(
 fontSize: 9,
-fontWeight:
-FontWeight.w900,
+fontWeight: FontWeight.w900,
 ),
 ),
 ),
@@ -2667,19 +2226,16 @@ required String label,
 required _DateFilter filter,
 IconData? icon,
 }) {
-final selected =
-_dateFilter == filter;
+final selected = _dateFilter == filter;
 
 ```
 return Padding(
-  padding:
-      const EdgeInsets.only(
+  padding: const EdgeInsets.only(
     right: 7,
   ),
   child: ChoiceChip(
     label: Row(
-      mainAxisSize:
-          MainAxisSize.min,
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
           Icon(
@@ -2694,23 +2250,15 @@ return Padding(
       ],
     ),
     selected: selected,
-    onSelected: (_) =>
-        _setDateFilter(filter),
-    labelStyle:
-        TextStyle(
+    onSelected: (_) => _setDateFilter(filter),
+    labelStyle: TextStyle(
       fontSize: 12,
-      fontWeight:
-          FontWeight.w700,
-      color: selected
-          ? Colors.white
-          : Colors.black,
+      fontWeight: FontWeight.w700,
+      color: selected ? Colors.white : Colors.black,
     ),
-    selectedColor:
-        Colors.black,
-    backgroundColor:
-        Colors.white,
-    side:
-        BorderSide(
+    selectedColor: Colors.black,
+    backgroundColor: Colors.white,
+    side: BorderSide(
       color: selected
           ? Colors.black
           : Colors.grey.shade300,
@@ -2723,8 +2271,7 @@ return Padding(
 
 Widget _buildFilterChips() {
 return Column(
-crossAxisAlignment:
-CrossAxisAlignment.start,
+crossAxisAlignment: CrossAxisAlignment.start,
 children: [
 _buildDateFilters(),
 _section(
@@ -2733,45 +2280,37 @@ Wrap(
 children: [
 _choiceChip(
 label: 'Tek başıma',
-selected:
-_companions.contains(
+selected: _companions.contains(
 CompanionType.solo,
 ),
-onTap: () =>
-_toggleCompanion(
+onTap: () => _toggleCompanion(
 CompanionType.solo,
 ),
 ),
 _choiceChip(
 label: 'İki kişi',
-selected:
-_companions.contains(
+selected: _companions.contains(
 CompanionType.couple,
 ),
-onTap: () =>
-_toggleCompanion(
+onTap: () => _toggleCompanion(
 CompanionType.couple,
 ),
 ),
 _choiceChip(
 label: 'Aile',
-selected:
-_companions.contains(
+selected: _companions.contains(
 CompanionType.family,
 ),
-onTap: () =>
-_toggleCompanion(
+onTap: () => _toggleCompanion(
 CompanionType.family,
 ),
 ),
 _choiceChip(
 label: 'Farketmez',
-selected:
-_companions.contains(
+selected: _companions.contains(
 CompanionType.any,
 ),
-onTap: () =>
-_toggleCompanion(
+onTap: () => _toggleCompanion(
 CompanionType.any,
 ),
 ),
@@ -2784,45 +2323,37 @@ Wrap(
 children: [
 _choiceChip(
 label: 'Ücretsiz',
-selected:
-_budgets.contains(
+selected: _budgets.contains(
 BudgetType.free,
 ),
-onTap: () =>
-_toggleBudget(
+onTap: () => _toggleBudget(
 BudgetType.free,
 ),
 ),
 _choiceChip(
 label: 'Ekonomik',
-selected:
-_budgets.contains(
+selected: _budgets.contains(
 BudgetType.low,
 ),
-onTap: () =>
-_toggleBudget(
+onTap: () => _toggleBudget(
 BudgetType.low,
 ),
 ),
 _choiceChip(
 label: 'Orta bütçe',
-selected:
-_budgets.contains(
+selected: _budgets.contains(
 BudgetType.medium,
 ),
-onTap: () =>
-_toggleBudget(
+onTap: () => _toggleBudget(
 BudgetType.medium,
 ),
 ),
 _choiceChip(
 label: 'Farketmez',
-selected:
-_budgets.contains(
+selected: _budgets.contains(
 BudgetType.any,
 ),
-onTap: () =>
-_toggleBudget(
+onTap: () => _toggleBudget(
 BudgetType.any,
 ),
 ),
@@ -2835,45 +2366,37 @@ Wrap(
 children: [
 _choiceChip(
 label: '1-2 saat',
-selected:
-_durations.contains(
+selected: _durations.contains(
 DurationType.short,
 ),
-onTap: () =>
-_toggleDuration(
+onTap: () => _toggleDuration(
 DurationType.short,
 ),
 ),
 _choiceChip(
 label: '3-5 saat',
-selected:
-_durations.contains(
+selected: _durations.contains(
 DurationType.medium,
 ),
-onTap: () =>
-_toggleDuration(
+onTap: () => _toggleDuration(
 DurationType.medium,
 ),
 ),
 _choiceChip(
 label: 'Tüm gün',
-selected:
-_durations.contains(
+selected: _durations.contains(
 DurationType.fullDay,
 ),
-onTap: () =>
-_toggleDuration(
+onTap: () => _toggleDuration(
 DurationType.fullDay,
 ),
 ),
 _choiceChip(
 label: 'Farketmez',
-selected:
-_durations.contains(
+selected: _durations.contains(
 DurationType.any,
 ),
-onTap: () =>
-_toggleDuration(
+onTap: () => _toggleDuration(
 DurationType.any,
 ),
 ),
@@ -2886,100 +2409,82 @@ Wrap(
 children: [
 _choiceChip(
 label: 'Etkinlik',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.event,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.event,
 ),
 ),
 _choiceChip(
 label: 'Müzik',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.music,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.music,
 ),
 ),
 _choiceChip(
 label: 'Sinema',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.cinema,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.cinema,
 ),
 ),
 _choiceChip(
 label: 'Doğa',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.nature,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.nature,
 ),
 ),
 _choiceChip(
 label: 'Park',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.park,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.park,
 ),
 ),
 _choiceChip(
 label: 'Tarih',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.history,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.history,
 ),
 ),
 _choiceChip(
 label: 'Müze',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.museum,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.museum,
 ),
 ),
 _choiceChip(
 label: 'Kültür',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.culture,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.culture,
 ),
 ),
 _choiceChip(
 label: 'Farketmez',
-selected:
-_interests.contains(
+selected: _interests.contains(
 InterestType.any,
 ),
-onTap: () =>
-_toggleInterest(
+onTap: () => _toggleInterest(
 InterestType.any,
 ),
 ),
@@ -2992,24 +2497,17 @@ InterestType.any,
 
 Widget _buildLocationStatus() {
 return Container(
-margin:
-const EdgeInsets.only(
+margin: const EdgeInsets.only(
 bottom: 18,
 ),
-padding:
-const EdgeInsets.symmetric(
+padding: const EdgeInsets.symmetric(
 horizontal: 13,
 vertical: 11,
 ),
-decoration:
-BoxDecoration(
+decoration: BoxDecoration(
 color: Colors.white,
-borderRadius:
-BorderRadius.circular(
-17,
-),
-border:
-Border.all(
+borderRadius: BorderRadius.circular(17),
+border: Border.all(
 color: Colors.grey.shade200,
 ),
 ),
@@ -3017,10 +2515,8 @@ child: Row(
 children: [
 Icon(
 _userPosition != null
-? Icons
-.my_location_rounded
-: Icons
-.location_off_outlined,
+? Icons.my_location_rounded
+: Icons.location_off_outlined,
 size: 20,
 ),
 const SizedBox(
@@ -3031,27 +2527,21 @@ child: Text(
 _userPosition != null
 ? 'Konumuna göre sıralanıyor.'
 : 'Konum olmadan Ankara geneli sıralanıyor.',
-style:
-const TextStyle(
+style: const TextStyle(
 fontSize: 12,
-fontWeight:
-FontWeight.w700,
+fontWeight: FontWeight.w700,
 ),
 ),
 ),
 TextButton(
-onPressed:
-_locationLoading
+onPressed: _locationLoading
 ? null
 : _refreshLocation,
-child:
-const Text(
+child: const Text(
 'KONUM',
-style:
-TextStyle(
+style: TextStyle(
 fontSize: 10,
-fontWeight:
-FontWeight.w900,
+fontWeight: FontWeight.w900,
 ),
 ),
 ),
@@ -3069,23 +2559,19 @@ return const SizedBox.shrink();
 return SafeArea(
   top: false,
   child: Container(
-    padding:
-        const EdgeInsets.fromLTRB(
+    padding: const EdgeInsets.fromLTRB(
       16,
       10,
       16,
       10,
     ),
-    decoration:
-        const BoxDecoration(
+    decoration: const BoxDecoration(
       color: Colors.white,
       boxShadow: [
         BoxShadow(
-          color:
-              Color(0x16000000),
+          color: Color(0x16000000),
           blurRadius: 15,
-          offset:
-              Offset(0, -5),
+          offset: Offset(0, -5),
         ),
       ],
     ),
@@ -3093,16 +2579,13 @@ return SafeArea(
       children: [
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '${_queue.length} aktivite seçildi',
-                style:
-                    const TextStyle(
+                style: const TextStyle(
                   fontSize: 13,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(
@@ -3111,10 +2594,8 @@ return SafeArea(
               const Text(
                 'Seçtiklerini tek rota olarak açabilirsin.',
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
-                style:
-                    TextStyle(
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
                   fontSize: 10,
                 ),
               ),
@@ -3125,44 +2606,30 @@ return SafeArea(
           width: 10,
         ),
         FilledButton.icon(
-          onPressed:
-              _buildRoute,
-          icon:
-              const Icon(
+          onPressed: _buildRoute,
+          icon: const Icon(
             Icons.route,
             size: 18,
           ),
-          label:
-              const Text(
+          label: const Text(
             'ROTA',
-            style:
-                TextStyle(
+            style: TextStyle(
               fontSize: 10,
-              fontWeight:
-                  FontWeight.w900,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          style:
-              FilledButton.styleFrom(
-            backgroundColor:
-                Colors.black,
-            foregroundColor:
-                Colors.white,
-            minimumSize:
-                const Size(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(
               0,
               45,
             ),
-            padding:
-                const EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric(
               horizontal: 14,
             ),
-            shape:
-                RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(
-                13,
-              ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
             ),
           ),
         ),
@@ -3179,35 +2646,26 @@ Widget build(
 BuildContext context,
 ) {
 return Scaffold(
-backgroundColor:
-const Color(0xFFF7F7F5),
+backgroundColor: const Color(0xFFF7F7F5),
 appBar: AppBar(
-backgroundColor:
-const Color(0xFFF7F7F5),
-surfaceTintColor:
-Colors.transparent,
+backgroundColor: const Color(0xFFF7F7F5),
+surfaceTintColor: Colors.transparent,
 elevation: 0,
-title:
-const Text(
+title: const Text(
 'Bugün ne yapayım?',
-style:
-TextStyle(
-fontWeight:
-FontWeight.w800,
+style: TextStyle(
+fontWeight: FontWeight.w800,
 ),
 ),
 ),
-bottomNavigationBar:
-_buildQueueBar(),
+bottomNavigationBar: _buildQueueBar(),
 body: _loading
 ? const Center(
-child:
-CircularProgressIndicator(),
+child: CircularProgressIndicator(),
 )
 : SafeArea(
 child: Padding(
-padding:
-const EdgeInsets.fromLTRB(
+padding: const EdgeInsets.fromLTRB(
 20,
 8,
 20,
@@ -3216,23 +2674,18 @@ const EdgeInsets.fromLTRB(
 child: Column(
 children: [
 Expanded(
-child:
-ListView(
-padding:
-const EdgeInsets.only(
+child: ListView(
+padding: const EdgeInsets.only(
 bottom: 95,
 ),
 children: [
 const Text(
-'Bugünü sana göre\nbirlikte planlayalım.',
-style:
-TextStyle(
+'Gününü sana göre\nbirlikte planlayalım.',
+style: TextStyle(
 fontSize: 29,
-fontWeight:
-FontWeight.w900,
+fontWeight: FontWeight.w900,
 height: 1.06,
-letterSpacing:
--0.8,
+letterSpacing: -0.8,
 ),
 ),
 const SizedBox(
@@ -3242,40 +2695,24 @@ _buildLocationStatus(),
 _buildFilterChips(),
 if (_error != null)
 Container(
-margin:
-const EdgeInsets.only(
+margin: const EdgeInsets.only(
 bottom: 16,
 ),
-padding:
-const EdgeInsets.all(
-15,
+padding: const EdgeInsets.all(15),
+decoration: BoxDecoration(
+color: Colors.white,
+borderRadius: BorderRadius.circular(18),
 ),
-decoration:
-BoxDecoration(
-color:
-Colors.white,
-borderRadius:
-BorderRadius.circular(
-18,
-),
-),
-child:
-Text(
-_error!,
-),
+child: Text(_error!),
 ),
 if (_results.isNotEmpty)
 Text(
-'$_dateFilterLabel ÖNERİLERİ',
-style:
-const TextStyle(
+'${_dateFilterLabel().toUpperCase()} ÖNERİLERİ',
+style: const TextStyle(
 fontSize: 11,
-fontWeight:
-FontWeight.w900,
-letterSpacing:
-1,
-color:
-Colors.black54,
+fontWeight: FontWeight.w900,
+letterSpacing: 1,
+color: Colors.black54,
 ),
 ),
 if (_results.isNotEmpty)
@@ -3283,51 +2720,33 @@ const SizedBox(
 height: 10,
 ),
 if (_results.isNotEmpty)
-..._results.map(
-_buildResultCard,
-),
+..._results.map(_buildResultCard),
 if (_hasSearched &&
 _results.isEmpty &&
 _error == null)
 Container(
-margin:
-const EdgeInsets.only(
+margin: const EdgeInsets.only(
 top: 10,
 ),
-padding:
-const EdgeInsets.all(
-22,
+padding: const EdgeInsets.all(22),
+decoration: BoxDecoration(
+color: Colors.white,
+borderRadius: BorderRadius.circular(20),
 ),
-decoration:
-BoxDecoration(
-color:
-Colors.white,
-borderRadius:
-BorderRadius.circular(
-20,
-),
-),
-child:
-Column(
+child: Column(
 children: [
 const Icon(
-Icons
-.search_off_rounded,
-size:
-42,
+Icons.search_off_rounded,
+size: 42,
 ),
 const SizedBox(
-height:
-10,
+height: 10,
 ),
 Text(
-'$_dateFilterLabel için bu kriterlere uygun sonuç bulamadım.',
-textAlign:
-TextAlign.center,
-style:
-const TextStyle(
-fontWeight:
-FontWeight.w800,
+'${_dateFilterLabel()} için bu kriterlere uygun sonuç bulamadım.',
+textAlign: TextAlign.center,
+style: const TextStyle(
+fontWeight: FontWeight.w800,
 ),
 ),
 ],
@@ -3340,54 +2759,38 @@ FontWeight.w800,
 ),
 ),
 ),
-floatingActionButton:
-_buildRecommendationButton(),
+floatingActionButton: _buildRecommendationButton(),
 floatingActionButtonLocation:
-FloatingActionButtonLocation
-.centerFloat,
+FloatingActionButtonLocation.centerFloat,
 );
 }
 
 Widget _buildRecommendationButton() {
 return SafeArea(
 child: Padding(
-padding:
-const EdgeInsets.symmetric(
+padding: const EdgeInsets.symmetric(
 horizontal: 20,
 ),
 child: SizedBox(
 width: double.infinity,
 height: 53,
-child:
-FilledButton.icon(
-onPressed:
-_generateRecommendations,
-icon:
-const Icon(
+child: FilledButton.icon(
+onPressed: _generateRecommendations,
+icon: const Icon(
 Icons.auto_awesome,
 ),
-label:
-Text(
+label: Text(
 '${_dateFilterLabel().toUpperCase()} İÇİN PLAN ÖNER',
-style:
-const TextStyle(
-fontWeight:
-FontWeight.w900,
+style: const TextStyle(
+fontWeight: FontWeight.w900,
 fontSize: 12,
 ),
 ),
-style:
-FilledButton.styleFrom(
-backgroundColor:
-Colors.black,
-foregroundColor:
-Colors.white,
-shape:
-RoundedRectangleBorder(
-borderRadius:
-BorderRadius.circular(
-17,
-),
+style: FilledButton.styleFrom(
+backgroundColor: Colors.black,
+foregroundColor: Colors.white,
+shape: RoundedRectangleBorder(
+borderRadius: BorderRadius.circular(17),
 ),
 ),
 ),
@@ -3415,8 +2818,7 @@ required this.place,
 });
 }
 
-class _InfoPill
-extends StatelessWidget {
+class _InfoPill extends StatelessWidget {
 final IconData icon;
 final String text;
 
@@ -3430,29 +2832,21 @@ Widget build(
 BuildContext context,
 ) {
 return Container(
-padding:
-const EdgeInsets.symmetric(
+padding: const EdgeInsets.symmetric(
 horizontal: 9,
 vertical: 6,
 ),
-decoration:
-BoxDecoration(
-color:
-const Color(0xFFF4F4F2),
-borderRadius:
-BorderRadius.circular(
-20,
-),
+decoration: BoxDecoration(
+color: const Color(0xFFF4F4F2),
+borderRadius: BorderRadius.circular(20),
 ),
 child: Row(
-mainAxisSize:
-MainAxisSize.min,
+mainAxisSize: MainAxisSize.min,
 children: [
 Icon(
 icon,
 size: 13,
-color:
-Colors.black54,
+color: Colors.black54,
 ),
 const SizedBox(
 width: 4,
@@ -3461,13 +2855,10 @@ Flexible(
 child: Text(
 text,
 maxLines: 1,
-overflow:
-TextOverflow.ellipsis,
-style:
-const TextStyle(
+overflow: TextOverflow.ellipsis,
+style: const TextStyle(
 fontSize: 10,
-fontWeight:
-FontWeight.w700,
+fontWeight: FontWeight.w700,
 ),
 ),
 ),
