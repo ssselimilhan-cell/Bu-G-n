@@ -47,14 +47,6 @@ enum _ActivityType {
   place,
 }
 
-enum _DateFilter {
-  today,
-  tomorrow,
-  thisWeek,
-  thisMonth,
-  custom,
-}
-
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({
     super.key,
@@ -102,9 +94,6 @@ class _RecommendationScreenState
 
   final List<_Activity> _queue =
       <_Activity>[];
-
-  _DateFilter _dateFilter = _DateFilter.today;
-  DateTime? _customDate;
 
   @override
   void initState() {
@@ -328,133 +317,6 @@ class _RecommendationScreenState
     });
   }
 
-  DateTime _dateOnly(DateTime date) {
-    final local = date.toLocal();
-    return DateTime(local.year, local.month, local.day);
-  }
-
-  DateTimeRange _selectedDateRange() {
-    final today = _dateOnly(DateTime.now());
-
-    switch (_dateFilter) {
-      case _DateFilter.today:
-        return DateTimeRange(
-          start: today,
-          end: today.add(const Duration(days: 1)),
-        );
-      case _DateFilter.tomorrow:
-        final start = today.add(const Duration(days: 1));
-        return DateTimeRange(
-          start: start,
-          end: start.add(const Duration(days: 1)),
-        );
-      case _DateFilter.thisWeek:
-        final start = today.subtract(
-          Duration(days: today.weekday - 1),
-        );
-        return DateTimeRange(
-          start: start,
-          end: start.add(const Duration(days: 7)),
-        );
-      case _DateFilter.thisMonth:
-        final start = DateTime(today.year, today.month, 1);
-        final end = today.month == 12
-            ? DateTime(today.year + 1, 1, 1)
-            : DateTime(today.year, today.month + 1, 1);
-        return DateTimeRange(start: start, end: end);
-      case _DateFilter.custom:
-        final selected = _dateOnly(_customDate ?? today);
-        return DateTimeRange(
-          start: selected,
-          end: selected.add(const Duration(days: 1)),
-        );
-    }
-  }
-
-  void _setDateFilter(_DateFilter filter) {
-    if (filter == _DateFilter.custom) {
-      _selectCustomDate();
-      return;
-    }
-
-    setState(() {
-      _dateFilter = filter;
-      _results = <_Activity>[];
-      _hasSearched = false;
-      _error = null;
-    });
-  }
-
-  Future<void> _selectCustomDate() async {
-    final today = _dateOnly(DateTime.now());
-    final current = _dateOnly(_customDate ?? today);
-    final initialDate = current.isBefore(today) ? today : current;
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: today,
-      lastDate: today.add(const Duration(days: 365)),
-      helpText: 'PLANLAMA TARİHİNİ SEÇ',
-      cancelText: 'VAZGEÇ',
-      confirmText: 'SEÇ',
-      locale: const Locale('tr', 'TR'),
-    );
-
-    if (picked == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _dateFilter = _DateFilter.custom;
-      _customDate = _dateOnly(picked);
-      _results = <_Activity>[];
-      _hasSearched = false;
-      _error = null;
-    });
-  }
-
-  String _dateFilterLabel() {
-    switch (_dateFilter) {
-      case _DateFilter.today:
-        return 'Bugün';
-      case _DateFilter.tomorrow:
-        return 'Yarın';
-      case _DateFilter.thisWeek:
-        return 'Bu Hafta';
-      case _DateFilter.thisMonth:
-        return 'Bu Ay';
-      case _DateFilter.custom:
-        return _customDate == null ? 'Tarih Seç' : _shortDateLabel(_customDate!);
-    }
-  }
-
-  String _shortDateLabel(DateTime date) {
-    const months = [
-      'Oca',
-      'Şub',
-      'Mar',
-      'Nis',
-      'May',
-      'Haz',
-      'Tem',
-      'Ağu',
-      'Eyl',
-      'Eki',
-      'Kas',
-      'Ara',
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
-  }
-
-  bool _isEventInSelectedDate(Event event) {
-    final range = _selectedDateRange();
-    final start = event.startsAt.toLocal();
-    final end = event.endsAt?.toLocal() ?? start;
-
-    return start.isBefore(range.end) && !end.isBefore(range.start);
-  }
-
   Future<void> _generateRecommendations() async {
     setState(() {
       _loading = true;
@@ -471,8 +333,8 @@ class _RecommendationScreenState
         _eventService
             .getUpcomingEvents(
           city: 'Ankara',
-          days: 366,
-          limit: 500,
+          days: 31,
+          limit: 200,
         ),
         _placeService.getPlaces(
           city: 'Ankara',
@@ -572,10 +434,6 @@ class _RecommendationScreenState
       return null;
     }
 
-    if (!_isEventInSelectedDate(event)) {
-      return null;
-    }
-
     final score =
         _scoreEvent(event);
 
@@ -629,7 +487,7 @@ class _RecommendationScreenState
     return value.clamp(
       30,
       600,
-    ).toInt();
+    );
   }
 
   int _eventDuration(
@@ -1778,73 +1636,11 @@ class _RecommendationScreenState
     );
   }
 
-  Widget _buildDateFilters() {
-    return Wrap(
-      children: [
-        _dateChoice(
-          label: 'Bugün',
-          filter: _DateFilter.today,
-        ),
-        _dateChoice(
-          label: 'Yarın',
-          filter: _DateFilter.tomorrow,
-        ),
-        _dateChoice(
-          label: 'Bu Hafta',
-          filter: _DateFilter.thisWeek,
-        ),
-        _dateChoice(
-          label: 'Bu Ay',
-          filter: _DateFilter.thisMonth,
-        ),
-        _dateChoice(
-          label: _dateFilter == _DateFilter.custom
-              ? _dateFilterLabel()
-              : 'Tarih Seç',
-          filter: _DateFilter.custom,
-          icon: Icons.calendar_month_outlined,
-        ),
-      ],
-    );
-  }
-
-  Widget _dateChoice({
-    required String label,
-    required _DateFilter filter,
-    IconData? icon,
-  }) {
-    final selected = _dateFilter == filter;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 7, bottom: 7),
-      child: ChoiceChip(
-        avatar: icon == null ? null : Icon(icon, size: 16),
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => _setDateFilter(filter),
-        labelStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: selected ? Colors.white : Colors.black,
-        ),
-        selectedColor: Colors.black,
-        backgroundColor: Colors.white,
-        side: BorderSide(
-          color: selected ? Colors.black : Colors.grey.shade300,
-        ),
-      ),
-    );
-  }
-
   Widget _buildFilterChips() {
     return Column(
       crossAxisAlignment:
           CrossAxisAlignment.start,
       children: [
-        _section(
-          'NE ZAMAN?',
-          _buildDateFilters(),
-        ),
         _section(
           'KİMİNLE?',
           Wrap(
@@ -3197,8 +2993,8 @@ class _RecommendationScreenState
               Icons.auto_awesome,
             ),
             label:
-                Text(
-              '${_dateFilterLabel().toUpperCase()} İÇİN PLAN ÖNER',
+                const Text(
+              'BANA PLAN ÖNER',
               style:
                   TextStyle(
                 fontWeight:
