@@ -36,6 +36,85 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
     }
   }
 
+
+  Future<void> _joinActivity(String activityId) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _message('Etkinliğe katılmak için önce profilinden giriş yap.');
+      return;
+    }
+    try {
+      final existing = await _client.from('activity_participants')
+          .select('status')
+          .eq('activity_id', activityId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (existing != null && existing['status'] == 'going') {
+        _message('Bu etkinliğe zaten katılıyorsun.');
+        return;
+      }
+      if (existing != null) {
+        await _client.from('activity_participants').update({'status': 'going'})
+            .eq('activity_id', activityId).eq('user_id', user.id);
+      } else {
+        await _client.from('activity_participants').insert({
+          'activity_id': activityId,
+          'user_id': user.id,
+          'status': 'going',
+        });
+      }
+      _message('Etkinliğe katılımın kaydedildi.');
+    } catch (_) {
+      _message('Katılım kaydedilemedi. Etkinlik başlamış veya kapanmış olabilir.');
+    }
+  }
+
+  Future<void> _joinByCode() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _message('Davet kodunu kullanmak için önce profilinden giriş yap.');
+      return;
+    }
+    final controller = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Davet koduyla katıl'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.none,
+          decoration: const InputDecoration(
+            labelText: 'Etkinlik kodu',
+            hintText: 'Arkadaşının paylaştığı kod',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('VAZGEÇ')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('BUL')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (code == null || code.trim().isEmpty) return;
+    try {
+      final activity = await _client.from('community_activities')
+          .select('id, title, city, status, starts_at')
+          .eq('invite_code', code.trim().toLowerCase())
+          .eq('status', 'open')
+          .maybeSingle();
+      if (activity == null) {
+        _message('Bu davet koduyla açık bir etkinlik bulunamadı.');
+        return;
+      }
+      await _joinActivity(activity['id'].toString());
+      await _load();
+    } catch (_) {
+      _message('Davet kodu kontrol edilemedi. Tekrar dene.');
+    }
+  }
+
   Future<void> _create() async {
     final user = _client.auth.currentUser;
     if (user == null) { _message('Etkinlik oluşturmak için önce profilinden giriş yap.'); return; }
@@ -167,7 +246,10 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Birlikte yapalım', style: TextStyle(fontWeight: FontWeight.w800))),
+    appBar: AppBar(
+      title: const Text('Birlikte yapalım', style: TextStyle(fontWeight: FontWeight.w800)),
+      actions: [IconButton(tooltip: 'Davet koduyla katıl', onPressed: _joinByCode, icon: const Icon(Icons.vpn_key_outlined))],
+    ),
     floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('Etkinlik oluştur')),
     body: _loading ? const Center(child: CircularProgressIndicator())
       : _error != null ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [Text(_error!, textAlign: TextAlign.center), const SizedBox(height: 12), FilledButton(onPressed: _load, child: const Text('Tekrar dene'))])))
@@ -192,7 +274,17 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                 if ((item['venue']?.toString() ?? '').isNotEmpty) Text('📍 ${item['venue']}'),
                 if ((item['address']?.toString() ?? '').isNotEmpty) Text(item['address'].toString()),
                 const SizedBox(height: 10),
-                Row(children: [Expanded(child: Text(item['is_free'] == true ? 'Ücretsiz' : (item['estimated_cost'] == null ? 'Ücret belirtilmedi' : 'Tahmini kişi başı: ₺${item['estimated_cost']}'), style: const TextStyle(fontWeight: FontWeight.w700))), OutlinedButton.icon(onPressed: () => _share(item), icon: const Icon(Icons.share_outlined, size: 17), label: const Text('Davet et'))]),
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Text(item['is_free'] == true ? 'Ücretsiz' : (item['estimated_cost'] == null ? 'Ücret belirtilmedi' : 'Tahmini kişi başı: ₺${item['estimated_cost']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString()), icon: const Icon(Icons.check_circle_outline, size: 17), label: const Text('Katıl')),
+                    OutlinedButton.icon(onPressed: () => _share(item), icon: const Icon(Icons.share_outlined, size: 17), label: const Text('Davet et')),
+                  ],
+                ),
               ]));
             },
           )),
