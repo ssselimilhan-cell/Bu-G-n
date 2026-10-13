@@ -140,7 +140,7 @@ class _RecommendationScreenState
       if (user != null) {
         final row = await Supabase.instance.client
             .from('profiles')
-            .select('budget_level, preferred_radius_km, preferred_visit_duration_min')
+            .select('budget_level, preferred_radius_km, preferred_visit_duration_min, interests')
             .eq('id', user.id)
             .maybeSingle();
         if (row != null) {
