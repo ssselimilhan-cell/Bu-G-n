@@ -420,12 +420,11 @@ class _HomeScreenState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                _selectedCity,
-                style:
-                    TextStyle(
-                  fontSize: 14,
-                  color:
-                      Colors.grey.shade600,
+                      _selectedCity,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(width: 5),
                     const Icon(Icons.expand_more, size: 18),
@@ -436,7 +435,7 @@ class _HomeScreenState
                 height: 15,
               ),
               Text(
-                'Bugün $_selectedCity’da\nne yapmak istersin?',
+                'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
                     TextStyle(
                   fontSize: 30,
@@ -691,11 +690,11 @@ class _HomeScreenState
     final title =
         _selectedPeriod ==
                 EventPeriod.today
-            ? 'BUGÜN $_selectedCity’DA'
+            ? 'BUGÜN • $_selectedCity'
             : _selectedPeriod ==
                     EventPeriod.week
-                ? 'BU HAFTA $_selectedCity’DA'
-                : 'BU AY $_selectedCity’DA';
+                ? 'BU HAFTA • $_selectedCity'
+                : 'BU AY • $_selectedCity';
 
     final events =
         _filteredEvents;
