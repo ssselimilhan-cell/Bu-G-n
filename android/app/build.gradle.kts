@@ -16,7 +16,7 @@ val hasReleaseSigning = listOf(
 ).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "com.example.bugun"
+    namespace = "tr.bugun.app"
     compileSdk = maxOf(flutter.compileSdkVersion, 36)
 
     signingConfigs {
@@ -37,24 +37,18 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.bugun"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Permanent package ID selected for the first public release.
+        applicationId = "tr.bugun.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // The CI APK may use debug signing for device testing. The Play AAB
-            // workflow requires all signing secrets and uses this release config.
+            // The CI APK may use debug signing for device testing.
+            // The Play AAB workflow requires all signing secrets and uses this release config.
             signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {
