@@ -106,37 +106,51 @@ class _HomeScreenState
   }
 
   Future<void> _loadEvents() async {
+    if (!mounted) return;
+
     setState(() {
       _eventsLoading = true;
       _eventsError = null;
     });
 
     try {
-      final events =
-          await _eventService
-              .getUpcomingEvents(
-        city: _selectedCity,
-        days: 31,
-        limit: 200,
-      );
+      late final List<Event> events;
 
-      if (!mounted) {
-        return;
+      // İlk açılışta da seçili dönem sorgulanır. "Bugün" artık
+      // yanlışlıkla 31 günlük etkinlik listesini göstermemeli.
+      switch (_selectedPeriod) {
+        case EventPeriod.today:
+          events = await _eventService.getTodayEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.week:
+          events = await _eventService.getThisWeekEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.month:
+          events = await _eventService.getThisMonthEvents(
+            city: _selectedCity,
+            limit: 200,
+          );
+          break;
       }
+
+      if (!mounted) return;
 
       setState(() {
         _events = events;
         _eventsLoading = false;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _eventsLoading = false;
-        _eventsError =
-            'Etkinlikler yüklenemedi.';
+        _eventsError = 'Etkinlikler yüklenemedi.';
       });
     }
   }
@@ -175,67 +189,16 @@ class _HomeScreenState
     }
   }
 
-  Future<void> _selectPeriod(
-    EventPeriod period,
-  ) async {
+  Future<void> _selectPeriod(EventPeriod period) async {
+    if (_selectedPeriod == period && !_eventsLoading) return;
+
     setState(() {
       _selectedPeriod = period;
       _eventSearchController.clear();
-      _eventsLoading = true;
-      _eventsError = null;
+      _eventSearch = '';
     });
 
-    try {
-      late List<Event> events;
-
-      switch (period) {
-        case EventPeriod.today:
-          events =
-              await _eventService
-                  .getTodayEvents(
-            city: _selectedCity,
-            limit: 100,
-          );
-          break;
-
-        case EventPeriod.week:
-          events =
-              await _eventService
-                  .getThisWeekEvents(
-            city: _selectedCity,
-            limit: 100,
-          );
-          break;
-
-        case EventPeriod.month:
-          events =
-              await _eventService
-                  .getThisMonthEvents(
-            city: _selectedCity,
-            limit: 200,
-          );
-          break;
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _events = events;
-        _eventsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _eventsLoading = false;
-        _eventsError =
-            'Etkinlikler yüklenemedi.';
-      });
-    }
+    await _loadEvents();
   }
 
   List<Event> get _filteredEvents {
