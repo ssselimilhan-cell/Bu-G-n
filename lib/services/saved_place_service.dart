@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -84,6 +86,71 @@ class SavedPlaceService {
       ids.add(placeId);
     }
     await prefs.setStringList(_key, ids.toList());
+  }
+
+  Future<String> getNote(String placeId) async {
+    final user = _client.auth.currentUser;
+    if (user != null) {
+      final row = await _client
+          .from('saved_items')
+          .select('note')
+          .eq('user_id', user.id)
+          .eq('entity_type', 'place')
+          .eq('entity_id', placeId)
+          .maybeSingle();
+      return (row?['note'] as String?) ?? '';
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('saved_place_notes');
+    if (raw == null) return '';
+    try {
+      final notes = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      return notes[placeId]?.toString() ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> saveNote(String placeId, String note) async {
+    final user = _client.auth.currentUser;
+    if (user != null) {
+      final existing = await _client
+          .from('saved_items')
+          .select('entity_id')
+          .eq('user_id', user.id)
+          .eq('entity_type', 'place')
+          .eq('entity_id', placeId)
+          .maybeSingle();
+      if (existing == null) {
+        await _client.from('saved_items').insert({
+          'user_id': user.id,
+          'entity_type': 'place',
+          'entity_id': placeId,
+          'note': note.trim(),
+        });
+      } else {
+        await _client.from('saved_items')
+            .update({'note': note.trim()})
+            .eq('user_id', user.id)
+            .eq('entity_type', 'place')
+            .eq('entity_id', placeId);
+      }
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('saved_place_notes');
+    Map<String, dynamic> notes = {};
+    if (raw != null) {
+      try {
+        notes = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      } catch (_) {}
+    }
+    if (note.trim().isEmpty) {
+      notes.remove(placeId);
+    } else {
+      notes[placeId] = note.trim();
+    }
+    await prefs.setString('saved_place_notes', jsonEncode(notes));
   }
 
   Future<void> remove(String placeId) async {
