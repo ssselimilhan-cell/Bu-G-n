@@ -413,20 +413,30 @@ class _HomeScreenState
               30,
             ),
             children: [
-              Text(
-                'Ankara',
+              InkWell(
+                onTap: () => _setMainTab(3),
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                _selectedCity,
                 style:
                     TextStyle(
                   fontSize: 14,
                   color:
                       Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 5),
+                    const Icon(Icons.expand_more, size: 18),
+                  ],
                 ),
               ),
               const SizedBox(
                 height: 15,
               ),
-              const Text(
-                'Bugün Ankara’da\nne yapmak istersin?',
+              Text(
+                'Bugün $_selectedCity’da\nne yapmak istersin?',
                 style:
                     TextStyle(
                   fontSize: 30,
@@ -681,11 +691,11 @@ class _HomeScreenState
     final title =
         _selectedPeriod ==
                 EventPeriod.today
-            ? 'BUGÜN ANKARA’DA'
+            ? 'BUGÜN $_selectedCity’DA'
             : _selectedPeriod ==
                     EventPeriod.week
-                ? 'BU HAFTA ANKARA’DA'
-                : 'BU AY ANKARA’DA';
+                ? 'BU HAFTA $_selectedCity’DA'
+                : 'BU AY $_selectedCity’DA';
 
     final events =
         _filteredEvents;
