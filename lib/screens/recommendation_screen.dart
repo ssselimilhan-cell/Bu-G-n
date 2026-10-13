@@ -51,6 +51,7 @@ enum InterestType {
   culture,
   history,
   museum,
+  food,
   any,
 }
 
@@ -133,6 +134,7 @@ class _RecommendationScreenState
       var budgetLevel = prefs.getInt('bugun_budget_level') ?? 3;
       var radiusKm = prefs.getDouble('bugun_radius_km') ?? 10;
       var durationMinutes = prefs.getInt('bugun_visit_duration_min') ?? 120;
+      var savedInterests = prefs.getStringList('bugun_guest_interests') ?? <String>[];
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
@@ -145,7 +147,23 @@ class _RecommendationScreenState
           budgetLevel = (row['budget_level'] as num?)?.toInt() ?? budgetLevel;
           radiusKm = (row['preferred_radius_km'] as num?)?.toDouble() ?? radiusKm;
           durationMinutes = (row['preferred_visit_duration_min'] as num?)?.toInt() ?? durationMinutes;
+          final profileInterests = row['interests'];
+          if (profileInterests is List) {
+            savedInterests = profileInterests.map((value) => value.toString()).toList();
+          }
         }
+      }
+
+      final mappedInterests = <InterestType>{};
+      for (final value in savedInterests) {
+        final interest = value.toLowerCase();
+        if (interest.contains('müzik')) mappedInterests.add(InterestType.music);
+        if (interest.contains('tiyatro') || interest.contains('sanat')) mappedInterests.add(InterestType.culture);
+        if (interest.contains('yeme') || interest.contains('içme') || interest.contains('kahve')) mappedInterests.add(InterestType.food);
+        if (interest.contains('doğa')) mappedInterests.add(InterestType.nature);
+        if (interest.contains('sinema')) mappedInterests.add(InterestType.cinema);
+        if (interest.contains('tarih')) mappedInterests.add(InterestType.history);
+        if (interest.contains('müze')) mappedInterests.add(InterestType.museum);
       }
 
       if (!mounted) return;
@@ -162,6 +180,7 @@ class _RecommendationScreenState
           _ => {DurationType.fullDay},
         };
         _preferredRadiusKm = radiusKm.clamp(1.0, 50.0).toDouble();
+        if (mappedInterests.isNotEmpty) _interests = mappedInterests;
       });
     } catch (_) {
       // Keep the discovery planner usable with its built-in defaults.
