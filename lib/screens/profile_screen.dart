@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,6 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _saving = false;
   User? _user;
   String? _displayName;
+  String? _avatarUrl;
   String? _message;
 
   @override
@@ -133,11 +135,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_user != null) {
         final row = await _client
             .from('profiles')
-            .select('display_name, city, interests, budget_level, preferred_radius_km, preferred_visit_duration_min, preferred_transport')
+            .select('display_name, avatar_url, city, interests, budget_level, preferred_radius_km, preferred_visit_duration_min, preferred_transport')
             .eq('id', _user!.id)
             .maybeSingle();
         if (row != null) {
           _displayName = row['display_name'] as String?;
+          _avatarUrl = row['avatar_url'] as String?;
           final profileCity = row['city'] as String?;
           if (profileCity != null && profileCity.isNotEmpty) _city = profileCity;
           final interests = row['interests'];
@@ -188,6 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _client.from('profiles').upsert({
       'id': user.id,
       'display_name': _displayName ?? user.userMetadata?['display_name'] as String?,
+      'avatar_url': _avatarUrl,
       'city': _city,
       'interests': _selectedInterests.toList(),
       'budget_level': _budgetLevel,
@@ -388,6 +392,162 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+
+  Future<void> _pickAvatar() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _showSnack('Profil fotoğrafı eklemek için önce hesabına giriş yap.');
+      return;
+    }
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1200,
+      );
+      if (image == null) return;
+      setState(() => _saving = true);
+      final bytes = await image.readAsBytes();
+      final extension = image.name.contains('.')
+          ? image.name.split('.').last.toLowerCase()
+          : 'jpg';
+      final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension)
+          ? extension
+          : 'jpg';
+      final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$safeExtension';
+      final contentType = safeExtension == 'png'
+          ? 'image/png'
+          : safeExtension == 'webp'
+              ? 'image/webp'
+              : 'image/jpeg';
+      await _client.storage.from('profile-avatars').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: contentType,
+          upsert: true,
+        ),
+      );
+      final url = _client.storage.from('profile-avatars').getPublicUrl(path);
+      await _client.from('profiles').upsert({
+        'id': user.id,
+        'display_name': _displayName ?? user.userMetadata?['display_name'] as String?,
+        'city': _city,
+        'avatar_url': url,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      if (!mounted) return;
+      setState(() {
+        _avatarUrl = url;
+        _saving = false;
+      });
+      _showSnack('Profil fotoğrafın güncellendi.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _showSnack('Fotoğraf yüklenemedi. Bağlantını ve hesap oturumunu kontrol et.');
+    }
+  }
+
+  Future<void> _showFeedback() async {
+    final messageController = TextEditingController();
+    final emailController = TextEditingController(text: _user?.email ?? '');
+    String category = 'Öneri';
+    bool sending = false;
+    final submitted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Bize ulaşın'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Önerini, sorun bildirimini veya eklemek istediğin şehir seçeneğini bize ilet.'),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: category,
+                  decoration: const InputDecoration(labelText: 'Konu'),
+                  items: const [
+                    DropdownMenuItem(value: 'Öneri', child: Text('Öneri')),
+                    DropdownMenuItem(value: 'Hata bildirimi', child: Text('Hata bildirimi')),
+                    DropdownMenuItem(value: 'İçerik düzeltme', child: Text('İçerik düzeltme')),
+                    DropdownMenuItem(value: 'Gizlilik', child: Text('Gizlilik / veri talebi')),
+                    DropdownMenuItem(value: 'Diğer', child: Text('Diğer')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => category = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: messageController,
+                  minLines: 4,
+                  maxLines: 7,
+                  maxLength: 4000,
+                  decoration: const InputDecoration(
+                    labelText: 'Mesajın',
+                    hintText: 'Nasıl yardımcı olabiliriz?',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'E-posta (isteğe bağlı)',
+                    hintText: 'Yanıt vermemizi istersen',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(dialogContext, false),
+              child: const Text('VAZGEÇ'),
+            ),
+            FilledButton(
+              onPressed: sending ? null : () async {
+                final message = messageController.text.trim();
+                if (message.length < 5) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lütfen en az 5 karakterlik bir mesaj yaz.')),
+                  );
+                  return;
+                }
+                setDialogState(() => sending = true);
+                try {
+                  await _client.from('app_feedback').insert({
+                    'user_id': _client.auth.currentUser?.id,
+                    'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                    'category': category,
+                    'message': message,
+                    'app_version': 'Android',
+                  });
+                  if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (_) {
+                  setDialogState(() => sending = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')),
+                  );
+                }
+              },
+              child: Text(sending ? 'GÖNDERİLİYOR…' : 'GÖNDER'),
+            ),
+          ],
+        ),
+      ),
+    );
+    messageController.dispose();
+    emailController.dispose();
+    if (submitted == true && mounted) {
+      _showSnack('Geri bildirimin alındı. Teşekkürler!');
+    }
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -401,7 +561,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             '• Giriş yapmadan seçtiğin şehir ve ilgi alanları bu cihazda saklanır.\n'
             '• Konum izni isteğe bağlıdır; yakınlık sıralaması için kullanılır. İzin vermeden de uygulamayı kullanabilirsin.\n'
             '• Etkinlik araması için etkinlik/yer verileri Supabase sunucusundan alınır. Bilet satın alma işlemleri ilgili sağlayıcının sitesinde yapılabilir.\n\n'
-            'Bu ekran uygulama içi bilgilendirmedir; yayına çıkmadan önce işletmeci iletişim bilgileri, veri saklama süreleri, kullanıcı hakları ve başvuru yöntemiyle birlikte hukuken gözden geçirilmiş bir Gizlilik Politikası ve gerekiyorsa KVKK aydınlatma metni yayımlanmalıdır.',
+            'Hesap ve profil verileri Supabase üzerinde saklanır. Kayıtlı yer notları ve kişisel tercihler yalnızca ilgili hesabın erişimine yönelik kurallarla korunur. Profil fotoğrafı herkese açık profil görseli deposunda tutulur; fotoğrafta paylaşmak istemediğin kişisel bilgileri bulundurma. Geri bildirimini uygulama içinden gönderebilirsin. Konum izni isteğe bağlıdır ve şehir seçimini elle yapabilirsin. Hesabın ve verilerinle ilgili talepler için Bize ulaşın alanından mesaj gönder.',
           ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))],
@@ -563,6 +723,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
                   const SizedBox(height: 10),
+                  _settingCard(icon: Icons.support_agent_rounded, title: 'Bize ulaşın', subtitle: 'Öneri, hata veya veri talebi gönder', onTap: _showFeedback),
+                  const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Bildirim iznini yönet', onTap: _requestNotifications),
                   const SizedBox(height: 22),
                   if (!signedIn)
@@ -593,7 +755,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(26)),
       child: Row(children: [
-        Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.person_outline_rounded, size: 34)),
+        InkWell(
+          onTap: signedIn ? _pickAvatar : _openAccount,
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(alignment: Alignment.bottomRight, children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              clipBehavior: Clip.antiAlias,
+              child: _avatarUrl == null || _avatarUrl!.isEmpty
+                  ? const Icon(Icons.person_outline_rounded, size: 38)
+                  : Image.network(_avatarUrl!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.person_outline_rounded, size: 38)),
+            ),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.camera_alt_outlined, size: 15),
+            ),
+          ]),
+        ),
         const SizedBox(width: 15),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(signedIn ? (name?.isNotEmpty == true ? name! : 'BUGÜN kullanıcısı') : 'Misafir Kullanıcı', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
