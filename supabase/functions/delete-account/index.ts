@@ -70,6 +70,7 @@ Deno.serve(async (req: Request) => {
       admin.from("activity_participants").delete().eq("user_id", userId),
       admin.from("activity_invitations").delete().eq("inviter_user_id", userId),
       admin.from("app_feedback").delete().eq("user_id", userId),
+      ...(user.email ? [admin.from("app_feedback").delete().ilike("email", user.email)] : []),
       admin.from("user_interactions").delete().eq("user_id", userId),
       admin.from("saved_items").delete().eq("user_id", userId),
       admin.from("content_reports").delete().eq("user_id", userId),
