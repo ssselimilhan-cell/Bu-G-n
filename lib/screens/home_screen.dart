@@ -7,6 +7,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
+import 'offers_screen.dart';
 import 'place_detail_screen.dart';
 import 'profile_screen.dart';
 import 'recommendation_screen.dart';
@@ -465,6 +466,27 @@ class _HomeScreenState
                 height: 25,
               ),
               _buildExploreButton(),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const OffersScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.local_offer_outlined),
+                label: const Text('Şehir fırsatlarını keşfet'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size.fromHeight(50),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
