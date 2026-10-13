@@ -180,6 +180,24 @@ extension _RecommendationLocationMethods on _RecommendationScreenState {
     return -15;
   }
 
+  bool _isWithinPreferredRadius(
+    double? latitude,
+    double? longitude,
+  ) {
+    final position = _userPosition;
+    if (position == null || latitude == null || longitude == null) {
+      return true;
+    }
+    final distanceKm = Geolocator.distanceBetween(
+          position.latitude,
+          position.longitude,
+          latitude,
+          longitude,
+        ) /
+        1000;
+    return distanceKm <= _preferredRadiusKm;
+  }
+
   double? _distanceFromUser(
     double? latitude,
     double? longitude,
