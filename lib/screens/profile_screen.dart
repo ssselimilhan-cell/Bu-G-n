@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/city_preference_service.dart';
+import '../services/saved_event_service.dart';
+import '../services/saved_place_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -299,6 +301,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _signOut() async {
     try {
+      // Move any guest saves to this account before ending the session so
+      // they cannot be imported into a different account on this device.
+      await SavedEventService().getSavedIds();
+      await SavedPlaceService().getSavedIds();
       await _client.auth.signOut();
       if (!mounted) return;
       setState(() {
