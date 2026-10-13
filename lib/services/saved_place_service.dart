@@ -14,14 +14,26 @@ class SavedPlaceService {
 
     // Import guest saves into the authenticated account once, then remove the
     // device-only copy so it cannot leak into a different account later.
-    for (final id in localIds) {
-      await _client.from('saved_items').upsert({
-        'user_id': user.id,
-        'entity_type': 'place',
-        'entity_id': id,
-      }, onConflict: 'user_id,entity_type,entity_id');
+    if (localIds.isNotEmpty) {
+      final existingRows = await _client
+          .from('saved_items')
+          .select('entity_id')
+          .eq('user_id', user.id)
+          .eq('entity_type', 'place')
+          .inFilter('entity_id', localIds.toList());
+      final existingIds = existingRows
+          .whereType<Map<String, dynamic>>()
+          .map((row) => row['entity_id'].toString())
+          .toSet();
+      for (final id in localIds.difference(existingIds)) {
+        await _client.from('saved_items').insert({
+          'user_id': user.id,
+          'entity_type': 'place',
+          'entity_id': id,
+        });
+      }
+      await prefs.remove(_key);
     }
-    if (localIds.isNotEmpty) await prefs.remove(_key);
 
     final rows = await _client
         .from('saved_items')
@@ -55,11 +67,11 @@ class SavedPlaceService {
             .eq('entity_type', 'place')
             .eq('entity_id', placeId);
       } else {
-        await _client.from('saved_items').upsert({
+        await _client.from('saved_items').insert({
           'user_id': user.id,
           'entity_type': 'place',
           'entity_id': placeId,
-        }, onConflict: 'user_id,entity_type,entity_id');
+        });
       }
       return;
     }
