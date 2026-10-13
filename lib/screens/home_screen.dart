@@ -4,6 +4,7 @@ import '../models/event.dart';
 import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
+import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
 import 'place_detail_screen.dart';
@@ -34,6 +35,8 @@ class _HomeScreenState
 
   final PlaceService _placeService =
       PlaceService();
+
+  String _selectedCity = CityPreferenceService.defaultCity;
 
   final TextEditingController
       _eventSearchController =
@@ -93,6 +96,8 @@ class _HomeScreenState
   }
 
   Future<void> _loadHome() async {
+    _selectedCity = await CityPreferenceService().getSelectedCity();
+    if (mounted) setState(() {});
     await Future.wait([
       _loadEvents(),
       _loadPlaces(),
@@ -109,7 +114,7 @@ class _HomeScreenState
       final events =
           await _eventService
               .getUpcomingEvents(
-        city: 'Ankara',
+        city: _selectedCity,
         days: 31,
         limit: 200,
       );
@@ -144,7 +149,7 @@ class _HomeScreenState
     try {
       final places =
           await _placeService.getPlaces(
-        city: 'Ankara',
+        city: _selectedCity,
         limit: 50,
       );
 
@@ -187,7 +192,7 @@ class _HomeScreenState
           events =
               await _eventService
                   .getTodayEvents(
-            city: 'Ankara',
+            city: _selectedCity,
             limit: 100,
           );
           break;
@@ -196,7 +201,7 @@ class _HomeScreenState
           events =
               await _eventService
                   .getThisWeekEvents(
-            city: 'Ankara',
+            city: _selectedCity,
             limit: 100,
           );
           break;
@@ -205,7 +210,7 @@ class _HomeScreenState
           events =
               await _eventService
                   .getThisMonthEvents(
-            city: 'Ankara',
+            city: _selectedCity,
             limit: 200,
           );
           break;
@@ -313,6 +318,9 @@ class _HomeScreenState
     setState(() {
       _selectedIndex = index;
     });
+    if (index == 0) {
+      _loadHome();
+    }
   }
 
   @override

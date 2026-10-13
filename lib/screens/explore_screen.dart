@@ -4,6 +4,7 @@ import '../models/event.dart';
 import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
+import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 
@@ -24,6 +25,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   final PlaceService _placeService = PlaceService();
 
   final EventService _eventService = EventService();
+
+  String _selectedCity = CityPreferenceService.defaultCity;
 
   late final TabController _tabController;
 
@@ -110,6 +113,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Future<void> _loadPlaces() async {
+    _selectedCity = await CityPreferenceService().getSelectedCity();
     setState(() {
       _placesLoading = true;
       _placesError = null;
@@ -117,7 +121,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     try {
       final places = await _placeService.getPlaces(
-        city: 'Ankara',
+        city: _selectedCity,
         category: _selectedCategory,
         limit: 100,
       );
@@ -143,6 +147,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Future<void> _loadEvents() async {
+    _selectedCity = await CityPreferenceService().getSelectedCity();
     setState(() {
       _eventsLoading = true;
       _eventsError = null;
@@ -150,7 +155,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     try {
       final events = await _eventService.getUpcomingEvents(
-        city: 'Ankara',
+        city: _selectedCity,
         days: 31,
         limit: 200,
       );
