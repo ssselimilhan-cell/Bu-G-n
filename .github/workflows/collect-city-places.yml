@@ -1,6 +1,11 @@
 name: BUGUN City Places Collector
 
 on:
+  push:
+    branches: [bugun-codespaces-ready]
+    paths:
+      - ".github/workflows/collect-city-places.yml"
+      - "scripts/collectors/openstreetmap_city_places.py"
   workflow_dispatch:
   schedule:
     - cron: "30 2 * * 1"
