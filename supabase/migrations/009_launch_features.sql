@@ -1,6 +1,10 @@
 -- BUGÜN launch features: profile photos, saved-place notes, feedback and community activities.
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.saved_items add column if not exists note text;
+alter table public.places add column if not exists external_source text;
+alter table public.places add column if not exists external_id text;
+create unique index if not exists places_external_source_id_uq
+  on public.places(external_source, external_id) where external_source is not null and external_id is not null;
 
 create table if not exists public.app_feedback (
   id uuid primary key default gen_random_uuid(),
