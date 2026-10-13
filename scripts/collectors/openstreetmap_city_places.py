@@ -1,0 +1,164 @@
+import json
+import os
+import time
+import requests
+
+SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+NOMINATIM = "https://nominatim.openstreetmap.org/search"
+OVERPASS = "https://overpass-api.de/api/interpreter"
+HEADERS = {
+    "User-Agent": "BUGUN-city-discovery/1.0 (city places collector)",
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "resolution=merge-duplicates,return=minimal",
+}
+CITIES = [
+    "Adana","Adıyaman","Afyonkarahisar","Ağrı","Amasya","Ankara","Antalya","Artvin","Aydın","Balıkesir",
+    "Bilecik","Bingöl","Bitlis","Bolu","Burdur","Bursa","Çanakkale","Çankırı","Çorum","Denizli",
+    "Diyarbakır","Edirne","Elazığ","Erzincan","Erzurum","Eskişehir","Gaziantep","Giresun","Gümüşhane","Hakkâri",
+    "Hatay","Isparta","Mersin","İstanbul","İzmir","Kars","Kastamonu","Kayseri","Kırklareli","Kırşehir",
+    "Kocaeli","Konya","Kütahya","Malatya","Manisa","Kahramanmaraş","Mardin","Muğla","Muş","Nevşehir",
+    "Niğde","Ordu","Rize","Sakarya","Samsun","Siirt","Sinop","Sivas","Tekirdağ","Tokat",
+    "Trabzon","Tunceli","Şanlıurfa","Uşak","Van","Yozgat","Zonguldak","Aksaray","Bayburt","Karaman",
+    "Kırıkkale","Batman","Şırnak","Bartın","Ardahan","Iğdır","Yalova","Karabük","Kilis","Osmaniye","Düzce",
+]
+
+def category_for(tags):
+    if tags.get("tourism") == "museum": return ("Müze", "Müze")
+    if tags.get("tourism") == "zoo": return ("Hayvanat Bahçesi", "Hayvanat bahçesi")
+    if tags.get("tourism") == "gallery": return ("Sanat", "Sanat galerisi")
+    if tags.get("tourism") == "theme_park": return ("Eğlence", "Eğlence parkı")
+    if tags.get("leisure") in ("park", "garden"): return ("Park", "Park ve bahçe")
+    if tags.get("historic") in ("castle", "monument", "memorial", "archaeological_site"): return ("Tarih", "Tarihi yer")
+    if tags.get("amenity") == "arts_centre": return ("Kültür", "Kültür merkezi")
+    return ("Gezi", "Gezilecek yer")
+
+def element_point(el):
+    if el.get("type") == "node":
+        return el.get("lat"), el.get("lon")
+    center = el.get("center") or {}
+    return center.get("lat"), center.get("lon")
+
+def short_description(name, tags, label):
+    description = tags.get("description") or tags.get("tourism:description")
+    if description:
+        return description[:450]
+    if label == "Müze": return f"{name}, {tags.get('museum', 'kültür ve tarih') } hakkında koleksiyonlar ve sergiler keşfedebileceğiniz bir müzedir."
+    if label == "Hayvanat bahçesi": return f"{name}, farklı hayvan türlerini tanıyabileceğiniz bir ziyaret noktasıdır."
+    if label == "Park ve bahçe": return f"{name}, açık havada yürüyüş yapmak, dinlenmek ve şehirde vakit geçirmek için bir seçenektir."
+    if label == "Tarihi yer": return f"{name}, şehrin tarihini ve kültürel mirasını keşfetmek isteyenler için bir duraktır."
+    if label == "Kültür merkezi": return f"{name}, kültür ve sanat etkinlikleri için ziyaret edilebilecek bir mekândır."
+    return f"{name}, {label.lower()} keşfetmek isteyenler için şehirde ziyaret edilebilecek bir noktadır."
+
+def main():
+    session = requests.Session()
+    session.headers.update({"User-Agent": "BUGUN-city-discovery/1.0 contact: support@bugun.app"})
+    all_rows = {}
+    errors = []
+    for index, city in enumerate(CITIES, 1):
+        print(f"[{index}/{len(CITIES)}] {city}: sınır ve ziyaret yerleri aranıyor", flush=True)
+        try:
+            geo = session.get(NOMINATIM, params={
+                "city": city, "country": "Türkiye", "format": "jsonv2",
+                "limit": 1, "addressdetails": 1,
+            }, timeout=25)
+            geo.raise_for_status()
+            results = geo.json()
+            if not results:
+                errors.append(f"{city}: geocoding sonucu yok")
+                continue
+            result = results[0]
+            osm_type = result.get("osm_type")
+            osm_id = int(result.get("osm_id", 0))
+            if osm_type == "relation":
+                area_id = 3600000000 + osm_id
+            elif osm_type == "way":
+                area_id = 2400000000 + osm_id
+            else:
+                # Avoid querying an entire state if the geocoder only found a point.
+                errors.append(f"{city}: idari sınır bulunamadı")
+                continue
+            query = f"""
+            [out:json][timeout:45];
+            area({area_id})->.city;
+            (
+              nwr(area.city)["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium)$"];
+              nwr(area.city)["leisure"~"^(park|garden)$"];
+              nwr(area.city)["historic"~"^(castle|monument|memorial|archaeological_site)$"];
+              nwr(area.city)["amenity"="arts_centre"];
+            );
+            out center tags 80;
+            """
+            response = session.post(OVERPASS, data={"data": query}, timeout=65)
+            response.raise_for_status()
+            elements = response.json().get("elements", [])
+            for el in elements:
+                tags = el.get("tags") or {}
+                name = tags.get("name") or tags.get("name:tr")
+                lat, lon = element_point(el)
+                if not name or lat is None or lon is None:
+                    continue
+                category, label = category_for(tags)
+                external_id = f'{el.get("type")}/{el.get("id")}'
+                address_parts = [
+                    tags.get("addr:street"),
+                    tags.get("addr:housenumber"),
+                    tags.get("addr:suburb") or tags.get("addr:district"),
+                    city,
+                ]
+                address = ", ".join(part for part in address_parts if part)
+                website = tags.get("website") or tags.get("contact:website")
+                row = {
+                    "external_source": "openstreetmap",
+                    "external_id": external_id,
+                    "name": name[:180],
+                    "slug": f"osm-{el.get('type')}-{el.get('id')}",
+                    "category": category,
+                    "place_type": tags.get("tourism") or tags.get("leisure") or tags.get("historic") or tags.get("amenity") or label,
+                    "city": city,
+                    "address": address[:350] or city,
+                    "latitude": float(lat),
+                    "longitude": float(lon),
+                    "website": website,
+                    "short_description": short_description(name, tags, label),
+                    "is_free": True if tags.get("fee") == "no" else (False if tags.get("fee") == "yes" else None),
+                    "visit_duration_min": 90 if category in ("Müze","Tarih","Kültür") else 60,
+                    "indoor": category in ("Müze","Sanat","Kültür"),
+                    "outdoor": category in ("Park","Gezi","Tarih","Hayvanat Bahçesi","Eğlence"),
+                    "tags": list(dict.fromkeys([label, city, tags.get("tourism",""), tags.get("leisure",""), tags.get("historic","")])) ,
+                    "verified": False,
+                    "trust_score": 60,
+                    "is_active": True,
+                }
+                row["tags"] = [tag for tag in row["tags"] if tag]
+                all_rows[external_id] = row
+            print(f"  OSM kayıtları: {len(elements)}", flush=True)
+            time.sleep(1.1)
+        except Exception as exc:
+            errors.append(f"{city}: {type(exc).__name__}: {exc}")
+            print(f"  UYARI: {errors[-1]}", flush=True)
+            time.sleep(2)
+    rows = list(all_rows.values())
+    print(f"Toplam tekil yer: {len(rows)}; sorunlu şehir sayısı: {len(errors)}", flush=True)
+    # Send moderate-sized upserts to avoid request-size limits.
+    for offset in range(0, len(rows), 100):
+        chunk = rows[offset:offset+100]
+        response = session.post(
+            f"{SUPABASE_URL}/rest/v1/places?on_conflict=external_source,external_id",
+            headers=HEADERS,
+            json=chunk,
+            timeout=60,
+        )
+        response.raise_for_status()
+        print(f"Supabase'e aktarıldı: {min(offset+len(chunk), len(rows))}/{len(rows)}", flush=True)
+    if errors:
+        print("Bazı şehirler işlenemedi:")
+        for error in errors:
+            print(f" - {error}")
+    if not rows:
+        raise RuntimeError("Hiç yer bulunamadı; veri kaynağı yanıtlarını kontrol edin.")
+
+if __name__ == "__main__":
+    main()
