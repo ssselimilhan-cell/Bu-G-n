@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/event.dart';
 import '../services/event_service.dart';
+import '../services/city_preference_service.dart';
 import '../screens/event_detail_screen.dart';
 
 class HomeEventsSection extends StatefulWidget {
@@ -15,6 +16,7 @@ class HomeEventsSection extends StatefulWidget {
 
 class _HomeEventsSectionState extends State<HomeEventsSection> {
   final EventService _eventService = EventService();
+  String _selectedCity = CityPreferenceService.defaultCity;
 
   List<Event> _events = [];
   bool _loading = true;
@@ -35,8 +37,9 @@ class _HomeEventsSectionState extends State<HomeEventsSection> {
     }
 
     try {
+      _selectedCity = await CityPreferenceService().getSelectedCity();
       final events = await _eventService.getTodayEvents(
-        city: 'Ankara',
+        city: _selectedCity,
         limit: 10,
       );
 
@@ -464,6 +467,7 @@ class _AllEventsScreen extends StatefulWidget {
 class _AllEventsScreenState
     extends State<_AllEventsScreen> {
   final EventService _eventService = EventService();
+  String _selectedCity = CityPreferenceService.defaultCity;
 
   List<Event> _events = [];
   bool _loading = true;
@@ -482,9 +486,10 @@ class _AllEventsScreenState
     });
 
     try {
+      _selectedCity = await CityPreferenceService().getSelectedCity();
       final events =
           await _eventService.getUpcomingEvents(
-        city: 'Ankara',
+        city: _selectedCity,
         days: 14,
         limit: 100,
       );
@@ -514,7 +519,7 @@ class _AllEventsScreenState
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Ankara Etkinlikleri',
+          '$_selectedCity Etkinlikleri',
           style: TextStyle(
             fontWeight: FontWeight.w800,
           ),
@@ -564,7 +569,7 @@ class _AllEventsScreenState
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Önümüzdeki 14 gün içinde Ankara için etkinlik bulunamadı.',
+            'Önümüzdeki 14 gün içinde $_selectedCity için etkinlik bulunamadı.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w600,
