@@ -7,6 +7,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
+import 'map_explore_screen.dart';
 import 'offers_screen.dart';
 import 'place_detail_screen.dart';
 import 'profile_screen.dart';
@@ -1216,10 +1217,10 @@ class _HomeScreenState
       height: 54,
       child:
           OutlinedButton.icon(
-        onPressed: () =>
-            setState(() {
-          _selectedIndex = 1;
-        }),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+        ),
         icon:
             const Icon(
           Icons.map_outlined,
