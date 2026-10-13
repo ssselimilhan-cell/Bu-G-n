@@ -147,20 +147,30 @@ def main():
             osm_id = int(result.get("osm_id", 0))
             if osm_type == "relation":
                 area_id = 3600000000 + osm_id
+                scope = "nwr(area.city)"
+                area_statement = f"area({area_id})->.city;"
             elif osm_type == "way":
                 area_id = 2400000000 + osm_id
+                scope = "nwr(area.city)"
+                area_statement = f"area({area_id})->.city;"
             else:
-                # Avoid querying an entire state if the geocoder only found a point.
-                errors.append(f"{city}: idari sınır bulunamadı")
-                continue
+                # Some city searches resolve to a point instead of a boundary.
+                # Use a bounded 20 km radius as a practical fallback.
+                latitude = result.get("lat")
+                longitude = result.get("lon")
+                if latitude is None or longitude is None:
+                    errors.append(f"{city}: sınır veya merkez koordinatı bulunamadı")
+                    continue
+                scope = f"nwr(around:20000,{latitude},{longitude})"
+                area_statement = ""
             query = f"""
             [out:json][timeout:20];
-            area({area_id})->.city;
+            {area_statement}
             (
-              nwr(area.city)["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium)$"];
-              nwr(area.city)["leisure"~"^(park|garden)$"];
-              nwr(area.city)["historic"~"^(castle|monument|memorial|archaeological_site)$"];
-              nwr(area.city)["amenity"="arts_centre"];
+              {scope}["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium)$"];
+              {scope}["leisure"~"^(park|garden)$"];
+              {scope}["historic"~"^(castle|monument|memorial|archaeological_site)$"];
+              {scope}["amenity"="arts_centre"];
             );
             out center tags 80;
             """
