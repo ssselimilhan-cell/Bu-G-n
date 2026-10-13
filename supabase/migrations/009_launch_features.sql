@@ -110,3 +110,10 @@ for delete to authenticated using (
 drop policy if exists "Public can view profile avatars" on storage.objects;
 create policy "Public can view profile avatars" on storage.objects
 for select to anon, authenticated using (bucket_id = 'profile-avatars');
+
+-- Explicit Data API grants; RLS above remains the row-level boundary.
+grant select, insert on public.app_feedback to anon, authenticated;
+grant select, insert, update, delete on public.community_activities to authenticated;
+grant select on public.community_activities to anon;
+grant select, insert on public.activity_invitations to authenticated;
+grant select, insert, update, delete on public.saved_items to authenticated;
