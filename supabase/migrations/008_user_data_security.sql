@@ -8,6 +8,10 @@ for select to authenticated using (auth.uid() = user_id);
 drop policy if exists "Users can create own saved items" on public.saved_items;
 create policy "Users can create own saved items" on public.saved_items
 for insert to authenticated with check (auth.uid() = user_id);
+drop policy if exists "Users can update own saved items" on public.saved_items;
+create policy "Users can update own saved items" on public.saved_items
+for update to authenticated using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 drop policy if exists "Users can delete own saved items" on public.saved_items;
 create policy "Users can delete own saved items" on public.saved_items
 for delete to authenticated using (auth.uid() = user_id);
