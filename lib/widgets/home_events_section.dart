@@ -565,9 +565,9 @@ class _AllEventsScreenState
     }
 
     if (_events.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
             'Önümüzdeki 14 gün içinde $_selectedCity için etkinlik bulunamadı.',
             textAlign: TextAlign.center,
