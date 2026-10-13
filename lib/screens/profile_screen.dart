@@ -107,6 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _city = CityPreferenceService.defaultCity;
   Set<String> _selectedInterests = {'🌳 Doğa', '🍔 Yeme-İçme'};
+  int _budgetLevel = 3;
+  double _radiusKm = 10;
+  int _visitDurationMin = 120;
+  String _preferredTransport = 'Farketmez';
   bool _loading = true;
   bool _saving = false;
   User? _user;
@@ -127,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_user != null) {
         final row = await _client
             .from('profiles')
-            .select('display_name, city, interests')
+            .select('display_name, city, interests, budget_level, preferred_radius_km, preferred_visit_duration_min, preferred_transport')
             .eq('id', _user!.id)
             .maybeSingle();
         if (row != null) {
@@ -138,17 +142,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (interests is List) {
             _selectedInterests = interests.map((e) => e.toString()).toSet();
           }
+          _budgetLevel = (row['budget_level'] as num?)?.toInt() ?? _budgetLevel;
+          _radiusKm = (row['preferred_radius_km'] as num?)?.toDouble() ?? _radiusKm;
+          _visitDurationMin = (row['preferred_visit_duration_min'] as num?)?.toInt() ?? _visitDurationMin;
+          _preferredTransport = row['preferred_transport'] as String? ?? _preferredTransport;
         } else {
           final preferences = await SharedPreferences.getInstance();
-          final guestInterests = preferences.getStringList('bugun_guest_interests');
-          if (guestInterests != null) _selectedInterests = guestInterests.toSet();
+          _loadLocalPreferences(preferences);
           _displayName ??= _user!.userMetadata?['display_name'] as String?;
           await _saveProfile();
         }
       } else {
         final prefs = await SharedPreferences.getInstance();
-        final saved = prefs.getStringList('bugun_guest_interests');
-        if (saved != null) _selectedInterests = saved.toSet();
+        _loadLocalPreferences(prefs);
       }
     } catch (error) {
       _message = 'Profil bilgileri yüklenemedi. İnternet bağlantını kontrol et.';
@@ -157,11 +163,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _loadLocalPreferences(SharedPreferences prefs) {
+    final saved = prefs.getStringList('bugun_guest_interests');
+    if (saved != null) _selectedInterests = saved.toSet();
+    _budgetLevel = prefs.getInt('bugun_budget_level') ?? _budgetLevel;
+    _radiusKm = prefs.getDouble('bugun_radius_km') ?? _radiusKm;
+    _visitDurationMin = prefs.getInt('bugun_visit_duration_min') ?? _visitDurationMin;
+    _preferredTransport = prefs.getString('bugun_transport') ?? _preferredTransport;
+  }
+
   Future<void> _saveProfile() async {
     final user = _client.auth.currentUser;
     if (user == null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('bugun_guest_interests', _selectedInterests.toList());
+      await prefs.setInt('bugun_budget_level', _budgetLevel);
+      await prefs.setDouble('bugun_radius_km', _radiusKm);
+      await prefs.setInt('bugun_visit_duration_min', _visitDurationMin);
+      await prefs.setString('bugun_transport', _preferredTransport);
       return;
     }
     await _client.from('profiles').upsert({
@@ -169,6 +188,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'display_name': _displayName ?? user.userMetadata?['display_name'] as String?,
       'city': _city,
       'interests': _selectedInterests.toList(),
+      'budget_level': _budgetLevel,
+      'preferred_radius_km': _radiusKm,
+      'preferred_visit_duration_min': _visitDurationMin,
+      'preferred_transport': _preferredTransport,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
   }
@@ -436,6 +459,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       side: BorderSide.none,
                     );
                   }).toList()),
+                  const SizedBox(height: 24),
+                  const _SectionLabel('PLAN TERCİHLERİ'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Önerilerde bütçeni, ulaşım tercihini ve ne kadar zaman ayırabileceğini dikkate al.',
+                    style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Bütçe', style: TextStyle(fontWeight: FontWeight.w800)),
+                        DropdownButtonFormField<int>(
+                          value: _budgetLevel,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true),
+                          items: const [
+                            DropdownMenuItem(value: 0, child: Text('Ücretsiz')),
+                            DropdownMenuItem(value: 1, child: Text('Düşük bütçe')),
+                            DropdownMenuItem(value: 2, child: Text('Orta bütçe')),
+                            DropdownMenuItem(value: 3, child: Text('Sınırlama yok')),
+                          ],
+                          onChanged: (value) async {
+                            if (value == null) return;
+                            setState(() => _budgetLevel = value);
+                            await _savePreferences();
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Ulaşım', style: TextStyle(fontWeight: FontWeight.w800))),
+                            DropdownButton<String>(
+                              value: _preferredTransport,
+                              items: const [
+                                DropdownMenuItem(value: 'Farketmez', child: Text('Farketmez')),
+                                DropdownMenuItem(value: 'Yürüyerek', child: Text('Yürüyerek')),
+                                DropdownMenuItem(value: 'Toplu taşıma', child: Text('Toplu taşıma')),
+                                DropdownMenuItem(value: 'Araç', child: Text('Araç')),
+                              ],
+                              onChanged: (value) async {
+                                if (value == null) return;
+                                setState(() => _preferredTransport = value);
+                                await _savePreferences();
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Yakınlık yarıçapı', style: TextStyle(fontWeight: FontWeight.w800))),
+                            Text('${_radiusKm.round()} km'),
+                          ],
+                        ),
+                        Slider(
+                          value: _radiusKm.clamp(1, 50),
+                          min: 1,
+                          max: 50,
+                          divisions: 49,
+                          label: '${_radiusKm.round()} km',
+                          onChanged: (value) => setState(() => _radiusKm = value),
+                          onChangeEnd: (_) => _savePreferences(),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('Ayırabileceğin süre', style: TextStyle(fontWeight: FontWeight.w800)),
+                        DropdownButtonFormField<int>(
+                          value: _visitDurationMin,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true),
+                          items: const [
+                            DropdownMenuItem(value: 60, child: Text('Yaklaşık 1 saat')),
+                            DropdownMenuItem(value: 120, child: Text('Yaklaşık 2 saat')),
+                            DropdownMenuItem(value: 240, child: Text('Yaklaşık 4 saat')),
+                            DropdownMenuItem(value: 480, child: Text('Tam gün')),
+                          ],
+                          onChanged: (value) async {
+                            if (value == null) return;
+                            setState(() => _visitDurationMin = value);
+                            await _savePreferences();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   const _SectionLabel('AYARLAR'),
                   const SizedBox(height: 10),
