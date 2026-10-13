@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 part of 'recommendation_screen.dart';
 
 extension _RecommendationLocationMethods on _RecommendationScreenState {
