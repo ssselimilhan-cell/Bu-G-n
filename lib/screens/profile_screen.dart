@@ -303,6 +303,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result == true && mounted) await _loadProfile();
   }
 
+  Future<void> _deleteAccount() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _showSnack('Hesabına giriş yapman gerekiyor.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final confirmation = TextEditingController();
+        return AlertDialog(
+          title: const Text('Hesabını ve verilerini sil'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bu işlem profilini, kayıtlı yerlerini ve notlarını, kişisel etkileşimlerini, '
+                'geri bildirim bağlantını ve oluşturduğun etkinlikleri siler. Hesap silindikten '
+                'sonra geri alınamaz. Devam etmek için aşağıya SİL yaz.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmation,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Onay'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('VAZGEÇ'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                confirmation.text.trim() == 'SİL',
+              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('HESABI SİL'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _client.functions.invoke('delete-account');
+      await _client.auth.signOut(scope: SignOutScope.local);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('bugun_guest_interests');
+      await prefs.remove('bugun_budget_level');
+      await prefs.remove('bugun_radius_km');
+      await prefs.remove('bugun_visit_duration_min');
+      await prefs.remove('bugun_transport');
+      if (!mounted) return;
+      setState(() {
+        _user = null;
+        _displayName = null;
+        _avatarUrl = null;
+        _message = null;
+      });
+      await _loadProfile();
+      if (mounted) _showSnack('Hesabın ve ilişkili verilerin silindi.');
+    } catch (_) {
+      if (mounted) {
+        _showSnack('Hesap silinemedi. İşlem tamamlanmadı; bağlantını kontrol edip tekrar dene.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _signOut() async {
     try {
       // Move any guest saves to this account before ending the session so
@@ -728,6 +803,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Bildirim iznini yönet', onTap: _requestNotifications),
                   const SizedBox(height: 22),
+                  if (signedIn) ...[
+                    _settingCard(
+                      icon: Icons.delete_forever_outlined,
+                      title: 'Hesabı ve verileri sil',
+                      subtitle: 'Hesabını ve ilişkili kişisel verilerini kalıcı olarak sil',
+                      onTap: _deleteAccount,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   if (!signedIn)
                     FilledButton(
                       onPressed: _openAccount,
