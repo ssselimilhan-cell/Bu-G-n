@@ -521,7 +521,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                         Slider(
-                          value: _radiusKm.clamp(1, 50),
+                          value: _radiusKm.clamp(1.0, 50.0).toDouble(),
                           min: 1,
                           max: 50,
                           divisions: 49,
