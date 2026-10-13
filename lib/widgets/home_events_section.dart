@@ -111,9 +111,9 @@ class _HomeEventsSectionState extends State<HomeEventsSection> {
             padding: const EdgeInsets.only(right: 20),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'BUGÜN ANKARA\'DA',
+                    'BUGÜN • $_selectedCity',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
