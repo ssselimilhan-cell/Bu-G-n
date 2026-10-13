@@ -110,6 +110,9 @@ extension _RecommendationLogicMethods on _RecommendationScreenState {
   _Activity? _makeEventActivity(
     Event event,
   ) {
+    if (!_isWithinPreferredRadius(event.latitude, event.longitude)) {
+      return null;
+    }
     final start =
         event.startsAt.toLocal();
 
@@ -144,6 +147,9 @@ extension _RecommendationLogicMethods on _RecommendationScreenState {
   _Activity? _makePlaceActivity(
     Place place,
   ) {
+    if (!_isWithinPreferredRadius(place.latitude, place.longitude)) {
+      return null;
+    }
     final score =
         _scorePlace(place);
 
