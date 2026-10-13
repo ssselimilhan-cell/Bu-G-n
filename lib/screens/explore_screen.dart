@@ -6,6 +6,8 @@ import '../services/event_service.dart';
 import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
+import 'map_explore_screen.dart';
+import 'community_activities_screen.dart';
 import 'place_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -262,6 +264,24 @@ class _ExploreScreenState extends State<ExploreScreen>
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Haritada keşfet',
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Birlikte etkinlik oluştur',
+            icon: const Icon(Icons.group_add_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CommunityActivitiesScreen()),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) {
