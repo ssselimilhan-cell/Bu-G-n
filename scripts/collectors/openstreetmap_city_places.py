@@ -15,14 +15,86 @@ HEADERS = {
     "Prefer": "resolution=merge-duplicates,return=minimal",
 }
 CITIES = [
-    "Adana","Adıyaman","Afyonkarahisar","Ağrı","Amasya","Ankara","Antalya","Artvin","Aydın","Balıkesir",
-    "Bilecik","Bingöl","Bitlis","Bolu","Burdur","Bursa","Çanakkale","Çankırı","Çorum","Denizli",
-    "Diyarbakır","Edirne","Elazığ","Erzincan","Erzurum","Eskişehir","Gaziantep","Giresun","Gümüşhane","Hakkâri",
-    "Hatay","Isparta","Mersin","İstanbul","İzmir","Kars","Kastamonu","Kayseri","Kırklareli","Kırşehir",
-    "Kocaeli","Konya","Kütahya","Malatya","Manisa","Kahramanmaraş","Mardin","Muğla","Muş","Nevşehir",
-    "Niğde","Ordu","Rize","Sakarya","Samsun","Siirt","Sinop","Sivas","Tekirdağ","Tokat",
-    "Trabzon","Tunceli","Şanlıurfa","Uşak","Van","Yozgat","Zonguldak","Aksaray","Bayburt","Karaman",
-    "Kırıkkale","Batman","Şırnak","Bartın","Ardahan","Iğdır","Yalova","Karabük","Kilis","Osmaniye","Düzce",
+    "Ankara",
+    "İstanbul",
+    "İzmir",
+    "Antalya",
+    "Bursa",
+    "Muğla",
+    "Eskişehir",
+    "Konya",
+    "Adana",
+    "Gaziantep",
+    "Mersin",
+    "Trabzon",
+    "Samsun",
+    "Kocaeli",
+    "Balıkesir",
+    "Aydın",
+    "Denizli",
+    "Kayseri",
+    "Hatay",
+    "Diyarbakır",
+    "Şanlıurfa",
+    "Nevşehir",
+    "Çanakkale",
+    "Edirne",
+    "Rize",
+    "Ordu",
+    "Sakarya",
+    "Tekirdağ",
+    "Kahramanmaraş",
+    "Mardin",
+    "Erzurum",
+    "Sivas",
+    "Malatya",
+    "Van",
+    "Aksaray",
+    "Afyonkarahisar",
+    "Bolu",
+    "Kastamonu",
+    "Kars",
+    "Zonguldak",
+    "Yalova",
+    "Adıyaman",
+    "Ağrı",
+    "Amasya",
+    "Artvin",
+    "Bilecik",
+    "Bingöl",
+    "Bitlis",
+    "Burdur",
+    "Çankırı",
+    "Çorum",
+    "Elazığ",
+    "Erzincan",
+    "Giresun",
+    "Gümüşhane",
+    "Hakkâri",
+    "Isparta",
+    "Kırklareli",
+    "Kırşehir",
+    "Kütahya",
+    "Manisa",
+    "Muş",
+    "Niğde",
+    "Sinop",
+    "Tokat",
+    "Tunceli",
+    "Uşak",
+    "Yozgat",
+    "Bayburt",
+    "Karaman",
+    "Kırıkkale",
+    "Batman",
+    "Şırnak",
+    "Bartın",
+    "Ardahan",
+    "Iğdır",
+    "Karabük",
+    "Kilis",
+    "Osmaniye",
+    "Düzce"
 ]
 
 def category_for(tags):
@@ -58,12 +130,13 @@ def main():
     all_rows = {}
     errors = []
     for index, city in enumerate(CITIES, 1):
+        city_rows = []
         print(f"[{index}/{len(CITIES)}] {city}: sınır ve ziyaret yerleri aranıyor", flush=True)
         try:
             geo = session.get(NOMINATIM, params={
                 "city": city, "country": "Türkiye", "format": "jsonv2",
                 "limit": 1, "addressdetails": 1,
-            }, timeout=25)
+            }, timeout=15)
             geo.raise_for_status()
             results = geo.json()
             if not results:
@@ -81,7 +154,7 @@ def main():
                 errors.append(f"{city}: idari sınır bulunamadı")
                 continue
             query = f"""
-            [out:json][timeout:45];
+            [out:json][timeout:20];
             area({area_id})->.city;
             (
               nwr(area.city)["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium)$"];
@@ -91,7 +164,7 @@ def main():
             );
             out center tags 80;
             """
-            response = session.post(OVERPASS, data={"data": query}, timeout=65)
+            response = session.post(OVERPASS, data={"data": query}, timeout=25)
             response.raise_for_status()
             elements = response.json().get("elements", [])
             for el in elements:
@@ -134,7 +207,18 @@ def main():
                 }
                 row["tags"] = [tag for tag in row["tags"] if tag]
                 all_rows[external_id] = row
+                city_rows.append(row)
             print(f"  OSM kayıtları: {len(elements)}", flush=True)
+            for offset in range(0, len(city_rows), 100):
+                chunk = city_rows[offset:offset+100]
+                saved = session.post(
+                    f"{SUPABASE_URL}/rest/v1/places?on_conflict=external_source,external_id",
+                    headers=HEADERS,
+                    json=chunk,
+                    timeout=25,
+                )
+                saved.raise_for_status()
+            print(f"  Supabase'e yazılan yer: {len(city_rows)}", flush=True)
             time.sleep(1.1)
         except Exception as exc:
             errors.append(f"{city}: {type(exc).__name__}: {exc}")
@@ -142,17 +226,7 @@ def main():
             time.sleep(2)
     rows = list(all_rows.values())
     print(f"Toplam tekil yer: {len(rows)}; sorunlu şehir sayısı: {len(errors)}", flush=True)
-    # Send moderate-sized upserts to avoid request-size limits.
-    for offset in range(0, len(rows), 100):
-        chunk = rows[offset:offset+100]
-        response = session.post(
-            f"{SUPABASE_URL}/rest/v1/places?on_conflict=external_source,external_id",
-            headers=HEADERS,
-            json=chunk,
-            timeout=60,
-        )
-        response.raise_for_status()
-        print(f"Supabase'e aktarıldı: {min(offset+len(chunk), len(rows))}/{len(rows)}", flush=True)
+    print('Şehir bazlı aktarımlar tamamlandı.', flush=True)
     if errors:
         print("Bazı şehirler işlenemedi:")
         for error in errors:
