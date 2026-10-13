@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
@@ -309,7 +310,10 @@ class _MapExploreScreenState extends State<MapExploreScreen> {
                           attributions: [
                             TextSourceAttribution(
                               '© OpenStreetMap contributors',
-                              onTap: () {},
+                              onTap: () => launchUrl(
+                                Uri.parse('https://www.openstreetmap.org/copyright'),
+                                mode: LaunchMode.externalApplication,
+                              ),
                             ),
                           ],
                         ),
