@@ -17,7 +17,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CityPreferenceService _cityService = CityPreferenceService();
 
   static const List<String> _cities = [
-    'Ankara', 'İstanbul', 'İzmir', 'Bursa', 'Antalya', 'Eskişehir', 'Konya', 'Adana',
+    'Adana',
+    'Adıyaman',
+    'Afyonkarahisar',
+    'Ağrı',
+    'Amasya',
+    'Ankara',
+    'Antalya',
+    'Artvin',
+    'Aydın',
+    'Balıkesir',
+    'Bilecik',
+    'Bingöl',
+    'Bitlis',
+    'Bolu',
+    'Burdur',
+    'Bursa',
+    'Çanakkale',
+    'Çankırı',
+    'Çorum',
+    'Denizli',
+    'Diyarbakır',
+    'Edirne',
+    'Elazığ',
+    'Erzincan',
+    'Erzurum',
+    'Eskişehir',
+    'Gaziantep',
+    'Giresun',
+    'Gümüşhane',
+    'Hakkâri',
+    'Hatay',
+    'Isparta',
+    'Mersin',
+    'İstanbul',
+    'İzmir',
+    'Kars',
+    'Kastamonu',
+    'Kayseri',
+    'Kırklareli',
+    'Kırşehir',
+    'Kocaeli',
+    'Konya',
+    'Kütahya',
+    'Malatya',
+    'Manisa',
+    'Kahramanmaraş',
+    'Mardin',
+    'Muğla',
+    'Muş',
+    'Nevşehir',
+    'Niğde',
+    'Ordu',
+    'Rize',
+    'Sakarya',
+    'Samsun',
+    'Siirt',
+    'Sinop',
+    'Sivas',
+    'Tekirdağ',
+    'Tokat',
+    'Trabzon',
+    'Tunceli',
+    'Şanlıurfa',
+    'Uşak',
+    'Van',
+    'Yozgat',
+    'Zonguldak',
+    'Aksaray',
+    'Bayburt',
+    'Karaman',
+    'Kırıkkale',
+    'Batman',
+    'Şırnak',
+    'Bartın',
+    'Ardahan',
+    'Iğdır',
+    'Yalova',
+    'Karabük',
+    'Kilis',
+    'Osmaniye',
+    'Düzce'
   ];
   static const List<String> _interests = [
     '🎵 Müzik', '🎭 Tiyatro', '🍔 Yeme-İçme', '☕ Kahve', '🌳 Doğa', '🎨 Sanat',
@@ -106,24 +186,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _chooseCity() async {
+    var query = '';
     final chosen = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: Text('Şehir seç', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final filteredCities = _cities
+              .where((city) => city.toLowerCase().contains(query.trim().toLowerCase()))
+              .toList();
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.78,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Şehir seç',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: TextField(
+                      autofocus: true,
+                      onChanged: (value) => setModalState(() => query = value),
+                      decoration: InputDecoration(
+                        hintText: '81 şehir içinde ara',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredCities.isEmpty
+                        ? const Center(child: Text('Şehir bulunamadı.'))
+                        : ListView.builder(
+                            itemCount: filteredCities.length,
+                            itemBuilder: (context, index) {
+                              final city = filteredCities[index];
+                              return ListTile(
+                                title: Text(city),
+                                trailing: city == _city ? const Icon(Icons.check) : null,
+                                onTap: () => Navigator.pop(context, city),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-            ..._cities.map((city) => ListTile(
-              title: Text(city),
-              trailing: city == _city ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(context, city),
-            )),
-          ],
-        ),
+          );
+        },
       ),
     );
     if (chosen == null || !mounted) return;
