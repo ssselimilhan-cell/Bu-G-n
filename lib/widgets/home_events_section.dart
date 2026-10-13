@@ -518,7 +518,7 @@ class _AllEventsScreenState
         backgroundColor: const Color(0xFFF7F7F5),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: Text(
           '$_selectedCity Etkinlikleri',
           style: TextStyle(
             fontWeight: FontWeight.w800,
