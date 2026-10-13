@@ -263,7 +263,7 @@ extension _RecommendationLocationMethods on _RecommendationScreenState {
                 Text(
               _userPosition != null
                   ? 'Konumuna göre sıralanıyor.'
-                  : 'Konum olmadan Ankara geneli sıralanıyor.',
+                  : 'Konum olmadan seçtiğin şehir geneli sıralanıyor.',
               style:
                   const TextStyle(
                 fontSize:
