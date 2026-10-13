@@ -529,6 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   });
                   if (dialogContext.mounted) Navigator.pop(dialogContext, true);
                 } catch (_) {
+                  if (!context.mounted) return;
                   setDialogState(() => sending = false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')),
