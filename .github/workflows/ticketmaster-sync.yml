@@ -1,6 +1,10 @@
 name: Ticketmaster Turkey City Sync
 
 on:
+  push:
+    branches: [bugun-codespaces-ready]
+    paths:
+      - ".github/workflows/ticketmaster-sync.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 */6 * * *"
