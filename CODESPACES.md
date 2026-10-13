@@ -45,3 +45,15 @@ Profil ekranından Türkiye'nin 81 ili aranıp seçilebilir. Misafir kullanıcı
 ## Not
 
 Canlı içeriklerin görünmesi Supabase veritabanındaki etkinlik/mekân kayıtlarının güncelliğine ve seçilen şehir adıyla eşleşmesine bağlıdır. Dış veri sağlayıcılarının API anahtarları ve arka plan veri toplama servisleri ayrıca yapılandırılmalıdır.
+
+## Supabase güvenlik migration'ı
+
+Bu geliştirme dalında `supabase/migrations/008_user_data_security.sql` dosyası da bulunur. Mevcut Supabase projesinde tablolar için daha önce RLS politikaları çalıştırıldıysa bu dosya, aynı kullanıcı-verisi izolasyonunu proje deposunda sürümlü ve tekrar kurulabilir hale getirir. Yeni bir veritabanı kurulumunda migration dosyalarını sırayla uygulayın; migration'ları uygulamadan hesaplara ait kayıtları bulut üzerinde saklama özelliğinin çalıştığını varsaymayın.
+
+## Kullanıcı kayıtları ve gizlilik
+
+- Misafir kayıtları cihazdaki uygulama tercihleri içinde tutulur.
+- Oturum açılmış kullanıcıların kaydedilmiş etkinlikleri ve mekânları `saved_items` tablosunda kullanıcı kimliğiyle saklanır.
+- Profil, kaydedilen öğeler ve etkileşim kayıtları için RLS kullanıcıya göre erişimi sınırlar.
+- Bildirim izni kullanıcı isteğiyle istenir. Gerçek push bildirimi göndermek için ayrıca sunucu/FCM kurulumu gerekir; izin verilmesi tek başına bildirim gönderimi sağlamaz.
+- Yayına çıkmadan önce işletmeci bilgileri ve saklama süreleri içeren gerçek KVKK aydınlatma metni/Gizlilik Politikası hazırlanmalıdır.
