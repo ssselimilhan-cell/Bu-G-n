@@ -7,6 +7,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
+import 'community_activities_screen.dart';
 import 'map_explore_screen.dart';
 import 'offers_screen.dart';
 import 'place_detail_screen.dart';
@@ -430,6 +431,26 @@ class _HomeScreenState
                 height: 25,
               ),
               _buildExploreButton(),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CommunityActivitiesScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.group_add_outlined),
+                label: const Text('Birlikte etkinlik oluştur / davet et'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  backgroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: () {
