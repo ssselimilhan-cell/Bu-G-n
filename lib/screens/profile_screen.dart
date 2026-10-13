@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
 import '../services/saved_event_service.dart';
@@ -301,6 +302,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (_) => _AccountDialog(client: _client),
     );
     if (result == true && mounted) await _loadProfile();
+  }
+
+  Future<void> _openWebAccountDeletion() async {
+    final uri = Uri.parse(
+      'https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page',
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      _showSnack('Hesap silme sayfası açılamadı. Lütfen tekrar dene.');
+    }
   }
 
   Future<void> _deleteAccount() async {
@@ -633,11 +644,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Text(
             'BUGÜN, şehirdeki etkinlik ve gezilecek yerleri bulmana yardımcı olur.\n\n'
             '• Hesap açarsan e-posta adresin Supabase Auth tarafından oturum açma ve hesap güvenliği için işlenir.\n'
-            '• Profil adı, seçtiğin şehir ve ilgi alanların hesabına kaydedilir; yalnızca giriş yaptığın hesabın kendi profilini okuyup değiştirmesine izin veren erişim kuralları kullanılmalıdır.\n'
+            '• Profil adı, seçtiğin şehir ve ilgi alanların hesabına kaydedilir; profil kayıtlarına erişim hesap bazlı yetkilendirme kurallarıyla sınırlandırılır.\n'
             '• Giriş yapmadan seçtiğin şehir ve ilgi alanları bu cihazda saklanır.\n'
             '• Konum izni isteğe bağlıdır; yakınlık sıralaması için kullanılır. İzin vermeden de uygulamayı kullanabilirsin.\n'
             '• Etkinlik araması için etkinlik/yer verileri Supabase sunucusundan alınır. Bilet satın alma işlemleri ilgili sağlayıcının sitesinde yapılabilir.\n\n'
-            'Hesap ve profil verileri Supabase üzerinde saklanır. Kayıtlı yer notları ve kişisel tercihler yalnızca ilgili hesabın erişimine yönelik kurallarla korunur. Profil fotoğrafı herkese açık profil görseli deposunda tutulur; fotoğrafta paylaşmak istemediğin kişisel bilgileri bulundurma. Geri bildirimini uygulama içinden gönderebilirsin. Konum izni isteğe bağlıdır ve şehir seçimini elle yapabilirsin. Hesabın ve verilerinle ilgili talepler için Bize ulaşın alanından mesaj gönder.',
+            'Hesap ve profil verileri Supabase üzerinde saklanır. Kayıtlı yer notları ve kişisel tercihler yalnızca ilgili hesabın erişimine yönelik kurallarla korunur. Profil fotoğrafı herkese açık profil görseli deposunda tutulur; fotoğrafta paylaşmak istemediğin kişisel bilgileri bulundurma. Geri bildirimini uygulama içinden gönderebilirsin. Konum izni isteğe bağlıdır ve şehir seçimini elle yapabilirsin. Hesabını uygulama içinden veya web üzerinden silebilirsin. Web silme sayfası: https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page. Bu kısa özet, veri sorumlusunun kimliği ve iletişim bilgilerini içeren ayrıntılı KVKK aydınlatma metninin yerine geçmez.',
           ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))],
@@ -800,6 +811,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.support_agent_rounded, title: 'Bize ulaşın', subtitle: 'Öneri, hata veya veri talebi gönder', onTap: _showFeedback),
+                  const SizedBox(height: 10),
+                  _settingCard(
+                    icon: Icons.open_in_new_rounded,
+                    title: 'Web üzerinden hesap silme',
+                    subtitle: 'Uygulamaya erişemediğinde hesap silme talebi başlat',
+                    onTap: _openWebAccountDeletion,
+                  ),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Bildirim iznini yönet', onTap: _requestNotifications),
                   const SizedBox(height: 22),
