@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -325,6 +326,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _requestNotifications() async {
+    final explain = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bildirim izni'),
+        content: const Text(
+          'İzin verirsen BUGÜN etkinlik hatırlatmaları ve seçtiğin içeriklerle ilgili bildirimler gönderebilir. '
+          'İzin isteğe bağlıdır; reddedersen uygulamanın diğer özelliklerini kullanmaya devam edebilirsin. '
+          'Bildirim izni, henüz sunucu tarafında etkinleştirilmemiş bildirim kampanyalarının çalıştığı anlamına gelmez.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ŞİMDİ DEĞİL')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('DEVAM ET')),
+        ],
+      ),
+    );
+    if (explain != true || !mounted) return;
+    try {
+      final status = await Permission.notification.request();
+      if (!mounted) return;
+      if (status.isGranted || status.isLimited) {
+        _showSnack('Bildirim izni verildi. Bildirim gönderimi sunucu yapılandırmasına bağlıdır.');
+      } else if (status.isPermanentlyDenied) {
+        _showSnack('Bildirim izni kapalı. İstersen uygulama ayarlarından açabilirsin.');
+        await openAppSettings();
+      } else {
+        _showSnack('Bildirim izni verilmedi. Uygulamayı kullanmaya devam edebilirsin.');
+      }
+    } catch (_) {
+      if (mounted) _showSnack('Bildirim izni kontrol edilemedi.');
+    }
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -409,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
                   const SizedBox(height: 10),
-                  _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Anlık bildirimler bu sürümde etkin değil', onTap: () => _showSnack('Bildirim gönderimi henüz etkinleştirilmedi; şu anda bildirim izni istenmiyor.')),
+                  _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Bildirim iznini yönet', onTap: _requestNotifications),
                   const SizedBox(height: 22),
                   if (!signedIn)
                     FilledButton(
