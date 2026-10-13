@@ -8,7 +8,7 @@ SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 OVERPASS = "https://overpass-api.de/api/interpreter"
 HEADERS = {
-    "User-Agent": "BUGUN-city-discovery/1.0 (city places collector)",
+    "User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)",
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json",
@@ -54,7 +54,7 @@ def short_description(name, tags, label):
 
 def main():
     session = requests.Session()
-    session.headers.update({"User-Agent": "BUGUN-city-discovery/1.0 contact: support@bugun.app"})
+    session.headers.update({"User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)"})
     all_rows = {}
     errors = []
     for index, city in enumerate(CITIES, 1):
