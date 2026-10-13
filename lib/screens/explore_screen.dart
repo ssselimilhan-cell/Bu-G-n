@@ -56,6 +56,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     'Müze',
     'Kültür',
     'Sinema',
+    'Hayvanat Bahçesi',
+    'Eğlence',
+    'Sanat',
+    'Gezi',
   ];
 
   @override
