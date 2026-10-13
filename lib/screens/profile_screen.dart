@@ -478,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         const Text('Bütçe', style: TextStyle(fontWeight: FontWeight.w800)),
                         DropdownButtonFormField<int>(
-                          value: _budgetLevel,
+                          initialValue: _budgetLevel,
                           isExpanded: true,
                           decoration: const InputDecoration(isDense: true),
                           items: const [
@@ -532,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 8),
                         const Text('Ayırabileceğin süre', style: TextStyle(fontWeight: FontWeight.w800)),
                         DropdownButtonFormField<int>(
-                          value: _visitDurationMin,
+                          initialValue: _visitDurationMin,
                           isExpanded: true,
                           decoration: const InputDecoration(isDense: true),
                           items: const [
