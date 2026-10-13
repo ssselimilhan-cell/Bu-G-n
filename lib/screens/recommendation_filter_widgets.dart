@@ -205,6 +205,18 @@ extension _RecommendationFilterWidgetMethods on _RecommendationScreenState {
               ),
               _choiceChip(
                 label:
+                    'Yeme-İçme',
+                selected:
+                    _interests.contains(
+                  InterestType.food,
+                ),
+                onTap: () =>
+                    _toggleInterest(
+                  InterestType.food,
+                ),
+              ),
+              _choiceChip(
+                label:
                     'Sinema',
                 selected:
                     _interests.contains(
