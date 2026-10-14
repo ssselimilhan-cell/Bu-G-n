@@ -9,6 +9,7 @@
 - [x] `saved_items` UPDATE RLS politikası eklendi.
 - [x] Süresi geçmiş etkinlikleri pasifleştiren RPC'nin doğrudan anon/authenticated tarafından çağrılması engellendi; service_role izni doğrulandı.
 - [x] `set_place_location` fonksiyonuna sabit search_path verildi.
+- [x] Veri sorumlusu iletişim bilgileri, kullanıcının açık talebi doğrultusunda gizlilik taslağına eklendi.
 
 ## Yayından önce mutlaka tamamlanacaklar
 - [ ] Google Play Console'da `tr.bugun.app` paket adının kullanılabilirliğini/registrasyonunu doğrula. Paket kimliği ilk yayından sonra değiştirilmesi zor olduğundan bu kontrol yapılmadan mağazaya gönderme.
@@ -20,7 +21,7 @@
 - [ ] Hesap silmeyi gerçek bir test hesabında uçtan uca doğrula; başarısızlık ve tekrar deneme durumlarını da test et.
 - [ ] Supabase güvenlik danışmanındaki sızdırılmış parola koruması ayarını etkinleştirmenin mümkün olup olmadığını kontrol et.
 - [ ] Gizlilik/KVKK metnini tamamla. Supabase projesi Londra (eu-west-2) bölgesinde; yurt dışına aktarım için hukuki mekanizma doğrulanmadan yayına çıkma.
-- [ ] Veri sorumlusu adı/ünvanı, yayımlanacak iletişim e-postası ve tebligat adresini doğrula.
+- [ ] Uygulamanın gerçek veri akışlarını, işleme amaçlarını/hukuki sebeplerini, saklama sürelerini ve alt işleyenlerini doğrula; gizlilik metnini hukuk uzmanına kontrol ettir.
 - [ ] Gizlilik politikasını herkese açık URL'de yayımla ve uygulama içinden erişilebilir yap.
 - [ ] Gezilecek yer veri toplama iş akışını doğrula: son denetimde 15 yer / 1 şehir vardı; 81 şehir kapsamı henüz doğrulanmış değil.
 - [ ] Son Android APK build + `flutter analyze` başarılı olsun; AAB iş akışını ayrıca manuel çalıştırıp imzalı AAB çıktısını kontrol et.
