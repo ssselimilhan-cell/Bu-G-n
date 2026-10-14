@@ -1,13 +1,13 @@
 # BUGÜN — KVKK Aydınlatma Metni (yayın öncesi taslak)
 
-> **YAYINA ALINAMAZ:** Bu taslak, veri sorumlusu kimliği/iletişim bilgileri ve yurt dışına aktarım mekanizması doğrulanmadan nihai aydınlatma metni değildir. Köşeli parantezli alanlar doldurulmalı, veri akışı ve saklama süreleri doğrulanmalı ve metin hukuk uzmanına kontrol ettirilmelidir.
+> **YAYINA ALINAMAZ:** Veri sorumlusu iletişim bilgileri eklendi; ancak veri akışları, saklama süreleri ve özellikle yurt dışına aktarım mekanizması doğrulanmadan bu metin nihai aydınlatma metni değildir. Yayın öncesinde hukuk uzmanı tarafından kontrol edilmelidir.
 
 ## 1. Veri sorumlusu
 
-- **Veri sorumlusu / geliştirici:** [Gerçek kişi adı-soyadı veya tüzel kişi ticaret unvanı]
-- **Tebligat / iş adresi:** [Tam adres]
-- **Gizlilik ve veri talepleri e-posta adresi:** [Yayımlanması istenen, erişilebilir e-posta]
-- **Başvuru yöntemi:** [E-posta ve/veya posta adresi; kimlik doğrulama süreci]
+- **Veri sorumlusu / geliştirici:** Selim İlhan (gerçek kişi)
+- **Tebligat / iş adresi:** Yücetepe Mahallesi, İleri Sokak No: 4/10, Çankaya, Ankara, Türkiye
+- **Gizlilik ve veri talepleri e-posta adresi:** ssselimilhan@gmail.com
+- **Başvuru yöntemi:** E-posta veya yukarıdaki posta adresi üzerinden başvuru. Başvurular değerlendirilirken ilgili kişinin kimliği ve başvuru yetkisi, gereğinden fazla veri toplanmadan doğrulanmalıdır.
 
 ## 2. İşlenebilecek kişisel veri kategorileri
 
@@ -47,10 +47,10 @@ Hesap verileri, hesap hizmeti sürdüğü sürece; kullanıcı tarafından oluş
 
 ## 8. İlgili kişinin hakları ve başvuru
 
-İlgili kişiler, 6698 sayılı Kanun'un 11'inci maddesindeki hakları kapsamında veri sorumlusuna başvurabilir. Başvurular için yukarıdaki gerçek ve çalışan iletişim kanalı doldurulmalıdır. Hesap silme talebi uygulama içindeki **Profil → Hesabı ve verileri sil** seçeneğiyle veya şu web sayfasından başlatılabilir:
+İlgili kişiler, 6698 sayılı Kanun'un 11'inci maddesindeki hakları kapsamında veri sorumlusuna başvurabilir. Başvurular yukarıda belirtilen e-posta veya posta adresi üzerinden iletilebilir. Hesap silme talebi uygulama içindeki **Profil → Hesabı ve verileri sil** seçeneğiyle veya şu web sayfasından başlatılabilir:
 
 https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page
 
 ## 9. Son kontrol listesi
 
-Bu metin yayımlanmadan önce veri sorumlusu kimliği/iletişim bilgileri, her işleme amacının hukuki sebebi, saklama süreleri, alt işleyenler, yurt dışına aktarım mekanizması, başvuru süreci ve uygulamanın gerçek izin/SDK davranışı doğrulanmalıdır.
+Bu metin yayımlanmadan önce her işleme amacının hukuki sebebi, saklama süreleri, alt işleyenler, yurt dışına aktarım mekanizması, başvuru süreci ve uygulamanın gerçek izin/SDK davranışı doğrulanmalıdır. Bu metin, teknik ve hukuki doğrulama tamamlanana kadar taslak olarak kalmalıdır.
