@@ -41,28 +41,47 @@ jobs:
             [ -n "$API_CITY" ] || continue
             echo "Etkinlikler aranıyor: $DB_CITY"
 
-            if ! curl --silent --show-error --fail-with-body \
-              --get "https://app.ticketmaster.com/discovery/v2/events.json" \
-              --data-urlencode "apikey=${TICKETMASTER_API_KEY}" \
-              --data-urlencode "locale=*" \
-              --data-urlencode "city=${API_CITY}" \
-              --data-urlencode "countryCode=TR" \
-              --data-urlencode "startDateTime=${NOW_UTC}" \
-              --data-urlencode "size=200" \
-              --data-urlencode "sort=date,asc" \
-              --output "city-events/response.json"; then
-              echo "UYARI: $DB_CITY için Ticketmaster sorgusu başarısız; diğer şehirlere devam ediliyor."
-              failures=$((failures + 1))
+            rm -f "city-events/response-${API_CITY}-"*.json
+            PAGE=0
+            CITY_COUNT=0
+            while [ "$PAGE" -lt 5 ]; do
+              if ! curl --silent --show-error --fail-with-body \
+                --get "https://app.ticketmaster.com/discovery/v2/events.json" \
+                --data-urlencode "apikey=${TICKETMASTER_API_KEY}" \
+                --data-urlencode "locale=*" \
+                --data-urlencode "city=${API_CITY}" \
+                --data-urlencode "countryCode=TR" \
+                --data-urlencode "startDateTime=${NOW_UTC}" \
+                --data-urlencode "size=200" \
+                --data-urlencode "page=${PAGE}" \
+                --data-urlencode "sort=date,asc" \
+                --output "city-events/response-${API_CITY}-${PAGE}.json"; then
+                echo "UYARI: $DB_CITY sayfa $PAGE sorgusu başarısız."
+                failures=$((failures + 1))
+                break
+              fi
+
+              COUNT="$(jq '._embedded.events // [] | length' "city-events/response-${API_CITY}-${PAGE}.json")"
+              echo "$DB_CITY sayfa $PAGE: $COUNT etkinlik"
+              [ "$COUNT" -gt 0 ] || break
+              CITY_COUNT=$((CITY_COUNT + COUNT))
+              PAGE=$((PAGE + 1))
+              sleep 0.2
+            done
+
+            if compgen -G "city-events/response-${API_CITY}-*.json" > /dev/null; then
+              jq -s '[.[] | (._embedded.events // [])] | add // []' city-events/response-${API_CITY}-*.json > "city-events/combined-${API_CITY}.json"
+            else
+              echo "UYARI: $DB_CITY için yanıt dosyası oluşmadı."
               continue
             fi
-
-            COUNT="$(jq '._embedded.events // [] | length' city-events/response.json)"
-            echo "$DB_CITY için bulunan kayıt: $COUNT"
+            COUNT="$(jq 'length' "city-events/combined-${API_CITY}.json")"
+            echo "$DB_CITY toplam bulunan kayıt: $COUNT"
 
             if [ "$COUNT" -gt 0 ]; then
               jq --arg syncedAt "$NOW_UTC" --arg city "$DB_CITY" '
                 [
-                  (._embedded.events // [])[]
+                  .[]
                   | select(.id != null and .name != null and .dates.start.dateTime != null)
                   | {
                       external_id: .id,
@@ -94,7 +113,7 @@ jobs:
                       last_synced_at: $syncedAt
                     }
                 ]
-              ' city-events/response.json > "city-events/events-${API_CITY}.json"
+              ' "city-events/combined-${API_CITY}.json" > "city-events/events-${API_CITY}.json"
               total=$((total + $(jq 'length' "city-events/events-${API_CITY}.json")))
             fi
             sleep 1
