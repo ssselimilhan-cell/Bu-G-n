@@ -1,4 +1,4 @@
-package com.example.bugun
+package tr.bugun.app
 
 import io.flutter.embedding.android.FlutterActivity
 

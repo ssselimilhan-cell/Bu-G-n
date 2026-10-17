@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
+import '../services/saved_event_service.dart';
+import '../services/saved_place_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +22,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CityPreferenceService _cityService = CityPreferenceService();
 
   static const List<String> _cities = [
-    'Ankara', 'İstanbul', 'İzmir', 'Bursa', 'Antalya', 'Eskişehir', 'Konya', 'Adana',
+    'Adana',
+    'Adıyaman',
+    'Afyonkarahisar',
+    'Ağrı',
+    'Amasya',
+    'Ankara',
+    'Antalya',
+    'Artvin',
+    'Aydın',
+    'Balıkesir',
+    'Bilecik',
+    'Bingöl',
+    'Bitlis',
+    'Bolu',
+    'Burdur',
+    'Bursa',
+    'Çanakkale',
+    'Çankırı',
+    'Çorum',
+    'Denizli',
+    'Diyarbakır',
+    'Edirne',
+    'Elazığ',
+    'Erzincan',
+    'Erzurum',
+    'Eskişehir',
+    'Gaziantep',
+    'Giresun',
+    'Gümüşhane',
+    'Hakkâri',
+    'Hatay',
+    'Isparta',
+    'Mersin',
+    'İstanbul',
+    'İzmir',
+    'Kars',
+    'Kastamonu',
+    'Kayseri',
+    'Kırklareli',
+    'Kırşehir',
+    'Kocaeli',
+    'Konya',
+    'Kütahya',
+    'Malatya',
+    'Manisa',
+    'Kahramanmaraş',
+    'Mardin',
+    'Muğla',
+    'Muş',
+    'Nevşehir',
+    'Niğde',
+    'Ordu',
+    'Rize',
+    'Sakarya',
+    'Samsun',
+    'Siirt',
+    'Sinop',
+    'Sivas',
+    'Tekirdağ',
+    'Tokat',
+    'Trabzon',
+    'Tunceli',
+    'Şanlıurfa',
+    'Uşak',
+    'Van',
+    'Yozgat',
+    'Zonguldak',
+    'Aksaray',
+    'Bayburt',
+    'Karaman',
+    'Kırıkkale',
+    'Batman',
+    'Şırnak',
+    'Bartın',
+    'Ardahan',
+    'Iğdır',
+    'Yalova',
+    'Karabük',
+    'Kilis',
+    'Osmaniye',
+    'Düzce'
   ];
   static const List<String> _interests = [
     '🎵 Müzik', '🎭 Tiyatro', '🍔 Yeme-İçme', '☕ Kahve', '🌳 Doğa', '🎨 Sanat',
@@ -26,10 +111,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _city = CityPreferenceService.defaultCity;
   Set<String> _selectedInterests = {'🌳 Doğa', '🍔 Yeme-İçme'};
+  int _budgetLevel = 3;
+  double _radiusKm = 10;
+  int _visitDurationMin = 120;
+  String _preferredTransport = 'Farketmez';
   bool _loading = true;
   bool _saving = false;
   User? _user;
   String? _displayName;
+  String? _avatarUrl;
   String? _message;
 
   @override
@@ -46,28 +136,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_user != null) {
         final row = await _client
             .from('profiles')
-            .select('display_name, city, interests')
+            .select('display_name, avatar_url, city, interests, budget_level, preferred_radius_km, preferred_visit_duration_min, preferred_transport')
             .eq('id', _user!.id)
             .maybeSingle();
         if (row != null) {
           _displayName = row['display_name'] as String?;
+          _avatarUrl = row['avatar_url'] as String?;
           final profileCity = row['city'] as String?;
           if (profileCity != null && profileCity.isNotEmpty) _city = profileCity;
           final interests = row['interests'];
           if (interests is List) {
             _selectedInterests = interests.map((e) => e.toString()).toSet();
           }
+          _budgetLevel = (row['budget_level'] as num?)?.toInt() ?? _budgetLevel;
+          _radiusKm = (row['preferred_radius_km'] as num?)?.toDouble() ?? _radiusKm;
+          _visitDurationMin = (row['preferred_visit_duration_min'] as num?)?.toInt() ?? _visitDurationMin;
+          _preferredTransport = row['preferred_transport'] as String? ?? _preferredTransport;
         } else {
           final preferences = await SharedPreferences.getInstance();
-          final guestInterests = preferences.getStringList('bugun_guest_interests');
-          if (guestInterests != null) _selectedInterests = guestInterests.toSet();
+          _loadLocalPreferences(preferences);
           _displayName ??= _user!.userMetadata?['display_name'] as String?;
           await _saveProfile();
         }
       } else {
         final prefs = await SharedPreferences.getInstance();
-        final saved = prefs.getStringList('bugun_guest_interests');
-        if (saved != null) _selectedInterests = saved.toSet();
+        _loadLocalPreferences(prefs);
       }
     } catch (error) {
       _message = 'Profil bilgileri yüklenemedi. İnternet bağlantını kontrol et.';
@@ -76,18 +169,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _loadLocalPreferences(SharedPreferences prefs) {
+    final saved = prefs.getStringList('bugun_guest_interests');
+    if (saved != null) _selectedInterests = saved.toSet();
+    _budgetLevel = prefs.getInt('bugun_budget_level') ?? _budgetLevel;
+    _radiusKm = prefs.getDouble('bugun_radius_km') ?? _radiusKm;
+    _visitDurationMin = prefs.getInt('bugun_visit_duration_min') ?? _visitDurationMin;
+    _preferredTransport = prefs.getString('bugun_transport') ?? _preferredTransport;
+  }
+
   Future<void> _saveProfile() async {
     final user = _client.auth.currentUser;
     if (user == null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList('bugun_guest_interests', _selectedInterests.toList());
+      await prefs.setInt('bugun_budget_level', _budgetLevel);
+      await prefs.setDouble('bugun_radius_km', _radiusKm);
+      await prefs.setInt('bugun_visit_duration_min', _visitDurationMin);
+      await prefs.setString('bugun_transport', _preferredTransport);
       return;
     }
     await _client.from('profiles').upsert({
       'id': user.id,
       'display_name': _displayName ?? user.userMetadata?['display_name'] as String?,
+      'avatar_url': _avatarUrl,
       'city': _city,
       'interests': _selectedInterests.toList(),
+      'budget_level': _budgetLevel,
+      'preferred_radius_km': _radiusKm,
+      'preferred_visit_duration_min': _visitDurationMin,
+      'preferred_transport': _preferredTransport,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
   }
@@ -106,24 +217,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _chooseCity() async {
+    var query = '';
     final chosen = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: Text('Şehir seç', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final filteredCities = _cities
+              .where((city) => city.toLowerCase().contains(query.trim().toLowerCase()))
+              .toList();
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.78,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Şehir seç',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: TextField(
+                      autofocus: true,
+                      onChanged: (value) => setModalState(() => query = value),
+                      decoration: InputDecoration(
+                        hintText: '81 şehir içinde ara',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: filteredCities.isEmpty
+                        ? const Center(child: Text('Şehir bulunamadı.'))
+                        : ListView.builder(
+                            itemCount: filteredCities.length,
+                            itemBuilder: (context, index) {
+                              final city = filteredCities[index];
+                              return ListTile(
+                                title: Text(city),
+                                trailing: city == _city ? const Icon(Icons.check) : null,
+                                onTap: () => Navigator.pop(context, city),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-            ..._cities.map((city) => ListTile(
-              title: Text(city),
-              trailing: city == _city ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(context, city),
-            )),
-          ],
-        ),
+          );
+        },
       ),
     );
     if (chosen == null || !mounted) return;
@@ -151,8 +304,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result == true && mounted) await _loadProfile();
   }
 
+  Future<void> _openWebAccountDeletion() async {
+    final uri = Uri.parse(
+      'https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page',
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      _showSnack('Hesap silme sayfası açılamadı. Lütfen tekrar dene.');
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _showSnack('Hesabına giriş yapman gerekiyor.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final confirmation = TextEditingController();
+        return AlertDialog(
+          title: const Text('Hesabını ve verilerini sil'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bu işlem profilini, kayıtlı yerlerini ve notlarını, kişisel etkileşimlerini, '
+                'geri bildirim bağlantını ve oluşturduğun etkinlikleri siler. Hesap silindikten '
+                'sonra geri alınamaz. Devam etmek için aşağıya SİL yaz.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmation,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'Onay'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('VAZGEÇ'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                confirmation.text.trim() == 'SİL',
+              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('HESABI SİL'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _client.functions.invoke('delete-account');
+      await _client.auth.signOut(scope: SignOutScope.local);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('bugun_guest_interests');
+      await prefs.remove('bugun_budget_level');
+      await prefs.remove('bugun_radius_km');
+      await prefs.remove('bugun_visit_duration_min');
+      await prefs.remove('bugun_transport');
+      if (!mounted) return;
+      setState(() {
+        _user = null;
+        _displayName = null;
+        _avatarUrl = null;
+        _message = null;
+      });
+      await _loadProfile();
+      if (mounted) _showSnack('Hesabın ve ilişkili verilerin silindi.');
+    } catch (_) {
+      if (mounted) {
+        _showSnack('Hesap silinemedi. İşlem tamamlanmadı; bağlantını kontrol edip tekrar dene.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _signOut() async {
     try {
+      // Move any guest saves to this account before ending the session so
+      // they cannot be imported into a different account on this device.
+      await SavedEventService().getSavedIds();
+      await SavedPlaceService().getSavedIds();
       await _client.auth.signOut();
       if (!mounted) return;
       setState(() {
@@ -203,6 +445,196 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _requestNotifications() async {
+    final explain = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bildirim izni'),
+        content: const Text(
+          'İzin verirsen BUGÜN etkinlik hatırlatmaları ve seçtiğin içeriklerle ilgili bildirimler gönderebilir. '
+          'İzin isteğe bağlıdır; reddedersen uygulamanın diğer özelliklerini kullanmaya devam edebilirsin. '
+          'Bildirim izni, henüz sunucu tarafında etkinleştirilmemiş bildirim kampanyalarının çalıştığı anlamına gelmez.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ŞİMDİ DEĞİL')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('DEVAM ET')),
+        ],
+      ),
+    );
+    if (explain != true || !mounted) return;
+    try {
+      final status = await Permission.notification.request();
+      if (!mounted) return;
+      if (status.isGranted || status.isLimited) {
+        _showSnack('Bildirim izni verildi. Bildirim gönderimi sunucu yapılandırmasına bağlıdır.');
+      } else if (status.isPermanentlyDenied) {
+        _showSnack('Bildirim izni kapalı. İstersen uygulama ayarlarından açabilirsin.');
+        await openAppSettings();
+      } else {
+        _showSnack('Bildirim izni verilmedi. Uygulamayı kullanmaya devam edebilirsin.');
+      }
+    } catch (_) {
+      if (mounted) _showSnack('Bildirim izni kontrol edilemedi.');
+    }
+  }
+
+
+  Future<void> _pickAvatar() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _showSnack('Profil fotoğrafı eklemek için önce hesabına giriş yap.');
+      return;
+    }
+    try {
+      final image = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1200,
+      );
+      if (image == null) return;
+      setState(() => _saving = true);
+      final bytes = await image.readAsBytes();
+      final extension = image.name.contains('.')
+          ? image.name.split('.').last.toLowerCase()
+          : 'jpg';
+      final safeExtension = ['jpg', 'jpeg', 'png', 'webp'].contains(extension)
+          ? extension
+          : 'jpg';
+      final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$safeExtension';
+      final contentType = safeExtension == 'png'
+          ? 'image/png'
+          : safeExtension == 'webp'
+              ? 'image/webp'
+              : 'image/jpeg';
+      await _client.storage.from('profile-avatars').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          contentType: contentType,
+          upsert: true,
+        ),
+      );
+      final url = _client.storage.from('profile-avatars').getPublicUrl(path);
+      await _client.from('profiles').upsert({
+        'id': user.id,
+        'display_name': _displayName ?? user.userMetadata?['display_name'] as String?,
+        'city': _city,
+        'avatar_url': url,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      if (!mounted) return;
+      setState(() {
+        _avatarUrl = url;
+        _saving = false;
+      });
+      _showSnack('Profil fotoğrafın güncellendi.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _showSnack('Fotoğraf yüklenemedi. Bağlantını ve hesap oturumunu kontrol et.');
+    }
+  }
+
+  Future<void> _showFeedback() async {
+    final messageController = TextEditingController();
+    final emailController = TextEditingController(text: _user?.email ?? '');
+    String category = 'Öneri';
+    bool sending = false;
+    final submitted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Bize ulaşın'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Önerini, sorun bildirimini veya eklemek istediğin şehir seçeneğini bize ilet.'),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: category,
+                  decoration: const InputDecoration(labelText: 'Konu'),
+                  items: const [
+                    DropdownMenuItem(value: 'Öneri', child: Text('Öneri')),
+                    DropdownMenuItem(value: 'Hata bildirimi', child: Text('Hata bildirimi')),
+                    DropdownMenuItem(value: 'İçerik düzeltme', child: Text('İçerik düzeltme')),
+                    DropdownMenuItem(value: 'Gizlilik', child: Text('Gizlilik / veri talebi')),
+                    DropdownMenuItem(value: 'Diğer', child: Text('Diğer')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => category = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: messageController,
+                  minLines: 4,
+                  maxLines: 7,
+                  maxLength: 4000,
+                  decoration: const InputDecoration(
+                    labelText: 'Mesajın',
+                    hintText: 'Nasıl yardımcı olabiliriz?',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'E-posta (isteğe bağlı)',
+                    hintText: 'Yanıt vermemizi istersen',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(dialogContext, false),
+              child: const Text('VAZGEÇ'),
+            ),
+            FilledButton(
+              onPressed: sending ? null : () async {
+                final message = messageController.text.trim();
+                if (message.length < 5) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lütfen en az 5 karakterlik bir mesaj yaz.')),
+                  );
+                  return;
+                }
+                setDialogState(() => sending = true);
+                try {
+                  await _client.from('app_feedback').insert({
+                    'user_id': _client.auth.currentUser?.id,
+                    'email': emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                    'category': category,
+                    'message': message,
+                    'app_version': 'Android',
+                  });
+                  if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                } catch (_) {
+                  if (!context.mounted) return;
+                  setDialogState(() => sending = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mesaj gönderilemedi. Bağlantını kontrol edip tekrar dene.')),
+                  );
+                }
+              },
+              child: Text(sending ? 'GÖNDERİLİYOR…' : 'GÖNDER'),
+            ),
+          ],
+        ),
+      ),
+    );
+    messageController.dispose();
+    emailController.dispose();
+    if (submitted == true && mounted) {
+      _showSnack('Geri bildirimin alındı. Teşekkürler!');
+    }
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -212,11 +644,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Text(
             'BUGÜN, şehirdeki etkinlik ve gezilecek yerleri bulmana yardımcı olur.\n\n'
             '• Hesap açarsan e-posta adresin Supabase Auth tarafından oturum açma ve hesap güvenliği için işlenir.\n'
-            '• Profil adı, seçtiğin şehir ve ilgi alanların hesabına kaydedilir; yalnızca giriş yaptığın hesabın kendi profilini okuyup değiştirmesine izin veren erişim kuralları kullanılmalıdır.\n'
+            '• Profil adı, seçtiğin şehir ve ilgi alanların hesabına kaydedilir; profil kayıtlarına erişim hesap bazlı yetkilendirme kurallarıyla sınırlandırılır.\n'
             '• Giriş yapmadan seçtiğin şehir ve ilgi alanları bu cihazda saklanır.\n'
             '• Konum izni isteğe bağlıdır; yakınlık sıralaması için kullanılır. İzin vermeden de uygulamayı kullanabilirsin.\n'
             '• Etkinlik araması için etkinlik/yer verileri Supabase sunucusundan alınır. Bilet satın alma işlemleri ilgili sağlayıcının sitesinde yapılabilir.\n\n'
-            'Bu ekran uygulama içi bilgilendirmedir; yayına çıkmadan önce işletmeci iletişim bilgileri, veri saklama süreleri, kullanıcı hakları ve başvuru yöntemiyle birlikte hukuken gözden geçirilmiş bir Gizlilik Politikası ve gerekiyorsa KVKK aydınlatma metni yayımlanmalıdır.',
+            'Hesap ve profil verileri Supabase üzerinde saklanır. Kayıtlı yer notları ve kişisel tercihler yalnızca ilgili hesabın erişimine yönelik kurallarla korunur. Profil fotoğrafı herkese açık profil görseli deposunda tutulur; fotoğrafta paylaşmak istemediğin kişisel bilgileri bulundurma. Geri bildirimini uygulama içinden gönderebilirsin. Konum izni isteğe bağlıdır ve şehir seçimini elle yapabilirsin. Hesabını uygulama içinden veya web üzerinden silebilirsin. Web silme sayfası: https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page. Bu kısa özet, veri sorumlusunun kimliği ve iletişim bilgilerini içeren ayrıntılı KVKK aydınlatma metninin yerine geçmez.',
           ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))],
@@ -281,14 +713,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }).toList()),
                   const SizedBox(height: 24),
+                  const _SectionLabel('PLAN TERCİHLERİ'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Önerilerde bütçeni, ulaşım tercihini ve ne kadar zaman ayırabileceğini dikkate al.',
+                    style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Bütçe', style: TextStyle(fontWeight: FontWeight.w800)),
+                        DropdownButtonFormField<int>(
+                          initialValue: _budgetLevel,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true),
+                          items: const [
+                            DropdownMenuItem(value: 0, child: Text('Ücretsiz')),
+                            DropdownMenuItem(value: 1, child: Text('Düşük bütçe')),
+                            DropdownMenuItem(value: 2, child: Text('Orta bütçe')),
+                            DropdownMenuItem(value: 3, child: Text('Sınırlama yok')),
+                          ],
+                          onChanged: (value) async {
+                            if (value == null) return;
+                            setState(() => _budgetLevel = value);
+                            await _savePreferences();
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Ulaşım', style: TextStyle(fontWeight: FontWeight.w800))),
+                            DropdownButton<String>(
+                              value: _preferredTransport,
+                              items: const [
+                                DropdownMenuItem(value: 'Farketmez', child: Text('Farketmez')),
+                                DropdownMenuItem(value: 'Yürüyerek', child: Text('Yürüyerek')),
+                                DropdownMenuItem(value: 'Toplu taşıma', child: Text('Toplu taşıma')),
+                                DropdownMenuItem(value: 'Araç', child: Text('Araç')),
+                              ],
+                              onChanged: (value) async {
+                                if (value == null) return;
+                                setState(() => _preferredTransport = value);
+                                await _savePreferences();
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Yakınlık yarıçapı', style: TextStyle(fontWeight: FontWeight.w800))),
+                            Text('${_radiusKm.round()} km'),
+                          ],
+                        ),
+                        Slider(
+                          value: _radiusKm.clamp(1.0, 50.0).toDouble(),
+                          min: 1,
+                          max: 50,
+                          divisions: 49,
+                          label: '${_radiusKm.round()} km',
+                          onChanged: (value) => setState(() => _radiusKm = value),
+                          onChangeEnd: (_) => _savePreferences(),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('Ayırabileceğin süre', style: TextStyle(fontWeight: FontWeight.w800)),
+                        DropdownButtonFormField<int>(
+                          initialValue: _visitDurationMin,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true),
+                          items: const [
+                            DropdownMenuItem(value: 60, child: Text('Yaklaşık 1 saat')),
+                            DropdownMenuItem(value: 120, child: Text('Yaklaşık 2 saat')),
+                            DropdownMenuItem(value: 240, child: Text('Yaklaşık 4 saat')),
+                            DropdownMenuItem(value: 480, child: Text('Tam gün')),
+                          ],
+                          onChanged: (value) async {
+                            if (value == null) return;
+                            setState(() => _visitDurationMin = value);
+                            await _savePreferences();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   const _SectionLabel('AYARLAR'),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.location_searching_rounded, title: 'Konum izni', subtitle: 'Yakınındaki etkinlikleri sıralamaya yardımcı olur', onTap: _requestLocation),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
                   const SizedBox(height: 10),
-                  _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Anlık bildirimler bu sürümde etkin değil', onTap: () => _showSnack('Bildirim gönderimi henüz etkinleştirilmedi; şu anda bildirim izni istenmiyor.')),
+                  _settingCard(icon: Icons.support_agent_rounded, title: 'Bize ulaşın', subtitle: 'Öneri, hata veya veri talebi gönder', onTap: _showFeedback),
+                  const SizedBox(height: 10),
+                  _settingCard(
+                    icon: Icons.open_in_new_rounded,
+                    title: 'Web üzerinden hesap silme',
+                    subtitle: 'Uygulamaya erişemediğinde hesap silme talebi başlat',
+                    onTap: _openWebAccountDeletion,
+                  ),
+                  const SizedBox(height: 10),
+                  _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Bildirim iznini yönet', onTap: _requestNotifications),
                   const SizedBox(height: 22),
+                  if (signedIn) ...[
+                    _settingCard(
+                      icon: Icons.delete_forever_outlined,
+                      title: 'Hesabı ve verileri sil',
+                      subtitle: 'Hesabını ve ilişkili kişisel verilerini kalıcı olarak sil',
+                      onTap: _deleteAccount,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   if (!signedIn)
                     FilledButton(
                       onPressed: _openAccount,
@@ -317,7 +858,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(26)),
       child: Row(children: [
-        Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.person_outline_rounded, size: 34)),
+        InkWell(
+          onTap: signedIn ? _pickAvatar : _openAccount,
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(alignment: Alignment.bottomRight, children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+              clipBehavior: Clip.antiAlias,
+              child: _avatarUrl == null || _avatarUrl!.isEmpty
+                  ? const Icon(Icons.person_outline_rounded, size: 38)
+                  : Image.network(_avatarUrl!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.person_outline_rounded, size: 38)),
+            ),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.camera_alt_outlined, size: 15),
+            ),
+          ]),
+        ),
         const SizedBox(width: 15),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(signedIn ? (name?.isNotEmpty == true ? name! : 'BUGÜN kullanıcısı') : 'Misafir Kullanıcı', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),

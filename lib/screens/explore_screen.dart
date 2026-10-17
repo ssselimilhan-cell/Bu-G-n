@@ -6,6 +6,8 @@ import '../services/event_service.dart';
 import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
+import 'map_explore_screen.dart';
+import 'community_activities_screen.dart';
 import 'place_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -33,8 +35,11 @@ class _ExploreScreenState extends State<ExploreScreen>
   final TextEditingController _searchController = TextEditingController();
 
   List<Place> _places = <Place>[];
+  List<Place> _allPlacesForSearch = <Place>[];
 
   List<Event> _events = <Event>[];
+  List<Event> _allEventsForSearch = <Event>[];
+  String _selectedEventCategory = 'Tümü';
 
   bool _placesLoading = true;
   bool _eventsLoading = true;
@@ -53,7 +58,18 @@ class _ExploreScreenState extends State<ExploreScreen>
     'Tarih',
     'Müze',
     'Kültür',
-    'Sinema',
+    'Sanat',
+    'Aile',
+    'Ücretsiz',
+    'Açık hava',
+  ];
+
+  final List<String> _eventCategories = const [
+    'Tümü',
+    'Müzik',
+    'Sahne',
+    'Spor',
+    'Diğer',
   ];
 
   @override
@@ -120,18 +136,24 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final places = await _placeService.getPlaces(
+      final localPlaces = await _placeService.getPlaces(
         city: _selectedCity,
-        category: _selectedCategory,
-        limit: 100,
+        limit: 300,
       );
+      List<Place> allPlaces;
+      try {
+        allPlaces = await _placeService.getPlaces(city: null, limit: 500);
+      } catch (_) {
+        allPlaces = localPlaces;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _places = places;
+        _places = localPlaces;
+        _allPlacesForSearch = allPlaces;
         _placesLoading = false;
       });
     } catch (_) {
@@ -154,18 +176,29 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final events = await _eventService.getUpcomingEvents(
+      final localEvents = await _eventService.getUpcomingEvents(
         city: _selectedCity,
         days: 31,
-        limit: 200,
+        limit: 250,
       );
+      List<Event> allEvents;
+      try {
+        allEvents = await _eventService.getUpcomingEvents(
+          city: null,
+          days: 31,
+          limit: 500,
+        );
+      } catch (_) {
+        allEvents = localEvents;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _events = events;
+        _events = localEvents;
+        _allEventsForSearch = allEvents;
         _eventsLoading = false;
       });
     } catch (_) {
@@ -180,69 +213,148 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  Future<void> _selectCategory(
-    String category,
-  ) async {
-    final newCategory = category == 'Tümü' ? null : category;
-
+  Future<void> _selectCategory(String category) async {
     setState(() {
-      _selectedCategory = newCategory;
+      _selectedCategory = category == 'Tümü' ? null : category;
     });
+  }
 
-    await _loadPlaces();
+  String _normalizeText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('ı', 'i')
+        .replaceAll('İ', 'i')
+        .replaceAll('ş', 's')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ü', 'u')
+        .replaceAll('ö', 'o')
+        .replaceAll('ç', 'c')
+        .trim();
+  }
+
+  bool _matchesPlaceCategory(Place place) {
+    final category = _selectedCategory;
+    if (category == null || category == 'Tümü') return true;
+
+    final value = _normalizeText([
+      place.category,
+      place.placeType ?? '',
+      ...place.tags,
+    ].join(' '));
+
+    switch (category) {
+      case 'Doğa':
+        return place.outdoor == true ||
+            value.contains('doga') ||
+            value.contains('nature') ||
+            value.contains('waterfall') ||
+            value.contains('selale') ||
+            value.contains('plaj') ||
+            value.contains('gol') ||
+            value.contains('dag');
+      case 'Park':
+        return value.contains('park') || value.contains('bahce') || value.contains('garden');
+      case 'Tarih':
+        return value.contains('tarih') ||
+            value.contains('historic') ||
+            value.contains('history') ||
+            value.contains('castle') ||
+            value.contains('anıt') ||
+            value.contains('anit');
+      case 'Müze':
+        return value.contains('muze') || value.contains('museum');
+      case 'Kültür':
+        return value.contains('kultur') ||
+            value.contains('culture') ||
+            value.contains('tiyatro') ||
+            value.contains('theatre');
+      case 'Sanat':
+        return value.contains('sanat') ||
+            value.contains('art') ||
+            value.contains('gallery') ||
+            value.contains('galeri');
+      case 'Aile':
+        return place.kidsFriendly == true;
+      case 'Ücretsiz':
+        return place.isFree == true;
+      case 'Açık hava':
+        return place.outdoor == true || value.contains('acik hava') || value.contains('outdoor');
+      default:
+        return true;
+    }
+  }
+
+  bool _matchesEventCategory(Event event) {
+    switch (_selectedEventCategory) {
+      case 'Müzik':
+        return _normalizeText(event.category).contains('music') ||
+            _normalizeText(event.category).contains('muzik') ||
+            _normalizeText(event.title).contains('konser');
+      case 'Sahne':
+        final value = _normalizeText('${event.category} ${event.title}');
+        return value.contains('theatre') ||
+            value.contains('theater') ||
+            value.contains('tiyatro') ||
+            value.contains('opera') ||
+            value.contains('stand up');
+      case 'Spor':
+        final value = _normalizeText('${event.category} ${event.title}');
+        return value.contains('sport') || value.contains('spor') || value.contains('mac');
+      case 'Diğer':
+        final value = _normalizeText(event.category);
+        return value.contains('miscellaneous') ||
+            value.contains('other') ||
+            value.contains('diger');
+      default:
+        return true;
+    }
   }
 
   String _pageTitle() {
     if (_tabController.index == 1) {
-      return 'Ankara etkinlikleri';
+      return '$_selectedCity etkinlikleri';
     }
 
-    return _selectedCategory ?? 'Ankara’yı keşfet';
+    return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
 
   List<Place> get _filteredPlaces {
-    if (_searchText.isEmpty) {
-      return _places;
-    }
-
-    return _places.where(
-      (place) {
-        final text = [
-          place.name,
-          place.category,
-          place.placeType ?? '',
-          place.shortDescription ?? '',
-          place.address ?? '',
-          ...place.tags,
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final source = _searchText.isNotEmpty
+        ? _allPlacesForSearch
+        : (_places.isNotEmpty ? _places : _allPlacesForSearch);
+    return source.where((place) {
+      if (!_matchesPlaceCategory(place)) return false;
+      if (_searchText.isEmpty) return true;
+      final text = _normalizeText([
+        place.name,
+        place.category,
+        place.placeType ?? '',
+        place.shortDescription ?? '',
+        place.address ?? '',
+        place.city,
+        ...place.tags,
+      ].join(' '));
+      return text.contains(_normalizeText(_searchText));
+    }).toList();
   }
 
   List<Event> get _filteredEvents {
-    if (_searchText.isEmpty) {
-      return _events;
-    }
-
-    return _events.where(
-      (event) {
-        final text = [
-          event.title,
-          event.category,
-          event.description ?? '',
-          event.venueName ?? '',
-          event.address ?? '',
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final source = _searchText.isNotEmpty
+        ? _allEventsForSearch
+        : (_events.isNotEmpty ? _events : _allEventsForSearch);
+    return source.where((event) {
+      if (!_matchesEventCategory(event)) return false;
+      if (_searchText.isEmpty) return true;
+      final text = _normalizeText([
+        event.title,
+        event.category,
+        event.description ?? '',
+        event.venueName ?? '',
+        event.address ?? '',
+        event.city,
+      ].join(' '));
+      return text.contains(_normalizeText(_searchText));
+    }).toList();
   }
 
   @override
@@ -262,10 +374,31 @@ class _ExploreScreenState extends State<ExploreScreen>
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Haritada keşfet',
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Birlikte etkinlik oluştur',
+            icon: const Icon(Icons.group_add_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CommunityActivitiesScreen()),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) {
-            setState(() {});
+            _searchController.clear();
+            setState(() {
+              _selectedEventCategory = 'Tümü';
+            });
           },
           labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
@@ -354,51 +487,69 @@ class _ExploreScreenState extends State<ExploreScreen>
     final selected = _selectedCategory ?? 'Tümü';
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSearchBox(
-          hint: 'Ankara’da yer ara...',
-        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            4,
-            16,
-            8,
-          ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: _categories.map(
-                (category) {
-                  final isSelected = selected == category;
-
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (_) => _selectCategory(
-                      category,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nereye gitmek istersin?',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                     ),
-                    selectedColor: Colors.black,
-                    backgroundColor: Colors.white,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 3),
+                    Text(
+                      _places.isNotEmpty
+                          ? '$_selectedCity ve çevresindeki yerleri keşfet'
+                          : 'Şehirdeki ve Türkiye genelindeki yerleri keşfet',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
-                    side: BorderSide(
-                      color: isSelected ? Colors.black : Colors.grey.shade300,
-                    ),
-                  );
-                },
-              ).toList(),
-            ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Haritada keşfet',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+                ),
+                icon: const Icon(Icons.map_outlined),
+              ),
+            ],
           ),
         ),
-        Expanded(
-          child: _buildPlacesContent(),
+        _buildSearchBox(hint: 'Yer, ilçe veya şehir ara'),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              final isSelected = selected == category;
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (_) => _selectCategory(category),
+                selectedColor: Colors.black,
+                backgroundColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300),
+              );
+            },
+          ),
         ),
+        Expanded(child: _buildPlacesContent()),
       ],
     );
   }
@@ -424,24 +575,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadPlaces,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.travel_explore_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için sonuç bulamadık.'
+                  : 'Bu kategoride henüz yer yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Farklı bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Tüm yerleri görmek için filtreyi kaldır.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun yer bulunamadı.'
-                      : 'Bu kategoride henüz yer yok.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedCategory = null);
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
@@ -453,25 +614,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadPlaces,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          6,
-          16,
-          24,
-        ),
-        itemCount: places.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: places.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final place = places[index];
-
-          return _PlaceCard(
-            place: place,
-            onTap: () => _openPlace(
-              place,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Keşfedilecek yerler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${places.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final place = places[index - 1];
+          return _PlaceCard(place: place, onTap: () => _openPlace(place));
         },
       ),
     );
@@ -479,13 +646,53 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildEventsTab() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSearchBox(
-          hint: 'Etkinliklerde ara...',
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Yakında ne var?',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '$_selectedCity için yaklaşan etkinlikler; arama Türkiye genelinde yapılır.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
         ),
-        Expanded(
-          child: _buildEventsContent(),
+        _buildSearchBox(hint: 'Etkinlik, sanatçı veya mekân ara'),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            scrollDirection: Axis.horizontal,
+            itemCount: _eventCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            itemBuilder: (context, index) {
+              final category = _eventCategories[index];
+              final isSelected = _selectedEventCategory == category;
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (_) => setState(() => _selectedEventCategory = category),
+                selectedColor: Colors.black,
+                backgroundColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300),
+              );
+            },
+          ),
         ),
+        Expanded(child: _buildEventsContent()),
       ],
     );
   }
@@ -511,24 +718,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadEvents,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.event_busy_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için etkinlik bulamadık.'
+                  : 'Şimdilik gösterilecek etkinlik yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Başka bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Şehirde yeni etkinlikler eklendikçe burada görünecek.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde Ankara için etkinlik bulunamadı.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedEventCategory = 'Tümü');
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
@@ -540,25 +757,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadEvents,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          24,
-        ),
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: events.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final event = events[index];
-
-          return _EventCard(
-            event: event,
-            onTap: () => _openEvent(
-              event,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Yaklaşan etkinlikler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${events.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final event = events[index - 1];
+          return _EventCard(event: event, onTap: () => _openEvent(event));
         },
       ),
     );
@@ -783,6 +1006,23 @@ class _PlaceCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           height: 1.1,
                         ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 13, color: Colors.grey.shade600),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              place.address?.trim().isNotEmpty == true
+                                  ? '${place.city} · ${place.address}'
+                                  : place.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            ),
+                          ),
+                        ],
                       ),
                       if (place.shortDescription != null) ...[
                         const SizedBox(
@@ -1050,14 +1290,15 @@ class _EventCard extends StatelessWidget {
                         icon: Icons.schedule_outlined,
                         text: _dateText(),
                       ),
-                      if (event.venueName != null &&
-                          event.venueName!.trim().isNotEmpty) ...[
-                        const SizedBox(
-                          height: 5,
-                        ),
+                      if ((event.venueName != null && event.venueName!.trim().isNotEmpty) ||
+                          event.city.trim().isNotEmpty) ...[
+                        const SizedBox(height: 5),
                         _EventInfoRow(
                           icon: Icons.location_on_outlined,
-                          text: event.venueName!,
+                          text: [
+                            if (event.venueName?.trim().isNotEmpty == true) event.venueName!,
+                            if (event.city.trim().isNotEmpty) event.city,
+                          ].join(' · '),
                         ),
                       ],
                       const SizedBox(
