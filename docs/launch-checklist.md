@@ -12,9 +12,9 @@
 - [x] Süresi geçmiş etkinlikleri pasifleştiren RPC'nin doğrudan anon/authenticated tarafından çağrılması engellendi; service_role izni doğrulandı.
 - [x] `set_place_location` fonksiyonuna sabit search_path verildi.
 - [x] Veri sorumlusu iletişim bilgileri, kullanıcının açık talebi doğrultusunda gizlilik taslağına eklendi.
-- [x] Ticketmaster Türkiye senkronizasyonu doğrulandı: 2.358 toplam etkinlik kaydı; 2.079 gelecekteki aktif etkinlik, 66 şehir. Kaynak URL ve görsel alanları dolu; 70 gelecekteki etkinlikte koordinat eksik.
+- [x] Ticketmaster Türkiye senkronizasyonu doğrulandı: 2.358 toplam etkinlik kaydı; 2.079 gelecekteki aktif etkinlik, 66 şehir. Geçmiş etkinlikler pasifleştirildi. Kaynak URL ve görsel alanları dolu; 70 gelecekteki etkinlikte koordinat eksik.
 - [x] Gezilecek yer kolektörünün Supabase upsert çakışma indeksi düzeltildi; OpenStreetMap kolektörü genişletildi ve çalıştırıldı.
-- [ ] Gezilecek yer aktarımının tamamlanmasını ve 81 il genelindeki kayıt sayısı/şehir dağılımını doğrula. Ara kontrolde 81 yer vardı: 15 Ankara kaydı ve 66 OpenStreetMap kaydı İzmir'de; aktarım devam ediyor.
+- [ ] Gezilecek yer aktarımının tamamlanmasını ve 81 il genelindeki kayıt sayısı/şehir dağılımını doğrula. Ara kontrolde 81 yer vardı: 15 Ankara kaydı ve 66 OpenStreetMap kaydı İzmir'de; yeni 81 il taraması hâlâ çalışıyor ve henüz tamamlanmış sayılmıyor.
 
 ## Yayından önce mutlaka tamamlanacaklar
 - [ ] Google Play Console'da `tr.bugun.app` paket adının kullanılabilirliğini/registrasyonunu doğrula. Paket kimliği ilk yayından sonra değiştirilmesi zor olduğundan bu kontrol yapılmadan mağazaya gönderme.
