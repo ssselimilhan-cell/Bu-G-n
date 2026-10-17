@@ -102,9 +102,16 @@ def category_for(tags):
     if tags.get("tourism") == "zoo": return ("Hayvanat Bahçesi", "Hayvanat bahçesi")
     if tags.get("tourism") == "gallery": return ("Sanat", "Sanat galerisi")
     if tags.get("tourism") == "theme_park": return ("Eğlence", "Eğlence parkı")
+    if tags.get("tourism") == "aquarium": return ("Hayvanat Bahçesi", "Akvaryum")
+    if tags.get("tourism") == "viewpoint": return ("Doğa", "Seyir noktası")
+    if tags.get("tourism") in ("attraction", "artwork"): return ("Gezi", "Turistik nokta")
+    if tags.get("tourism") in ("camp_site", "caravan_site", "picnic_site"): return ("Doğa", "Kamp ve piknik alanı")
     if tags.get("leisure") in ("park", "garden"): return ("Park", "Park ve bahçe")
-    if tags.get("historic") in ("castle", "monument", "memorial", "archaeological_site"): return ("Tarih", "Tarihi yer")
-    if tags.get("amenity") == "arts_centre": return ("Kültür", "Kültür merkezi")
+    if tags.get("leisure") in ("nature_reserve", "water_park", "beach_resort"): return ("Doğa", "Doğa ve rekreasyon alanı")
+    if tags.get("natural") in ("waterfall", "beach", "peak", "cave_entrance", "hot_spring"): return ("Doğa", "Doğal güzellik")
+    if tags.get("historic") in ("castle", "monument", "memorial", "archaeological_site", "ruins", "fort", "city_gate", "manor", "battlefield", "monastery"): return ("Tarih", "Tarihi yer")
+    if tags.get("man_made") in ("lighthouse", "tower"): return ("Tarih", "Yapı ve anıt")
+    if tags.get("amenity") in ("arts_centre", "planetarium"): return ("Kültür", "Kültür merkezi")
     return ("Gezi", "Gezilecek yer")
 
 def element_point(el):
@@ -167,14 +174,16 @@ def main():
             [out:json][timeout:20];
             {area_statement}
             (
-              {scope}["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium)$"];
-              {scope}["leisure"~"^(park|garden)$"];
-              {scope}["historic"~"^(castle|monument|memorial|archaeological_site)$"];
-              {scope}["amenity"="arts_centre"];
+              {scope}["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium|viewpoint|artwork|camp_site|caravan_site|picnic_site)$"];
+              {scope}["leisure"~"^(park|garden|nature_reserve|water_park|beach_resort)$"];
+              {scope}["natural"~"^(waterfall|beach|peak|cave_entrance|hot_spring)$"];
+              {scope}["historic"~"^(castle|monument|memorial|archaeological_site|ruins|fort|city_gate|manor|battlefield|monastery)$"];
+              {scope}["man_made"~"^(lighthouse|tower)$"];
+              {scope}["amenity"~"^(arts_centre|planetarium)$"];
             );
-            out center tags 80;
+            out center tags 120;
             """
-            response = session.post(OVERPASS, data={"data": query}, timeout=25)
+            response = session.post(OVERPASS, data={"data": query}, timeout=60)
             response.raise_for_status()
             elements = response.json().get("elements", [])
             for el in elements:
@@ -218,7 +227,7 @@ def main():
                 row["tags"] = [tag for tag in row["tags"] if tag]
                 all_rows[external_id] = row
                 city_rows.append(row)
-            print(f"  OSM kayıtları: {len(elements)}", flush=True)
+            print(f"  OSM sonuçları: {len(elements)}; isim ve koordinat kontrolünden sonra kaydedilecek: {len(city_rows)}", flush=True)
             for offset in range(0, len(city_rows), 100):
                 chunk = city_rows[offset:offset+100]
                 saved = session.post(
