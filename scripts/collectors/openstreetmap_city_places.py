@@ -28,6 +28,7 @@ CITIES = [
     "Mersin",
     "Trabzon",
     "Samsun",
+    "Siirt",
     "Kocaeli",
     "Balıkesir",
     "Aydın",
@@ -183,7 +184,7 @@ def main():
             );
             out center tags 120;
             """
-            response = session.post(OVERPASS, data={"data": query}, timeout=60)
+            response = session.post(OVERPASS, data={"data": query}, timeout=25)
             response.raise_for_status()
             elements = response.json().get("elements", [])
             for el in elements:
