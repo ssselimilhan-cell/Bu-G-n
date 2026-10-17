@@ -6,7 +6,11 @@ import requests
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
-OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS_ENDPOINTS = [
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+]
 HEADERS = {
     "User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)",
     "apikey": SUPABASE_KEY,
@@ -172,7 +176,7 @@ def main():
                 scope = f"nwr(around:20000,{latitude},{longitude})"
                 area_statement = ""
             query = f"""
-            [out:json][timeout:20];
+            [out:json][timeout:15];
             {area_statement}
             (
               {scope}["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium|viewpoint|artwork|camp_site|caravan_site|picnic_site)$"];
@@ -184,8 +188,24 @@ def main():
             );
             out center tags 120;
             """
-            response = session.post(OVERPASS, data={"data": query}, timeout=25)
-            response.raise_for_status()
+            response = None
+            endpoint_errors = []
+            for endpoint in OVERPASS_ENDPOINTS:
+                try:
+                    candidate = session.post(
+                        endpoint,
+                        data={"data": query},
+                        timeout=22,
+                    )
+                    candidate.raise_for_status()
+                    response = candidate
+                    print(f"  Overpass kaynağı: {endpoint}", flush=True)
+                    break
+                except requests.RequestException as exc:
+                    endpoint_errors.append(f"{endpoint}: {type(exc).__name__}: {exc}")
+                    print(f"  Overpass yedek kaynağa geçiliyor: {endpoint}", flush=True)
+            if response is None:
+                raise RuntimeError("Tüm Overpass uçları başarısız: " + " | ".join(endpoint_errors))
             elements = response.json().get("elements", [])
             for el in elements:
                 tags = el.get("tags") or {}
