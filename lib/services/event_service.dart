@@ -108,7 +108,7 @@ class EventService {
   }
 
   Future<List<Event>> getUpcomingEvents({
-    String city = 'Ankara',
+    String? city = 'Ankara',
     int days = 7,
     int limit = 100,
   }) async {
@@ -182,12 +182,12 @@ class EventService {
   }
 
   Future<List<Event>> _getEvents({
-    required String city,
+    required String? city,
     required DateTime start,
     required DateTime end,
     required int limit,
   }) async {
-    final rows = await _client
+    var query = _client
         .from('events')
         .select('''
           id,
@@ -208,32 +208,20 @@ class EventService {
           longitude,
           trust_score,
           recommendation_score,
-          is_active
+          is_active,
+          city
         ''')
-        .eq(
-          'city',
-          city,
-        )
-        .eq(
-          'is_active',
-          true,
-        )
-        .gte(
-          'starts_at',
-          start.toIso8601String(),
-        )
-        .lte(
-          'starts_at',
-          end.toIso8601String(),
-        )
-        .order(
-          'starts_at',
-          ascending: true,
-        )
-        .order(
-          'recommendation_score',
-          ascending: false,
-        )
+        .eq('is_active', true)
+        .gte('starts_at', start.toIso8601String())
+        .lte('starts_at', end.toIso8601String());
+
+    if (city != null && city.trim().isNotEmpty) {
+      query = query.eq('city', city);
+    }
+
+    final rows = await query
+        .order('starts_at', ascending: true)
+        .order('recommendation_score', ascending: false)
         .limit(limit);
 
     return rows
