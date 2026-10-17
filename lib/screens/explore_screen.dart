@@ -136,24 +136,24 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final results = await Future.wait<List<Place>>([
-        _placeService.getPlaces(
-          city: _selectedCity,
-          limit: 300,
-        ),
-        _placeService.getPlaces(
-          city: null,
-          limit: 500,
-        ),
-      ]);
+      final localPlaces = await _placeService.getPlaces(
+        city: _selectedCity,
+        limit: 300,
+      );
+      List<Place> allPlaces;
+      try {
+        allPlaces = await _placeService.getPlaces(city: null, limit: 500);
+      } catch (_) {
+        allPlaces = localPlaces;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _places = results[0];
-        _allPlacesForSearch = results[1];
+        _places = localPlaces;
+        _allPlacesForSearch = allPlaces;
         _placesLoading = false;
       });
     } catch (_) {
@@ -176,26 +176,29 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final results = await Future.wait<List<Event>>([
-        _eventService.getUpcomingEvents(
-          city: _selectedCity,
-          days: 31,
-          limit: 250,
-        ),
-        _eventService.getUpcomingEvents(
+      final localEvents = await _eventService.getUpcomingEvents(
+        city: _selectedCity,
+        days: 31,
+        limit: 250,
+      );
+      List<Event> allEvents;
+      try {
+        allEvents = await _eventService.getUpcomingEvents(
           city: null,
           days: 31,
           limit: 500,
-        ),
-      ]);
+        );
+      } catch (_) {
+        allEvents = localEvents;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _events = results[0];
-        _allEventsForSearch = results[1];
+        _events = localEvents;
+        _allEventsForSearch = allEvents;
         _eventsLoading = false;
       });
     } catch (_) {
@@ -392,7 +395,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) {
-            setState(() {});
+            _searchController.clear();
+            setState(() {
+              _selectedEventCategory = 'Tümü';
+            });
           },
           labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
@@ -598,25 +604,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadPlaces,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          6,
-          16,
-          24,
-        ),
-        itemCount: places.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: places.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final place = places[index];
-
-          return _PlaceCard(
-            place: place,
-            onTap: () => _openPlace(
-              place,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Keşfedilecek yerler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${places.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final place = places[index - 1];
+          return _PlaceCard(place: place, onTap: () => _openPlace(place));
         },
       ),
     );
@@ -725,25 +737,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadEvents,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          24,
-        ),
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: events.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final event = events[index];
-
-          return _EventCard(
-            event: event,
-            onTap: () => _openEvent(
-              event,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Yaklaşan etkinlikler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${events.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final event = events[index - 1];
+          return _EventCard(event: event, onTap: () => _openEvent(event));
         },
       ),
     );
@@ -968,6 +986,23 @@ class _PlaceCard extends StatelessWidget {
                           fontWeight: FontWeight.w800,
                           height: 1.1,
                         ),
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_outlined, size: 13, color: Colors.grey.shade600),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              place.address?.trim().isNotEmpty == true
+                                  ? '${place.city} · ${place.address}'
+                                  : place.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            ),
+                          ),
+                        ],
                       ),
                       if (place.shortDescription != null) ...[
                         const SizedBox(
@@ -1235,14 +1270,15 @@ class _EventCard extends StatelessWidget {
                         icon: Icons.schedule_outlined,
                         text: _dateText(),
                       ),
-                      if (event.venueName != null &&
-                          event.venueName!.trim().isNotEmpty) ...[
-                        const SizedBox(
-                          height: 5,
-                        ),
+                      if ((event.venueName != null && event.venueName!.trim().isNotEmpty) ||
+                          event.city.trim().isNotEmpty) ...[
+                        const SizedBox(height: 5),
                         _EventInfoRow(
                           icon: Icons.location_on_outlined,
-                          text: event.venueName!,
+                          text: [
+                            if (event.venueName?.trim().isNotEmpty == true) event.venueName!,
+                            if (event.city.trim().isNotEmpty) event.city,
+                          ].join(' · '),
                         ),
                       ],
                       const SizedBox(
