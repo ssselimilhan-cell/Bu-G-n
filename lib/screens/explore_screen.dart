@@ -302,11 +302,9 @@ class _ExploreScreenState extends State<ExploreScreen>
         return value.contains('sport') || value.contains('spor') || value.contains('mac');
       case 'Diğer':
         final value = _normalizeText(event.category);
-        return !value.contains('music') &&
-            !value.contains('muzik') &&
-            !value.contains('theatre') &&
-            !value.contains('theater') &&
-            !value.contains('sport');
+        return value.contains('miscellaneous') ||
+            value.contains('other') ||
+            value.contains('diger');
       default:
         return true;
     }
@@ -341,7 +339,9 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   List<Event> get _filteredEvents {
-    final source = _searchText.isNotEmpty ? _allEventsForSearch : _events;
+    final source = _searchText.isNotEmpty
+        ? _allEventsForSearch
+        : (_events.isNotEmpty ? _events : _allEventsForSearch);
     return source.where((event) {
       if (!_matchesEventCategory(event)) return false;
       if (_searchText.isEmpty) return true;
