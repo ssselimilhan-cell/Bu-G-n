@@ -12,7 +12,9 @@
 - [x] Süresi geçmiş etkinlikleri pasifleştiren RPC'nin doğrudan anon/authenticated tarafından çağrılması engellendi; service_role izni doğrulandı.
 - [x] `set_place_location` fonksiyonuna sabit search_path verildi.
 - [x] Veri sorumlusu iletişim bilgileri, kullanıcının açık talebi doğrultusunda gizlilik taslağına eklendi.
-- [x] Supabase canlı veritabanı kontrol edildi: 1.622 aktif etkinlik, 63 farklı şehir; 15 gezilecek yer kaydı ve bunların tamamı Ankara'da.
+- [x] Ticketmaster Türkiye senkronizasyonu doğrulandı: 2.358 toplam etkinlik kaydı; 2.079 gelecekteki aktif etkinlik, 66 şehir. Kaynak URL ve görsel alanları dolu; 70 gelecekteki etkinlikte koordinat eksik.
+- [x] Gezilecek yer kolektörünün Supabase upsert çakışma indeksi düzeltildi; OpenStreetMap kolektörü genişletildi ve çalıştırıldı.
+- [ ] Gezilecek yer aktarımının tamamlanmasını ve 81 il genelindeki kayıt sayısı/şehir dağılımını doğrula. Ara kontrolde 81 yer vardı: 15 Ankara kaydı ve 66 OpenStreetMap kaydı İzmir'de; aktarım devam ediyor.
 
 ## Yayından önce mutlaka tamamlanacaklar
 - [ ] Google Play Console'da `tr.bugun.app` paket adının kullanılabilirliğini/registrasyonunu doğrula. Paket kimliği ilk yayından sonra değiştirilmesi zor olduğundan bu kontrol yapılmadan mağazaya gönderme.
@@ -28,7 +30,7 @@
 - [ ] Gizlilik/KVKK metnini tamamla. Supabase projesi Londra (eu-west-2) bölgesinde; yurt dışına aktarım için hukuki mekanizma doğrulanmadan yayına çıkma.
 - [ ] Uygulamanın gerçek veri akışlarını, işleme amaçlarını/hukuki sebeplerini, saklama sürelerini ve alt işleyenlerini doğrula; gizlilik metnini hukuk uzmanına kontrol ettir.
 - [ ] Gizlilik politikasını nihai hale getirip herkese açık URL'de yayımla ve uygulama içinden erişilebilir yap. Mevcut `docs/privacy-policy-draft.md` yalnızca taslaktır, nihai politika olarak sunulmamalıdır.
-- [ ] Gezilecek yer veri toplama iş akışını doğrula ve kapsamı genişlet: son canlı kontrol 15 yer / 1 şehir gösterdi; 81 şehir için gerçek kapsam henüz sağlanmış değil.
+- [ ] Gezilecek yer kolektörü tamamlandıktan sonra kayıtların ad, koordinat, kategori ve mükerrer kontrolünü yap; OSM kaynak atfını uygulamada görünür hale getir. 81 il kapsamı henüz doğrulanmadı.
 - [ ] Play Console Data safety formu, içerik derecelendirmesi, ekran görüntüleri, açıklama ve destek bağlantısını tamamla.
 - [ ] Android cihazda kayıt, giriş, parola sıfırlama, konum izni, harita, kayıtlı not, etkinlik oluşturma/katılım ve hesap silme uçtan uca testlerini tamamla.
 
