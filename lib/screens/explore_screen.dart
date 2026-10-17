@@ -575,24 +575,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadPlaces,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.travel_explore_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için sonuç bulamadık.'
+                  : 'Bu kategoride henüz yer yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Farklı bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Tüm yerleri görmek için filtreyi kaldır.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun yer bulunamadı.'
-                      : 'Bu kategoride henüz yer yok.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedCategory = null);
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
@@ -708,24 +718,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadEvents,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.event_busy_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için etkinlik bulamadık.'
+                  : 'Şimdilik gösterilecek etkinlik yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Başka bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Şehirde yeni etkinlikler eklendikçe burada görünecek.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde $_selectedCity için etkinlik bulunamadı.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedEventCategory = 'Tümü');
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
