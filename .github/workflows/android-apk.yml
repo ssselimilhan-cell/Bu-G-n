@@ -21,6 +21,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Smoke test public account deletion page
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://yvshqvethzbwcgpqaptd.supabase.co/functions/v1/account-deletion-page"
+          curl --retry 3 --retry-delay 2 --silent --show-error --fail "$url" --output "$RUNNER_TEMP/account-deletion.html"
+          grep -q '<title>BUGÜN – Hesap ve Veri Silme</title>' "$RUNNER_TEMP/account-deletion.html"
+          grep -q 'Doğrulama bağlantısı gönder' "$RUNNER_TEMP/account-deletion.html"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --request POST "$url")"
+          if [ "$status" != "405" ]; then
+            echo "::error::Account deletion page should reject POST requests; got HTTP $status"
+            exit 1
+          fi
+          echo "Account deletion page responds with the expected HTML and rejects POST."
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
