@@ -98,8 +98,8 @@ Deno.serve(async (req: Request) => {
         results.push({ id: place.id, status: "source_unavailable" });
         continue;
       }
-      const finalUrl = new URL(response.url);
-      if (finalUrl.protocol !== "https:") {
+      const finalUrl = safePublicUrl(response.url);
+      if (!finalUrl) {
         results.push({ id: place.id, status: "unsafe_redirect" });
         continue;
       }
