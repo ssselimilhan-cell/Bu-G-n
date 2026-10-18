@@ -29,7 +29,7 @@ jobs:
         if: steps.config.outputs.ready == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         shell: bash
         run: |
           set -euo pipefail
