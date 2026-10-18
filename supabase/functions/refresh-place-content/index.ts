@@ -45,10 +45,13 @@ Deno.serve(async (req: Request) => {
   } catch { /* use default */ }
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const refreshFilter = openAiKey
+    ? `content_review_status.eq.needs_review,content_review_status.eq.stale,content_review_status.eq.source_backed,verified_at.lt.${cutoff}`
+    : `content_review_status.eq.needs_review,content_review_status.eq.stale,verified_at.lt.${cutoff}`;
   const { data: places, error } = await client.from("places")
     .select("id,name,city,short_description,long_description,website,source_url,verified_at,content_review_status")
     .eq("is_active", true)
-    .or(`content_review_status.eq.needs_review,content_review_status.eq.stale,verified_at.lt.${cutoff}`)
+    .or(refreshFilter)
     .order("verified_at", { ascending: true, nullsFirst: true })
     .limit(limit);
   if (error) return json({ error: "Could not load places", details: error.message }, 500);
