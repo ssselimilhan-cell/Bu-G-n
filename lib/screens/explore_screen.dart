@@ -465,24 +465,35 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadPlaces,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           children: [
-            const SizedBox(
-              height: 150,
+            const SizedBox(height: 110),
+            const Icon(Icons.explore_off_outlined, size: 48, color: Colors.black54),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Aramana uygun yer bulunamadı.'
+                  : _selectedCategory != null
+                      ? '$_selectedCity için bu kategoride henüz yer bulunmuyor.'
+                      : '$_selectedCity için yer listesi hazırlanıyor.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Şimdilik etkinliklere bakabilir veya aşağı çekerek listeyi yenileyebilirsin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54, height: 1.4),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun yer bulunamadı.'
-                      : 'Bu kategoride henüz yer yok.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _tabController.animateTo(1);
+                  setState(() {});
+                },
+                icon: const Icon(Icons.event_available_outlined),
+                label: const Text('Etkinlikleri göster'),
               ),
             ),
           ],
