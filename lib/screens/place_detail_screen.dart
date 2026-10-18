@@ -236,6 +236,40 @@ class _PlaceDetailScreenState
             ),
           ],
 
+          if (place.longDescription != null &&
+              place.longDescription!.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              place.longDescription!,
+              style: const TextStyle(fontSize: 14, height: 1.55),
+            ),
+          ],
+
+          if (place.verifiedAt != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Son doğrulama: ${place.verifiedAt!.toLocal().day.toString().padLeft(2, '0')}.${place.verifiedAt!.toLocal().month.toString().padLeft(2, '0')}.${place.verifiedAt!.toLocal().year}',
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+          ],
+
+          if (place.sourceUrl != null && place.sourceUrl!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final uri = Uri.tryParse(place.sourceUrl!);
+                  if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('Kaynağı görüntüle'),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 20),
 
           if (place.address != null &&
