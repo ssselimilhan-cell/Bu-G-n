@@ -3,7 +3,7 @@ name: Refresh verified place content with AI
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 4 * * 1"
+    - cron: "30 4 * * *"
 
 permissions:
   contents: read
@@ -16,12 +16,12 @@ jobs:
         id: config
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         shell: bash
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$CONTENT_REFRESH_SECRET" ]; then
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set SUPABASE_URL and CONTENT_REFRESH_SECRET in GitHub Actions secrets to enable the scheduled refresh."
+            echo "::warning::Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in GitHub Actions secrets to enable the scheduled refresh."
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
@@ -36,6 +36,6 @@ jobs:
           response="$(curl --silent --show-error --fail-with-body \
             --request POST "${SUPABASE_URL}/functions/v1/refresh-place-content" \
             --header "Content-Type: application/json" \
-            --header "x-content-refresh-secret: ${CONTENT_REFRESH_SECRET}" \
-            --data '{"limit":5}')"
+            --header "x-content-refresh-secret: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --data '{"limit":25}')"
           echo "$response"
