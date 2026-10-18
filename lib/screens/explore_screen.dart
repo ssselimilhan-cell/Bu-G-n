@@ -37,6 +37,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   List<Place> _places = <Place>[];
   List<Place> _allPlacesForSearch = <Place>[];
+  List<Place> _citySearchPlaces = <Place>[];
 
   List<Event> _events = <Event>[];
   List<Event> _allEventsForSearch = <Event>[];
@@ -124,9 +125,34 @@ class _ExploreScreenState extends State<ExploreScreen>
       return;
     }
 
+    final query = _searchController.text.trim();
     setState(() {
-      _searchText = _searchController.text.trim().toLowerCase();
+      _searchText = query;
+      if (query.length < 3) {
+        _citySearchPlaces = <Place>[];
+      }
     });
+
+    if (query.length >= 3) {
+      _searchPlacesByCity(query);
+    }
+  }
+
+  Future<void> _searchPlacesByCity(String query) async {
+    try {
+      final results = await _placeService.searchPlacesByCity(query);
+      if (!mounted ||
+          normalizeSearchText(_searchController.text) !=
+              normalizeSearchText(query)) {
+        return;
+      }
+      setState(() {
+        _citySearchPlaces = results;
+      });
+    } catch (_) {
+      // Keep the already loaded local/global results available if this
+      // supplementary city lookup cannot reach the server.
+    }
   }
 
   Future<void> _loadPlaces() async {
@@ -307,8 +333,12 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   List<Place> get _filteredPlaces {
+    final searchPlacesById = <String, Place>{
+      for (final place in _allPlacesForSearch) place.id: place,
+      for (final place in _citySearchPlaces) place.id: place,
+    };
     final source = _searchText.isNotEmpty
-        ? _allPlacesForSearch
+        ? searchPlacesById.values.toList()
         : (_places.isNotEmpty ? _places : _allPlacesForSearch);
     return source.where((place) {
       if (!_matchesPlaceCategory(place)) return false;
