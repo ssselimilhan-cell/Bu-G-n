@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/event.dart';
@@ -49,6 +51,7 @@ enum InterestType {
   culture,
   history,
   museum,
+  food,
   any,
 }
 
@@ -115,13 +118,74 @@ class _RecommendationScreenState
 
   _DateFilter _dateFilter = _DateFilter.today;
   DateTime? _customDate;
+  double _preferredRadiusKm = 10;
 
   @override
   void initState() {
     super.initState();
     _tryGetLocationSilently();
+    _loadPersonalization();
   }
 
+
+  Future<void> _loadPersonalization() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var budgetLevel = prefs.getInt('bugun_budget_level') ?? 3;
+      var radiusKm = prefs.getDouble('bugun_radius_km') ?? 10;
+      var durationMinutes = prefs.getInt('bugun_visit_duration_min') ?? 120;
+      var savedInterests = prefs.getStringList('bugun_guest_interests') ?? <String>[];
+
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final row = await Supabase.instance.client
+            .from('profiles')
+            .select('budget_level, preferred_radius_km, preferred_visit_duration_min, interests')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (row != null) {
+          budgetLevel = (row['budget_level'] as num?)?.toInt() ?? budgetLevel;
+          radiusKm = (row['preferred_radius_km'] as num?)?.toDouble() ?? radiusKm;
+          durationMinutes = (row['preferred_visit_duration_min'] as num?)?.toInt() ?? durationMinutes;
+          final profileInterests = row['interests'];
+          if (profileInterests is List) {
+            savedInterests = profileInterests.map((value) => value.toString()).toList();
+          }
+        }
+      }
+
+      final mappedInterests = <InterestType>{};
+      for (final value in savedInterests) {
+        final interest = value.toLowerCase();
+        if (interest.contains('müzik')) mappedInterests.add(InterestType.music);
+        if (interest.contains('tiyatro') || interest.contains('sanat')) mappedInterests.add(InterestType.culture);
+        if (interest.contains('yeme') || interest.contains('içme') || interest.contains('kahve')) mappedInterests.add(InterestType.food);
+        if (interest.contains('doğa')) mappedInterests.add(InterestType.nature);
+        if (interest.contains('sinema')) mappedInterests.add(InterestType.cinema);
+        if (interest.contains('tarih')) mappedInterests.add(InterestType.history);
+        if (interest.contains('müze')) mappedInterests.add(InterestType.museum);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _budgets = switch (budgetLevel) {
+          0 => {BudgetType.free},
+          1 => {BudgetType.low},
+          2 => {BudgetType.medium},
+          _ => {BudgetType.any},
+        };
+        _durations = switch (durationMinutes) {
+          <= 90 => {DurationType.short},
+          <= 240 => {DurationType.medium},
+          _ => {DurationType.fullDay},
+        };
+        _preferredRadiusKm = radiusKm.clamp(1.0, 50.0).toDouble();
+        if (mappedInterests.isNotEmpty) _interests = mappedInterests;
+      });
+    } catch (_) {
+      // Keep the discovery planner usable with its built-in defaults.
+    }
+  }
 
   @override
   Widget build(

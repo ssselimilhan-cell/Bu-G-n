@@ -24,6 +24,25 @@ extension _RecommendationMatchingMethods on _RecommendationScreenState {
           ],
         );
 
+      case InterestType.food:
+        return _containsAny(
+          text,
+          [
+            'yemek',
+            'yeme-içme',
+            'restoran',
+            'restaurant',
+            'kafe',
+            'cafe',
+            'kahve',
+            'coffee',
+            'gastronomi',
+            'tadım',
+            'food',
+            'drink',
+          ],
+        );
+
       case InterestType.cinema:
         return _containsAny(
           text,
@@ -138,6 +157,24 @@ extension _RecommendationMatchingMethods on _RecommendationScreenState {
       case InterestType.event:
       case InterestType.music:
         return false;
+
+      case InterestType.food:
+        return _containsAny(
+          text,
+          [
+            'yemek',
+            'yeme-içme',
+            'restoran',
+            'restaurant',
+            'kafe',
+            'cafe',
+            'kahve',
+            'coffee',
+            'gastronomi',
+            'tadım',
+            'food',
+          ],
+        );
 
       case InterestType.cinema:
         return _containsAny(

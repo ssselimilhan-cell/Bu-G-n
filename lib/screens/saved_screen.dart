@@ -414,110 +414,163 @@ class _SavedEventCard
   }
 }
 
-class _SavedPlaceCard
-    extends StatelessWidget {
+class _SavedPlaceCard extends StatefulWidget {
   final Place place;
-
-  const _SavedPlaceCard({
-    required this.place,
-  });
+  const _SavedPlaceCard({required this.place});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  State<_SavedPlaceCard> createState() => _SavedPlaceCardState();
+}
+
+class _SavedPlaceCardState extends State<_SavedPlaceCard> {
+  final SavedPlaceService _service = SavedPlaceService();
+  String _note = '';
+  bool _savingNote = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNote();
+  }
+
+  Future<void> _loadNote() async {
+    try {
+      final note = await _service.getNote(widget.place.id);
+      if (mounted) setState(() => _note = note);
+    } catch (_) {}
+  }
+
+  Future<void> _editNote() async {
+    final controller = TextEditingController(text: _note);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Bu yer için notun'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          maxLength: 1000,
+          decoration: const InputDecoration(
+            hintText: 'Örn. hafta sonu git, giriş saatlerini kontrol et…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('VAZGEÇ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('KAYDET'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null) return;
+    setState(() => _savingNote = true);
+    try {
+      await _service.saveNote(widget.place.id, result);
+      if (!mounted) return;
+      setState(() {
+        _note = result.trim();
+        _savingNote = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notun kaydedildi.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _savingNote = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not kaydedilemedi. Tekrar dene.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final place = widget.place;
     return Material(
       color: Colors.white,
-      borderRadius:
-          BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  PlaceDetailScreen(
-                place: place,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => PlaceDetailScreen(place: place)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      place.category == 'Müze'
+                          ? Icons.museum_outlined
+                          : place.outdoor == true
+                              ? Icons.landscape_outlined
+                              : Icons.place_outlined,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(place.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 5),
+                        Text(place.category,
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                        if (place.shortDescription?.isNotEmpty == true) ...[
+                          const SizedBox(height: 5),
+                          Text(place.shortDescription!, maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, height: 1.3)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.black45),
+                ],
               ),
             ),
-          );
-        },
-        child: Padding(
-          padding:
-              const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.grey.shade100,
-                  borderRadius:
-                      BorderRadius.circular(
-                    16,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.sticky_note_2_outlined, size: 18, color: Colors.grey.shade700),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    _note.isEmpty ? 'Kendine bir not ekle' : _note,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _note.isEmpty ? Colors.grey.shade600 : Colors.black87,
+                    ),
                   ),
                 ),
-                child: Icon(
-                  place.category ==
-                          'Müze'
-                      ? Icons
-                          .museum_outlined
-                      : place.outdoor ==
-                              true
-                          ? Icons
-                              .landscape_outlined
-                          : Icons
-                              .place_outlined,
-                  size: 30,
+                TextButton.icon(
+                  onPressed: _savingNote ? null : _editNote,
+                  icon: Icon(_note.isEmpty ? Icons.add : Icons.edit_outlined, size: 17),
+                  label: Text(_savingNote ? 'Kaydediliyor' : (_note.isEmpty ? 'Not ekle' : 'Düzenle')),
                 ),
-              ),
-              const SizedBox(
-                width: 14,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
-                  children: [
-                    Text(
-                      place.name,
-                      maxLines: 2,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(
-                        fontSize: 16,
-                        fontWeight:
-                            FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    Text(
-                      place.category,
-                      style:
-                          TextStyle(
-                        color:
-                            Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color:
-                    Colors.black45,
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );

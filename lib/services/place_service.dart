@@ -7,15 +7,18 @@ class PlaceService {
       Supabase.instance.client;
 
   Future<List<Place>> getPlaces({
-    String city = 'Ankara',
+    String? city = 'Ankara',
     String? category,
     int limit = 50,
   }) async {
     var query = _client
         .from('places')
         .select()
-        .eq('city', city)
         .eq('is_active', true);
+
+    if (city != null && city.trim().isNotEmpty) {
+      query = query.eq('city', city);
+    }
 
     if (category != null &&
         category.trim().isNotEmpty &&

@@ -7,6 +7,9 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
+import 'community_activities_screen.dart';
+import 'map_explore_screen.dart';
+import 'offers_screen.dart';
 import 'place_detail_screen.dart';
 import 'profile_screen.dart';
 import 'recommendation_screen.dart';
@@ -105,37 +108,51 @@ class _HomeScreenState
   }
 
   Future<void> _loadEvents() async {
+    if (!mounted) return;
+
     setState(() {
       _eventsLoading = true;
       _eventsError = null;
     });
 
     try {
-      final events =
-          await _eventService
-              .getUpcomingEvents(
-        city: _selectedCity,
-        days: 31,
-        limit: 200,
-      );
+      late final List<Event> events;
 
-      if (!mounted) {
-        return;
+      // İlk açılışta da seçili dönem sorgulanır. "Bugün" artık
+      // yanlışlıkla 31 günlük etkinlik listesini göstermemeli.
+      switch (_selectedPeriod) {
+        case EventPeriod.today:
+          events = await _eventService.getTodayEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.week:
+          events = await _eventService.getThisWeekEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.month:
+          events = await _eventService.getThisMonthEvents(
+            city: _selectedCity,
+            limit: 200,
+          );
+          break;
       }
+
+      if (!mounted) return;
 
       setState(() {
         _events = events;
         _eventsLoading = false;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _eventsLoading = false;
-        _eventsError =
-            'Etkinlikler yüklenemedi.';
+        _eventsError = 'Etkinlikler yüklenemedi.';
       });
     }
   }
@@ -174,67 +191,16 @@ class _HomeScreenState
     }
   }
 
-  Future<void> _selectPeriod(
-    EventPeriod period,
-  ) async {
+  Future<void> _selectPeriod(EventPeriod period) async {
+    if (_selectedPeriod == period && !_eventsLoading) return;
+
     setState(() {
       _selectedPeriod = period;
       _eventSearchController.clear();
-      _eventsLoading = true;
-      _eventsError = null;
+      _eventSearch = '';
     });
 
-    try {
-      late List<Event> events;
-
-      switch (period) {
-        case EventPeriod.today:
-          events =
-              await _eventService
-                  .getTodayEvents(
-            city: _selectedCity,
-            limit: 100,
-          );
-          break;
-
-        case EventPeriod.week:
-          events =
-              await _eventService
-                  .getThisWeekEvents(
-            city: _selectedCity,
-            limit: 100,
-          );
-          break;
-
-        case EventPeriod.month:
-          events =
-              await _eventService
-                  .getThisMonthEvents(
-            city: _selectedCity,
-            limit: 200,
-          );
-          break;
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _events = events;
-        _eventsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _eventsLoading = false;
-        _eventsError =
-            'Etkinlikler yüklenemedi.';
-      });
-    }
+    await _loadEvents();
   }
 
   List<Event> get _filteredEvents {
@@ -413,20 +379,29 @@ class _HomeScreenState
               30,
             ),
             children: [
-              Text(
-                'Ankara',
-                style:
-                    TextStyle(
-                  fontSize: 14,
-                  color:
-                      Colors.grey.shade600,
+              InkWell(
+                onTap: () => _setMainTab(3),
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _selectedCity,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    const Icon(Icons.expand_more, size: 18),
+                  ],
                 ),
               ),
               const SizedBox(
                 height: 15,
               ),
-              const Text(
-                'Bugün Ankara’da\nne yapmak istersin?',
+              Text(
+                'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
                     TextStyle(
                   fontSize: 30,
@@ -456,6 +431,47 @@ class _HomeScreenState
                 height: 25,
               ),
               _buildExploreButton(),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CommunityActivitiesScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.group_add_outlined),
+                label: const Text('Birlikte etkinlik oluştur / davet et'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  backgroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(17),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const OffersScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.local_offer_outlined),
+                label: const Text('Şehir fırsatlarını keşfet'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size.fromHeight(50),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -681,11 +697,11 @@ class _HomeScreenState
     final title =
         _selectedPeriod ==
                 EventPeriod.today
-            ? 'BUGÜN ANKARA’DA'
+            ? 'BUGÜN • $_selectedCity'
             : _selectedPeriod ==
                     EventPeriod.week
-                ? 'BU HAFTA ANKARA’DA'
-                : 'BU AY ANKARA’DA';
+                ? 'BU HAFTA • $_selectedCity'
+                : 'BU AY • $_selectedCity';
 
     final events =
         _filteredEvents;
@@ -1222,10 +1238,10 @@ class _HomeScreenState
       height: 54,
       child:
           OutlinedButton.icon(
-        onPressed: () =>
-            setState(() {
-          _selectedIndex = 1;
-        }),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+        ),
         icon:
             const Icon(
           Icons.map_outlined,

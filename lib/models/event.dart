@@ -1,6 +1,7 @@
 class Event {
   final String id;
   final String title;
+  final String city;
   final String category;
   final String? description;
   final DateTime startsAt;
@@ -19,6 +20,7 @@ class Event {
   const Event({
     required this.id,
     required this.title,
+    this.city = '',
     required this.category,
     required this.startsAt,
     this.description,
@@ -41,6 +43,7 @@ class Event {
     return Event(
       id: map['id'] as String,
       title: map['title'] as String,
+      city: map['city'] as String? ?? '',
       category: map['category'] as String,
       description:
           map['description'] as String?,

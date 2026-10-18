@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../models/event.dart';
+import '../utils/search_text.dart';
 import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
+import 'map_explore_screen.dart';
+import 'community_activities_screen.dart';
 import 'place_detail_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -33,8 +36,11 @@ class _ExploreScreenState extends State<ExploreScreen>
   final TextEditingController _searchController = TextEditingController();
 
   List<Place> _places = <Place>[];
+  List<Place> _allPlacesForSearch = <Place>[];
 
   List<Event> _events = <Event>[];
+  List<Event> _allEventsForSearch = <Event>[];
+  String _selectedEventCategory = 'Tümü';
 
   bool _placesLoading = true;
   bool _eventsLoading = true;
@@ -53,7 +59,18 @@ class _ExploreScreenState extends State<ExploreScreen>
     'Tarih',
     'Müze',
     'Kültür',
-    'Sinema',
+    'Sanat',
+    'Aile',
+    'Ücretsiz',
+    'Açık hava',
+  ];
+
+  final List<String> _eventCategories = const [
+    'Tümü',
+    'Müzik',
+    'Sahne',
+    'Spor',
+    'Diğer',
   ];
 
   @override
@@ -120,18 +137,24 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final places = await _placeService.getPlaces(
+      final localPlaces = await _placeService.getPlaces(
         city: _selectedCity,
-        category: _selectedCategory,
-        limit: 100,
+        limit: 300,
       );
+      List<Place> allPlaces;
+      try {
+        allPlaces = await _placeService.getPlaces(city: null, limit: 500);
+      } catch (_) {
+        allPlaces = localPlaces;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _places = places;
+        _places = localPlaces;
+        _allPlacesForSearch = allPlaces;
         _placesLoading = false;
       });
     } catch (_) {
@@ -154,18 +177,29 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
 
     try {
-      final events = await _eventService.getUpcomingEvents(
+      final localEvents = await _eventService.getUpcomingEvents(
         city: _selectedCity,
         days: 31,
-        limit: 200,
+        limit: 250,
       );
+      List<Event> allEvents;
+      try {
+        allEvents = await _eventService.getUpcomingEvents(
+          city: null,
+          days: 31,
+          limit: 500,
+        );
+      } catch (_) {
+        allEvents = localEvents;
+      }
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _events = events;
+        _events = localEvents;
+        _allEventsForSearch = allEvents;
         _eventsLoading = false;
       });
     } catch (_) {
@@ -180,69 +214,135 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  Future<void> _selectCategory(
-    String category,
-  ) async {
-    final newCategory = category == 'Tümü' ? null : category;
-
+  Future<void> _selectCategory(String category) async {
     setState(() {
-      _selectedCategory = newCategory;
+      _selectedCategory = category == 'Tümü' ? null : category;
     });
+  }
 
-    await _loadPlaces();
+  bool _matchesPlaceCategory(Place place) {
+    final category = _selectedCategory;
+    if (category == null || category == 'Tümü') return true;
+
+    final value = normalizeSearchText([
+      place.category,
+      place.placeType ?? '',
+      ...place.tags,
+    ].join(' '));
+
+    switch (category) {
+      case 'Doğa':
+        return place.outdoor == true ||
+            value.contains('doga') ||
+            value.contains('nature') ||
+            value.contains('waterfall') ||
+            value.contains('selale') ||
+            value.contains('plaj') ||
+            value.contains('gol') ||
+            value.contains('dag');
+      case 'Park':
+        return value.contains('park') || value.contains('bahce') || value.contains('garden');
+      case 'Tarih':
+        return value.contains('tarih') ||
+            value.contains('historic') ||
+            value.contains('history') ||
+            value.contains('castle') ||
+            value.contains('anıt') ||
+            value.contains('anit');
+      case 'Müze':
+        return value.contains('muze') || value.contains('museum');
+      case 'Kültür':
+        return value.contains('kultur') ||
+            value.contains('culture') ||
+            value.contains('tiyatro') ||
+            value.contains('theatre');
+      case 'Sanat':
+        return value.contains('sanat') ||
+            value.contains('art') ||
+            value.contains('gallery') ||
+            value.contains('galeri');
+      case 'Aile':
+        return place.kidsFriendly == true;
+      case 'Ücretsiz':
+        return place.isFree == true;
+      case 'Açık hava':
+        return place.outdoor == true || value.contains('acik hava') || value.contains('outdoor');
+      default:
+        return true;
+    }
+  }
+
+  bool _matchesEventCategory(Event event) {
+    switch (_selectedEventCategory) {
+      case 'Müzik':
+        return normalizeSearchText(event.category).contains('music') ||
+            normalizeSearchText(event.category).contains('muzik') ||
+            normalizeSearchText(event.title).contains('konser');
+      case 'Sahne':
+        final value = normalizeSearchText('${event.category} ${event.title}');
+        return value.contains('theatre') ||
+            value.contains('theater') ||
+            value.contains('tiyatro') ||
+            value.contains('opera') ||
+            value.contains('stand up');
+      case 'Spor':
+        final value = normalizeSearchText('${event.category} ${event.title}');
+        return value.contains('sport') || value.contains('spor') || value.contains('mac');
+      case 'Diğer':
+        final value = normalizeSearchText(event.category);
+        return value.contains('miscellaneous') ||
+            value.contains('other') ||
+            value.contains('diger');
+      default:
+        return true;
+    }
   }
 
   String _pageTitle() {
     if (_tabController.index == 1) {
-      return 'Ankara etkinlikleri';
+      return '$_selectedCity etkinlikleri';
     }
 
-    return _selectedCategory ?? 'Ankara’yı keşfet';
+    return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
 
   List<Place> get _filteredPlaces {
-    if (_searchText.isEmpty) {
-      return _places;
-    }
-
-    return _places.where(
-      (place) {
-        final text = [
-          place.name,
-          place.category,
-          place.placeType ?? '',
-          place.shortDescription ?? '',
-          place.address ?? '',
-          ...place.tags,
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final source = _searchText.isNotEmpty
+        ? _allPlacesForSearch
+        : (_places.isNotEmpty ? _places : _allPlacesForSearch);
+    return source.where((place) {
+      if (!_matchesPlaceCategory(place)) return false;
+      if (_searchText.isEmpty) return true;
+      final text = normalizeSearchText([
+        place.name,
+        place.category,
+        place.placeType ?? '',
+        place.shortDescription ?? '',
+        place.address ?? '',
+        place.city,
+        ...place.tags,
+      ].join(' '));
+      return text.contains(normalizeSearchText(_searchText));
+    }).toList();
   }
 
   List<Event> get _filteredEvents {
-    if (_searchText.isEmpty) {
-      return _events;
-    }
-
-    return _events.where(
-      (event) {
-        final text = [
-          event.title,
-          event.category,
-          event.description ?? '',
-          event.venueName ?? '',
-          event.address ?? '',
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final source = _searchText.isNotEmpty
+        ? _allEventsForSearch
+        : (_events.isNotEmpty ? _events : _allEventsForSearch);
+    return source.where((event) {
+      if (!_matchesEventCategory(event)) return false;
+      if (_searchText.isEmpty) return true;
+      final text = normalizeSearchText([
+        event.title,
+        event.category,
+        event.description ?? '',
+        event.venueName ?? '',
+        event.address ?? '',
+        event.city,
+      ].join(' '));
+      return text.contains(normalizeSearchText(_searchText));
+    }).toList();
   }
 
   @override
@@ -262,10 +362,31 @@ class _ExploreScreenState extends State<ExploreScreen>
             fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Haritada keşfet',
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Birlikte etkinlik oluştur',
+            icon: const Icon(Icons.group_add_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CommunityActivitiesScreen()),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) {
-            setState(() {});
+            _searchController.clear();
+            setState(() {
+              _selectedEventCategory = 'Tümü';
+            });
           },
           labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
@@ -354,51 +475,69 @@ class _ExploreScreenState extends State<ExploreScreen>
     final selected = _selectedCategory ?? 'Tümü';
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSearchBox(
-          hint: 'Ankara’da yer ara...',
-        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            4,
-            16,
-            8,
-          ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: _categories.map(
-                (category) {
-                  final isSelected = selected == category;
-
-                  return ChoiceChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (_) => _selectCategory(
-                      category,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Nereye gitmek istersin?',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                     ),
-                    selectedColor: Colors.black,
-                    backgroundColor: Colors.white,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 3),
+                    Text(
+                      _places.isNotEmpty
+                          ? '$_selectedCity ve çevresindeki yerleri keşfet'
+                          : 'Şehirdeki ve Türkiye genelindeki yerleri keşfet',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
-                    side: BorderSide(
-                      color: isSelected ? Colors.black : Colors.grey.shade300,
-                    ),
-                  );
-                },
-              ).toList(),
-            ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Haritada keşfet',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MapExploreScreen()),
+                ),
+                icon: const Icon(Icons.map_outlined),
+              ),
+            ],
           ),
         ),
-        Expanded(
-          child: _buildPlacesContent(),
+        _buildSearchBox(hint: 'Yer, ilçe veya şehir ara'),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              final isSelected = selected == category;
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (_) => _selectCategory(category),
+                selectedColor: Colors.black,
+                backgroundColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300),
+              );
+            },
+          ),
         ),
+        Expanded(child: _buildPlacesContent()),
       ],
     );
   }
@@ -424,24 +563,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadPlaces,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.travel_explore_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için sonuç bulamadık.'
+                  : 'Bu kategoride henüz yer yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Farklı bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Tüm yerleri görmek için filtreyi kaldır.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun yer bulunamadı.'
-                      : 'Bu kategoride henüz yer yok.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedCategory = null);
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
@@ -453,25 +602,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadPlaces,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          6,
-          16,
-          24,
-        ),
-        itemCount: places.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: places.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final place = places[index];
-
-          return _PlaceCard(
-            place: place,
-            onTap: () => _openPlace(
-              place,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Keşfedilecek yerler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${places.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final place = places[index - 1];
+          return _PlaceCard(place: place, onTap: () => _openPlace(place));
         },
       ),
     );
@@ -479,13 +634,53 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildEventsTab() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSearchBox(
-          hint: 'Etkinliklerde ara...',
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Yakında ne var?',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '$_selectedCity için yaklaşan etkinlikler; arama Türkiye genelinde yapılır.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
         ),
-        Expanded(
-          child: _buildEventsContent(),
+        _buildSearchBox(hint: 'Etkinlik, sanatçı veya mekân ara'),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+            scrollDirection: Axis.horizontal,
+            itemCount: _eventCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 7),
+            itemBuilder: (context, index) {
+              final category = _eventCategories[index];
+              final isSelected = _selectedEventCategory == category;
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (_) => setState(() => _selectedEventCategory = category),
+                selectedColor: Colors.black,
+                backgroundColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300),
+              );
+            },
+          ),
         ),
+        Expanded(child: _buildEventsContent()),
       ],
     );
   }
@@ -511,24 +706,34 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadEvents,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(28, 70, 28, 24),
           children: [
-            const SizedBox(
-              height: 150,
+            Icon(Icons.event_busy_outlined, size: 54, color: Colors.grey.shade400),
+            const SizedBox(height: 14),
+            Text(
+              _searchText.isNotEmpty
+                  ? '“${_searchController.text.trim()}” için etkinlik bulamadık.'
+                  : 'Şimdilik gösterilecek etkinlik yok.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 8),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Başka bir kelime deneyebilir veya aramayı temizleyebilirsin.'
+                  : 'Şehirde yeni etkinlikler eklendikçe burada görünecek.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
             Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde Ankara için etkinlik bulunamadı.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _selectedEventCategory = 'Tümü');
+                },
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Filtreleri temizle'),
               ),
             ),
           ],
@@ -540,25 +745,31 @@ class _ExploreScreenState extends State<ExploreScreen>
       onRefresh: _loadEvents,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          24,
-        ),
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: events.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final event = events[index];
-
-          return _EventCard(
-            event: event,
-            onTap: () => _openEvent(
-              event,
-            ),
-          );
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2, top: 2),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Yaklaşan etkinlikler',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                  Text(
+                    '${events.length} sonuç',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }
+          final event = events[index - 1];
+          return _EventCard(event: event, onTap: () => _openEvent(event));
         },
       ),
     );
@@ -629,209 +840,89 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 }
 
+
 class _PlaceCard extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
 
-  const _PlaceCard({
-    required this.place,
-    required this.onTap,
-  });
+  const _PlaceCard({required this.place, required this.onTap});
 
   IconData _iconForCategory() {
-    final category = place.category.toLowerCase();
-
-    if (category.contains(
-          'doğa',
-        ) ||
-        category.contains(
-          'nature',
-        )) {
-      return Icons.park_outlined;
-    }
-
-    if (category.contains(
-          'park',
-        ) ||
-        category.contains(
-          'bahçe',
-        )) {
-      return Icons.grass_outlined;
-    }
-
-    if (category.contains(
-          'müze',
-        ) ||
-        category.contains(
-          'museum',
-        )) {
-      return Icons.museum_outlined;
-    }
-
-    if (category.contains(
-          'tarih',
-        ) ||
-        category.contains(
-          'history',
-        )) {
-      return Icons.account_balance_outlined;
-    }
-
-    if (category.contains(
-          'kültür',
-        ) ||
-        category.contains(
-          'culture',
-        )) {
-      return Icons.theater_comedy_outlined;
-    }
-
-    if (category.contains(
-          'sinema',
-        ) ||
-        category.contains(
-          'cinema',
-        )) {
-      return Icons.movie_outlined;
-    }
-
+    final value = '${place.category} ${place.placeType ?? ''}'.toLowerCase();
+    if (value.contains('park') || value.contains('bahçe')) return Icons.park_outlined;
+    if (value.contains('müze') || value.contains('museum')) return Icons.museum_outlined;
+    if (value.contains('tarih') || value.contains('historic')) return Icons.account_balance_outlined;
+    if (value.contains('sanat') || value.contains('art')) return Icons.palette_outlined;
+    if (place.outdoor == true || value.contains('doğa') || value.contains('nature')) return Icons.landscape_outlined;
     return Icons.place_outlined;
   }
 
-  Widget _buildImage() {
-    return Container(
-      color: Colors.grey.shade100,
-      child: Icon(
-        _iconForCategory(),
-        size: 31,
-        color: Colors.black54,
-      ),
-    );
-  }
-
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
+    final address = place.address?.trim() ?? '';
+    final description = place.shortDescription?.trim() ?? '';
+
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(
-        20,
-      ),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(
-          20,
-        ),
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-              20,
-            ),
-            border: Border.all(
-              color: Colors.grey.shade200,
-            ),
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(14),
           ),
-          clipBehavior: Clip.antiAlias,
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 92,
-                height: 118,
-                child: _buildImage(),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_iconForCategory(), size: 27, color: Colors.black87),
               ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(
-                    14,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              place.category.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                          if (place.verified)
-                            const Icon(
-                              Icons.verified_outlined,
-                              size: 16,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 6,
-                      ),
-                      Text(
-                        place.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                      ),
-                      if (place.shortDescription != null) ...[
-                        const SizedBox(
-                          height: 7,
-                        ),
-                        Text(
-                          place.shortDescription!,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(
-                        height: 8,
-                      ),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 5,
-                        children: [
-                          if (place.isFree == true)
-                            const _SmallPill(
-                              icon: Icons.local_offer_outlined,
-                              text: 'Ücretsiz',
-                            ),
-                          if (place.visitDurationMin != null)
-                            _SmallPill(
-                              icon: Icons.schedule_outlined,
-                              text: '${place.visitDurationMin} dk',
-                            ),
-                        ],
-                      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(place.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(
+                      [place.city, if (address.isNotEmpty) address].join(' · '),
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(description, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(
-                width: 5,
-              ),
-              const Padding(
-                padding: EdgeInsets.only(
-                  right: 10,
-                ),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.black45,
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Expanded(child: Text(place.category, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700))),
+                        if (place.isFree == true) ...[
+                          const Icon(Icons.check_circle_outline, size: 13, color: Colors.green),
+                          const SizedBox(width: 3),
+                          const Text('Ücretsiz', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text('Detayları gör', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                      SizedBox(width: 3),
+                      Icon(Icons.arrow_forward_rounded, size: 14),
+                    ]),
+                  ],
                 ),
               ),
             ],
@@ -846,347 +937,114 @@ class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
 
-  const _EventCard({
-    required this.event,
-    required this.onTap,
-  });
+  const _EventCard({required this.event, required this.onTap});
 
   String _dateText() {
     final value = event.startsAt.toLocal();
-
-    final day = value.day.toString().padLeft(
-          2,
-          '0',
-        );
-
-    final month = value.month.toString().padLeft(
-          2,
-          '0',
-        );
-
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
     final year = value.year.toString();
-
-    final hour = value.hour.toString().padLeft(
-          2,
-          '0',
-        );
-
-    final minute = value.minute.toString().padLeft(
-          2,
-          '0',
-        );
-
-    return '$day.$month.$year · '
-        '$hour:$minute';
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$day.$month.$year · $hour:$minute';
   }
 
   String _priceText() {
     final min = event.priceMin;
-
     final max = event.priceMax;
-
-    if (min == null && max == null) {
-      return '';
-    }
-
-    if ((min == null || min == 0) && (max == null || max == 0)) {
-      return 'Ücretsiz';
-    }
-
-    if (min != null && max != null && min != max) {
-      return '${min.round()}-${max.round()} TL';
-    }
-
+    if (min == null && max == null) return 'Fiyat bilgisi yok';
+    if ((min == null || min == 0) && (max == null || max == 0)) return 'Ücretsiz';
+    if (min != null && max != null && min != max) return '${min.round()}–${max.round()} TL';
     final price = min ?? max;
-
-    if (price == null) {
-      return '';
-    }
-
-    return '${price.round()} TL';
+    return price == null ? 'Fiyat bilgisi yok' : '${price.round()} TL';
   }
 
   IconData _iconForCategory() {
-    final value = event.category.toLowerCase();
-
-    if (value.contains('music') ||
-        value.contains('müzik') ||
-        value.contains('konser')) {
-      return Icons.music_note_outlined;
-    }
-
-    if (value.contains('sport') || value.contains('spor')) {
-      return Icons.sports_basketball_outlined;
-    }
-
-    if (value.contains('theatre') ||
-        value.contains('theater') ||
-        value.contains('tiyatro') ||
-        value.contains('culture') ||
-        value.contains('kültür')) {
-      return Icons.theater_comedy_outlined;
-    }
-
-    if (value.contains('film') ||
-        value.contains('movie') ||
-        value.contains('sinema')) {
-      return Icons.movie_outlined;
-    }
-
+    final value = '${event.category} ${event.title}'.toLowerCase();
+    if (value.contains('music') || value.contains('müzik') || value.contains('konser')) return Icons.music_note_outlined;
+    if (value.contains('sport') || value.contains('spor')) return Icons.sports_basketball_outlined;
+    if (value.contains('theatre') || value.contains('theater') || value.contains('tiyatro')) return Icons.theater_comedy_outlined;
     return Icons.event_outlined;
   }
 
-  Widget _buildImage() {
-    final imageUrl = event.imageUrl;
-
-    if (imageUrl == null || imageUrl.trim().isEmpty) {
-      return Center(
-        child: Icon(
-          _iconForCategory(),
-          size: 34,
-          color: Colors.black54,
-        ),
-      );
-    }
-
-    return Image.network(
-      imageUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Center(
-        child: Icon(
-          _iconForCategory(),
-          size: 34,
-          color: Colors.black54,
-        ),
-      ),
-    );
-  }
-
   @override
-  Widget build(
-    BuildContext context,
-  ) {
-    final price = _priceText();
+  Widget build(BuildContext context) {
+    final venue = event.venueName?.trim() ?? '';
+    final address = event.address?.trim() ?? '';
+    final imageUrl = event.imageUrl?.trim() ?? '';
 
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(
-        20,
-      ),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(
-          20,
-        ),
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-              20,
-            ),
-            border: Border.all(
-              color: Colors.grey.shade200,
-            ),
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(14),
           ),
-          clipBehavior: Clip.antiAlias,
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: 92,
-                height: 132,
-                color: Colors.grey.shade100,
-                child: _buildImage(),
+                width: 64,
+                height: 64,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F1EE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(imageUrl, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(_iconForCategory(), size: 28))
+                    : Icon(_iconForCategory(), size: 28),
               ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(
-                    14,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              event.category.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.7,
-                              ),
-                            ),
-                          ),
-                          if (price.isNotEmpty)
-                            Text(
-                              price,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 6,
-                      ),
-                      Text(
-                        event.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 9,
-                      ),
-                      _EventInfoRow(
-                        icon: Icons.schedule_outlined,
-                        text: _dateText(),
-                      ),
-                      if (event.venueName != null &&
-                          event.venueName!.trim().isNotEmpty) ...[
-                        const SizedBox(
-                          height: 5,
-                        ),
-                        _EventInfoRow(
-                          icon: Icons.location_on_outlined,
-                          text: event.venueName!,
-                        ),
-                      ],
-                      const SizedBox(
-                        height: 9,
-                      ),
-                      const Row(
-                        children: [
-                          Text(
-                            'DETAYLAR',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                          SizedBox(
-                            width: 4,
-                          ),
-                          Icon(
-                            Icons.arrow_forward,
-                            size: 13,
-                          ),
-                        ],
-                      ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(event.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 5),
+                    Row(children: [
+                      const Icon(Icons.calendar_today_outlined, size: 12),
+                      const SizedBox(width: 5),
+                      Expanded(child: Text(_dateText(), maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade700))),
+                    ]),
+                    if (venue.isNotEmpty || address.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(children: [
+                        const Icon(Icons.location_on_outlined, size: 12),
+                        const SizedBox(width: 5),
+                        Expanded(child: Text(
+                          [venue, address, event.city].where((value) => value.isNotEmpty).join(' · '),
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade700))),
+                      ]),
                     ],
-                  ),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(
-                  right: 10,
-                ),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.black45,
+                    const SizedBox(height: 5),
+                    Row(children: [
+                      Expanded(child: Text(event.category, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700))),
+                      Text(_priceText(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                    ]),
+                    const SizedBox(height: 6),
+                    const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text('Detayları gör', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                      SizedBox(width: 3),
+                      Icon(Icons.arrow_forward_rounded, size: 14),
+                    ]),
+                  ],
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SmallPill extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _SmallPill({
-    required this.icon,
-    required this.text,
-  });
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 5,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F1),
-        borderRadius: BorderRadius.circular(
-          15,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 12,
-            color: Colors.black54,
-          ),
-          const SizedBox(
-            width: 3,
-          ),
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EventInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _EventInfoRow({
-    required this.icon,
-    required this.text,
-  });
-
-  @override
-  Widget build(
-    BuildContext context,
-  ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 15,
-          color: Colors.black54,
-        ),
-        const SizedBox(
-          width: 5,
-        ),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade700,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
