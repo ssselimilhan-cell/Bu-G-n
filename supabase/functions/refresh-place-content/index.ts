@@ -87,9 +87,11 @@ Deno.serve(async (req: Request) => {
       if (!sourceText) {
         const searchTerm = `${place.name} ${place.city}`;
         const searchUrl = "https://tr.wikipedia.org/w/api.php?action=query&list=search&format=json&utf8=1&srlimit=5&srsearch=" + encodeURIComponent(searchTerm);
+        // Respect Wikimedia's public API rate limits.
+        await new Promise((resolve) => setTimeout(resolve, 1100));
         const searchResponse = await fetch(searchUrl, { headers: { "User-Agent": "BugunCityGuide/1.0 (source discovery)" }, signal: AbortSignal.timeout(8000) });
         if (!searchResponse.ok) {
-          results.push({ id: place.id, status: "source_search_failed" });
+          results.push({ id: place.id, status: `source_search_failed_http_${searchResponse.status}` });
           continue;
         }
         const searchJson = await searchResponse.json();
