@@ -707,13 +707,34 @@ class _HomeScreenState
     );
   }
 
+  String _cityLocative(String city) {
+    const vowels = 'aıoueiöü';
+    const backVowels = 'aıou';
+    const voiceless = 'çfhkpsşt';
+    final lower = city.toLowerCase();
+    String? lastVowel;
+    for (final rune in lower.runes.toList().reversed) {
+      final letter = String.fromCharCode(rune);
+      if (vowels.contains(letter)) {
+        lastVowel = letter;
+        break;
+      }
+    }
+    final vowel = lastVowel ?? 'a';
+    final lastLetter = lower.isEmpty ? '' : lower[lower.length - 1];
+    final suffix = backVowels.contains(vowel)
+        ? (voiceless.contains(lastLetter) ? 'ta' : 'da')
+        : (voiceless.contains(lastLetter) ? 'te' : 'de');
+    return "$city’$suffix";
+  }
+
   Widget _buildEventsSection() {
     final periodLabel = _selectedPeriod == EventPeriod.today
         ? 'BUGÜN'
         : _selectedPeriod == EventPeriod.week
             ? 'BU HAFTA'
             : 'BU AY';
-    final title = '$periodLabel • $_selectedCity';
+    final title = '$periodLabel \${_cityLocative(_selectedCity).toUpperCase()}';
 
     final events =
         _filteredEvents;
