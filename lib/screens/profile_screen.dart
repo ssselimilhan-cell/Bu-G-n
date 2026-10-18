@@ -17,7 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final CityPreferenceService _cityService = CityPreferenceService();
 
   static const List<String> _cities = [
-    'Ankara', 'İstanbul', 'İzmir', 'Bursa', 'Antalya', 'Eskişehir', 'Konya', 'Adana',
+    'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin', 'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkâri', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul', 'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kırıkkale', 'Kırklareli', 'Kırşehir', 'Kilis', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş', 'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Şanlıurfa', 'Siirt', 'Sinop', 'Sivas', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak',
   ];
   static const List<String> _interests = [
     '🎵 Müzik', '🎭 Tiyatro', '🍔 Yeme-İçme', '☕ Kahve', '🌳 Doğa', '🎨 Sanat',
@@ -108,27 +108,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _chooseCity() async {
     final chosen = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: Text('Şehir seç', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            ),
-            ..._cities.map((city) => ListTile(
-              title: Text(city),
-              trailing: city == _city ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(context, city),
-            )),
-          ],
-        ),
+      builder: (context) => _CityPickerSheet(
+        cities: _cities,
+        selectedCity: _city,
       ),
     );
-    if (chosen == null || !mounted) return;
+    if (chosen == null || !mounted || chosen == _city) return;
     setState(() => _city = chosen);
     await _savePreferences();
+    if (mounted) _showSnack('Şehir tercihi kaydedildi: $chosen');
   }
 
   Future<void> _toggleInterest(String interest) async {
@@ -465,6 +455,72 @@ class _AccountDialogState extends State<_AccountDialog> {
         TextButton(onPressed: _busy ? null : () => setState(() { _creating = !_creating; _error = null; }), child: Text(_creating ? 'GİRİŞ YAP' : 'HESAP OLUŞTUR')),
         FilledButton(onPressed: _busy ? null : _submit, child: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_creating ? 'OLUŞTUR' : 'GİRİŞ')),
       ],
+    );
+  }
+}
+
+
+class _CityPickerSheet extends StatefulWidget {
+  const _CityPickerSheet({required this.cities, required this.selectedCity});
+
+  final List<String> cities;
+  final String selectedCity;
+
+  @override
+  State<_CityPickerSheet> createState() => _CityPickerSheetState();
+}
+
+class _CityPickerSheetState extends State<_CityPickerSheet> {
+  String query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.cities
+        .where((city) => city.toLowerCase().contains(query.trim().toLowerCase()))
+        .toList();
+
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.78,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Şehir seç', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                onChanged: (value) => setState(() => query = value),
+                decoration: const InputDecoration(
+                  hintText: '81 il içinde ara',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(child: Text('Şehir bulunamadı.'))
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final city = filtered[index];
+                        return ListTile(
+                          title: Text(city),
+                          trailing: city == widget.selectedCity ? const Icon(Icons.check_circle) : null,
+                          onTap: () => Navigator.pop(context, city),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

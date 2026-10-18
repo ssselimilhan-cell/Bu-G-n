@@ -9,6 +9,10 @@ class Place {
   final double? longitude;
   final String? website;
   final String? shortDescription;
+  final String? longDescription;
+  final String? sourceUrl;
+  final DateTime? verifiedAt;
+  final String? contentReviewStatus;
   final bool? isFree;
   final int? visitDurationMin;
   final bool? indoor;
@@ -33,6 +37,10 @@ class Place {
     this.longitude,
     this.website,
     this.shortDescription,
+    this.longDescription,
+    this.sourceUrl,
+    this.verifiedAt,
+    this.contentReviewStatus,
     this.isFree,
     this.visitDurationMin,
     this.indoor,
@@ -61,6 +69,10 @@ class Place {
       longitude: (map['longitude'] as num?)?.toDouble(),
       website: map['website'] as String?,
       shortDescription: map['short_description'] as String?,
+      longDescription: map['long_description'] as String?,
+      sourceUrl: map['source_url'] as String?,
+      verifiedAt: map['verified_at'] == null ? null : DateTime.tryParse(map['verified_at'].toString()),
+      contentReviewStatus: map['content_review_status'] as String?,
       isFree: map['is_free'] as bool?,
       visitDurationMin: (map['visit_duration_min'] as num?)?.toInt(),
       indoor: map['indoor'] as bool?,

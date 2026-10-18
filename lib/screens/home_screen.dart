@@ -414,7 +414,7 @@ class _HomeScreenState
             ),
             children: [
               Text(
-                'Ankara',
+                _selectedCity,
                 style:
                     TextStyle(
                   fontSize: 14,
@@ -425,8 +425,8 @@ class _HomeScreenState
               const SizedBox(
                 height: 15,
               ),
-              const Text(
-                'Bugün Ankara’da\nne yapmak istersin?',
+              Text(
+                'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
                     TextStyle(
                   fontSize: 30,

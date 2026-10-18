@@ -14,7 +14,7 @@ class PlaceService {
     var query = _client
         .from('places')
         .select()
-        .eq('city', city)
+        .ilike('city', city.trim())
         .eq('is_active', true);
 
     if (category != null &&

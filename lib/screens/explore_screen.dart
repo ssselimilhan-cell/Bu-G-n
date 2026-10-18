@@ -7,6 +7,8 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
+import 'cinema_screen.dart';
+import '../widgets/city_picker_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -65,7 +67,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     _tabController = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
     );
 
@@ -180,6 +182,24 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  Future<void> _chooseCity() async {
+    final chosen = await showCityPickerSheet(context, _selectedCity);
+    if (chosen == null || chosen == _selectedCity || !mounted) return;
+
+    await CityPreferenceService().saveSelectedCity(chosen);
+    if (!mounted) return;
+
+    setState(() {
+      _selectedCity = chosen;
+      _searchController.clear();
+    });
+
+    await Future.wait([
+      _loadPlaces(),
+      _loadEvents(),
+    ]);
+  }
+
   Future<void> _selectCategory(
     String category,
   ) async {
@@ -194,10 +214,13 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   String _pageTitle() {
     if (_tabController.index == 1) {
-      return 'Ankara etkinlikleri';
+      return '$_selectedCity etkinlikleri';
+    }
+    if (_tabController.index == 2) {
+      return 'Sinema';
     }
 
-    return _selectedCategory ?? 'Ankara’yı keşfet';
+    return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
 
   List<Place> get _filteredPlaces {
@@ -253,6 +276,14 @@ class _ExploreScreenState extends State<ExploreScreen>
       backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7F5),
+        actions: [
+          IconButton(
+            tooltip: 'Şehir seç',
+            onPressed: _chooseCity,
+            icon: const Icon(Icons.location_city_outlined),
+          ),
+          const SizedBox(width: 4),
+        ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: Text(
@@ -277,6 +308,9 @@ class _ExploreScreenState extends State<ExploreScreen>
             Tab(
               text: 'Etkinlikler',
             ),
+            Tab(
+              text: 'Sinema',
+            ),
           ],
         ),
       ),
@@ -286,6 +320,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           children: [
             _buildPlacesTab(),
             _buildEventsTab(),
+            CinemaScreen(city: _selectedCity),
           ],
         ),
       ),
@@ -356,7 +391,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Column(
       children: [
         _buildSearchBox(
-          hint: 'Ankara’da yer ara...',
+          hint: '$_selectedCity içinde yer ara...',
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -523,7 +558,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Text(
                   _searchText.isNotEmpty
                       ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde Ankara için etkinlik bulunamadı.',
+                      : 'Önümüzdeki 31 gün içinde $_selectedCity için etkinlik bulunamadı.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
