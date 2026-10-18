@@ -2,6 +2,9 @@ name: Refresh verified place content with AI
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
   schedule:
     - cron: "30 4 * * *"
 
