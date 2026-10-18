@@ -7,6 +7,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
+import 'cinema_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -65,7 +66,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     _tabController = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
     );
 
@@ -196,6 +197,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_tabController.index == 1) {
       return '$_selectedCity etkinlikleri';
     }
+    if (_tabController.index == 2) {
+      return 'Sinema';
+    }
 
     return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
@@ -277,6 +281,9 @@ class _ExploreScreenState extends State<ExploreScreen>
             Tab(
               text: 'Etkinlikler',
             ),
+            Tab(
+              text: 'Sinema',
+            ),
           ],
         ),
       ),
@@ -286,6 +293,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           children: [
             _buildPlacesTab(),
             _buildEventsTab(),
+            CinemaScreen(city: _selectedCity),
           ],
         ),
       ),
