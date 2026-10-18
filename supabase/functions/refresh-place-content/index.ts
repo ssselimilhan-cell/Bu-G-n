@@ -95,9 +95,13 @@ Deno.serve(async (req: Request) => {
         const searchJson = await searchResponse.json();
         const resultsList = searchJson.query?.search ?? [];
         const wanted = normalize(place.name);
-        const candidate = resultsList.find((item: {title: string}) => {
+        const cityName = normalize(place.city);
+        const candidate = resultsList.find((item: {title: string; snippet?: string}) => {
           const title = normalize(item.title);
-          return title === wanted || title.includes(wanted) || (wanted.length > 8 && wanted.includes(title));
+          const titleMatches = title === wanted || title.includes(wanted) || (wanted.length > 8 && wanted.includes(title));
+          const context = normalize(item.snippet ?? "");
+          const cityMatches = title.includes(cityName) || context.includes(cityName);
+          return titleMatches && cityMatches;
         });
         if (!candidate) {
           await client.from("places").update({ content_review_status: "rejected" }).eq("id", place.id);
