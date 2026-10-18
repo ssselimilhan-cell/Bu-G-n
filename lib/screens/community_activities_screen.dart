@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -24,12 +25,35 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final city = await CityPreferenceService().getSelectedCity();
-      final rows = await _client.from('community_activities').select()
+      final cutoff = DateTime.now().subtract(const Duration(hours: 2)).toUtc().toIso8601String();
+      final cityRows = await _client.from('community_activities').select()
           .eq('city', city).eq('status', 'open')
-          .gte('starts_at', DateTime.now().subtract(const Duration(hours: 2)).toUtc().toIso8601String())
+          .gte('starts_at', cutoff)
           .order('starts_at').limit(100);
+
+      final byId = <String, Map<String, dynamic>>{
+        for (final row in cityRows.whereType<Map<String, dynamic>>())
+          row['id'].toString(): row,
+      };
+
+      // Keep the user's own open activities visible even after they change
+      // their selected city, so their invitation code remains accessible.
+      final user = _client.auth.currentUser;
+      if (user != null) {
+        final ownRows = await _client.from('community_activities').select()
+            .eq('host_user_id', user.id).eq('status', 'open')
+            .gte('starts_at', cutoff)
+            .order('starts_at').limit(100);
+        for (final row in ownRows.whereType<Map<String, dynamic>>()) {
+          byId[row['id'].toString()] = row;
+        }
+      }
+
+      final mergedRows = byId.values.toList()
+        ..sort((a, b) => (a['starts_at']?.toString() ?? '')
+            .compareTo(b['starts_at']?.toString() ?? ''));
       if (!mounted) return;
-      setState(() { _city = city; _items = rows.whereType<Map<String, dynamic>>().toList(); _loading = false; });
+      setState(() { _city = city; _items = mergedRows; _loading = false; });
     } catch (_) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'Topluluk etkinlikleri yüklenemedi. Veritabanı geçişi uygulanmış olmalı.'; });
@@ -273,6 +297,41 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                 const SizedBox(height: 8), Text('📅 ${start == null ? 'Tarih belirtilmedi' : DateFormat('EEEE d MMMM · HH:mm', 'tr_TR').format(start)}'),
                 if ((item['venue']?.toString() ?? '').isNotEmpty) Text('📍 ${item['venue']}'),
                 if ((item['address']?.toString() ?? '').isNotEmpty) Text(item['address'].toString()),
+                if (_client.auth.currentUser?.id == item['host_user_id'] &&
+                    (item['invite_code']?.toString() ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2F3EF),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE1E3DC)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.key_outlined, size: 17),
+                        const SizedBox(width: 8),
+                        const Text('Davet kodun', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SelectableText(
+                            item['invite_code'].toString().toUpperCase(),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Davet kodunu kopyala',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.copy_outlined, size: 19),
+                          onPressed: () async {
+                            await Clipboard.setData(ClipboardData(text: item['invite_code'].toString()));
+                            _message('Davet kodu kopyalandı.');
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
