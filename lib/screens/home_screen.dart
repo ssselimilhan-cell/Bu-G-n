@@ -734,7 +734,7 @@ class _HomeScreenState
         : _selectedPeriod == EventPeriod.week
             ? 'BU HAFTA'
             : 'BU AY';
-    final title = '$periodLabel ' + _cityLocative(_selectedCity).toUpperCase();
+    final title = '$periodLabel ${_cityLocative(_selectedCity).toUpperCase()}';
 
     final events =
         _filteredEvents;
