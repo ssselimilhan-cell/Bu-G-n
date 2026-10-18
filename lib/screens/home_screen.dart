@@ -425,7 +425,7 @@ class _HomeScreenState
               const SizedBox(
                 height: 15,
               ),
-              const Text(
+              Text(
                 'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
                     TextStyle(
