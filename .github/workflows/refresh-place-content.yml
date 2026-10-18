@@ -1,0 +1,41 @@
+name: Refresh verified place content with AI
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$CONTENT_REFRESH_SECRET" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Set SUPABASE_URL and CONTENT_REFRESH_SECRET in GitHub Actions secrets to enable the scheduled refresh."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Refresh source-backed place descriptions
+        if: steps.config.outputs.ready == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --silent --show-error --fail-with-body \
+            --request POST "${SUPABASE_URL}/functions/v1/refresh-place-content" \
+            --header "Content-Type: application/json" \
+            --header "x-content-refresh-secret: ${CONTENT_REFRESH_SECRET}" \
+            --data '{"limit":5}')"
+          echo "$response"
