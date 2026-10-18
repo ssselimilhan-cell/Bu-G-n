@@ -30,7 +30,7 @@ function safePublicUrl(raw: string): URL | null {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "POST required" }, 405);
-  const refreshSecret = Deno.env.get("CONTENT_REFRESH_SECRET");
+  const refreshSecret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!refreshSecret || req.headers.get("x-content-refresh-secret") !== refreshSecret) return json({ error: "Unauthorized" }, 401);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
