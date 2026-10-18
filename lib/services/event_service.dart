@@ -210,9 +210,9 @@ class EventService {
           recommendation_score,
           is_active
         ''')
-        .eq(
+        .ilike(
           'city',
-          city,
+          city.trim(),
         )
         .eq(
           'is_active',
