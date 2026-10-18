@@ -194,10 +194,10 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   String _pageTitle() {
     if (_tabController.index == 1) {
-      return 'Ankara etkinlikleri';
+      return '$_selectedCity etkinlikleri';
     }
 
-    return _selectedCategory ?? 'Ankara’yı keşfet';
+    return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
 
   List<Place> get _filteredPlaces {
@@ -356,7 +356,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Column(
       children: [
         _buildSearchBox(
-          hint: 'Ankara’da yer ara...',
+          hint: '$_selectedCity içinde yer ara...',
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -523,7 +523,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Text(
                   _searchText.isNotEmpty
                       ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde Ankara için etkinlik bulunamadı.',
+                      : 'Önümüzdeki 31 gün içinde $_selectedCity için etkinlik bulunamadı.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
