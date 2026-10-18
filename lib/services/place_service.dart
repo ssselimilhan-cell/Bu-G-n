@@ -38,6 +38,25 @@ class PlaceService {
         .toList();
   }
 
+  /// Searches the database directly for places in a city, independent of the
+  /// currently selected city and the size of the general search cache.
+  Future<List<Place>> searchPlacesByCity(String city, {int limit = 500}) async {
+    final value = city.trim();
+    if (value.length < 3) return <Place>[];
+
+    final rows = await _client
+        .from('places')
+        .select()
+        .eq('is_active', true)
+        .ilike('city', '%$value%')
+        .limit(limit);
+
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(Place.fromMap)
+        .toList();
+  }
+
   Future<List<Place>> getPlacesByIds(
     Iterable<String> ids,
   ) async {
