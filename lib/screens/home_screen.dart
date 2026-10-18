@@ -5,6 +5,7 @@ import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
+import '../widgets/city_picker_sheet.dart';
 import 'event_detail_screen.dart';
 import 'explore_screen.dart';
 import 'place_detail_screen.dart';
@@ -95,9 +96,33 @@ class _HomeScreenState
     });
   }
 
+  Future<void> _chooseCity() async {
+    final chosen = await showCityPickerSheet(context, _selectedCity);
+    if (chosen == null || chosen == _selectedCity || !mounted) return;
+
+    try {
+      await CityPreferenceService().saveSelectedCity(chosen);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Şehir tercihi kaydedilemedi. Tekrar deneyebilirsin.')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _selectedCity = chosen;
+      _eventSearchController.clear();
+    });
+    await Future.wait([_loadEvents(), _loadPlaces()]);
+  }
+
   Future<void> _loadHome() async {
-    _selectedCity = await CityPreferenceService().getSelectedCity();
-    if (mounted) setState(() {});
+    final city = await CityPreferenceService().getSelectedCity();
+    if (!mounted) return;
+    setState(() => _selectedCity = city);
     await Future.wait([
       _loadEvents(),
       _loadPlaces(),
@@ -105,37 +130,45 @@ class _HomeScreenState
   }
 
   Future<void> _loadEvents() async {
+    if (!mounted) return;
     setState(() {
       _eventsLoading = true;
       _eventsError = null;
     });
 
     try {
-      final events =
-          await _eventService
-              .getUpcomingEvents(
-        city: _selectedCity,
-        days: 31,
-        limit: 200,
-      );
-
-      if (!mounted) {
-        return;
+      late final List<Event> events;
+      switch (_selectedPeriod) {
+        case EventPeriod.today:
+          events = await _eventService.getTodayEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.week:
+          events = await _eventService.getThisWeekEvents(
+            city: _selectedCity,
+            limit: 100,
+          );
+          break;
+        case EventPeriod.month:
+          events = await _eventService.getThisMonthEvents(
+            city: _selectedCity,
+            limit: 200,
+          );
+          break;
       }
 
+      if (!mounted) return;
       setState(() {
         _events = events;
         _eventsLoading = false;
       });
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
         _eventsLoading = false;
-        _eventsError =
-            'Etkinlikler yüklenemedi.';
+        _eventsError = 'Etkinlikler yüklenemedi.';
       });
     }
   }
@@ -381,20 +414,17 @@ class _HomeScreenState
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Şehir seç',
+            onPressed: _chooseCity,
+            icon: const Icon(Icons.location_city_outlined),
+          ),
           Padding(
-            padding:
-                const EdgeInsets.only(
-              right: 12,
-            ),
+            padding: const EdgeInsets.only(right: 8),
             child: IconButton(
-              onPressed: () =>
-                  setState(() {
-                _selectedIndex = 3;
-              }),
-              icon: const Icon(
-                Icons
-                    .person_outline_rounded,
-              ),
+              tooltip: 'Profil',
+              onPressed: () => setState(() => _selectedIndex = 3),
+              icon: const Icon(Icons.person_outline_rounded),
             ),
           ),
         ],
@@ -678,14 +708,12 @@ class _HomeScreenState
   }
 
   Widget _buildEventsSection() {
-    final title =
-        _selectedPeriod ==
-                EventPeriod.today
-            ? 'BUGÜN ANKARA’DA'
-            : _selectedPeriod ==
-                    EventPeriod.week
-                ? 'BU HAFTA ANKARA’DA'
-                : 'BU AY ANKARA’DA';
+    final periodLabel = _selectedPeriod == EventPeriod.today
+        ? 'BUGÜN'
+        : _selectedPeriod == EventPeriod.week
+            ? 'BU HAFTA'
+            : 'BU AY';
+    final title = '$periodLabel • $_selectedCity';
 
     final events =
         _filteredEvents;
