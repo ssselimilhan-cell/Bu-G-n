@@ -295,7 +295,19 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                 const SizedBox(height: 5), Text(item['title']?.toString() ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                 if ((item['description']?.toString() ?? '').trim().isNotEmpty) ...[const SizedBox(height: 8), Text(item['description'].toString())],
                 const SizedBox(height: 8), Text('📅 ${start == null ? 'Tarih belirtilmedi' : DateFormat('EEEE d MMMM · HH:mm', 'tr_TR').format(start)}'),
-                if ((item['venue']?.toString() ?? '').isNotEmpty) Text('📍 ${item['venue']}'),
+                Text('📍 ${item['city'] ?? ''}${(item['venue']?.toString() ?? '').trim().isEmpty ? '' : ' · ${item['venue']}'}'),
+                if (_client.auth.currentUser?.id == item['host_user_id'])
+                  const Padding(
+                    padding: EdgeInsets.only(top: 7),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Chip(
+                        avatar: Icon(Icons.person_pin_circle_outlined, size: 16),
+                        label: Text('Senin etkinliğin'),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
                 if ((item['address']?.toString() ?? '').isNotEmpty) Text(item['address'].toString()),
                 if (_client.auth.currentUser?.id == item['host_user_id'] &&
                     (item['invite_code']?.toString() ?? '').trim().isNotEmpty) ...[
