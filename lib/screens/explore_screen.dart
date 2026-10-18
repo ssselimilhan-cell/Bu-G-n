@@ -8,6 +8,7 @@ import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 import 'cinema_screen.dart';
+import '../widgets/city_picker_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -181,6 +182,24 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  Future<void> _chooseCity() async {
+    final chosen = await showCityPickerSheet(context, _selectedCity);
+    if (chosen == null || chosen == _selectedCity || !mounted) return;
+
+    await CityPreferenceService().saveSelectedCity(chosen);
+    if (!mounted) return;
+
+    setState(() {
+      _selectedCity = chosen;
+      _searchController.clear();
+    });
+
+    await Future.wait([
+      _loadPlaces(),
+      _loadEvents(),
+    ]);
+  }
+
   Future<void> _selectCategory(
     String category,
   ) async {
@@ -257,6 +276,14 @@ class _ExploreScreenState extends State<ExploreScreen>
       backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7F5),
+        actions: [
+          IconButton(
+            tooltip: 'Şehir seç',
+            onPressed: _chooseCity,
+            icon: const Icon(Icons.location_city_outlined),
+          ),
+          const SizedBox(width: 4),
+        ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: Text(
