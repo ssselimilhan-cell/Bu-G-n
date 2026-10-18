@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - feature/city-discovery-cinema-ai
 
 permissions:
   contents: read
