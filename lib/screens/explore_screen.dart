@@ -75,8 +75,14 @@ class _ExploreScreenState extends State<ExploreScreen>
       _onSearchChanged,
     );
 
-    _loadPlaces();
-    _loadEvents();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final city = await CityPreferenceService().getSelectedCity();
+    if (!mounted) return;
+    setState(() => _selectedCity = city);
+    await Future.wait([_loadPlaces(), _loadEvents()]);
   }
 
   String? _normalizeInitialCategory(
@@ -115,7 +121,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Future<void> _loadPlaces() async {
-    _selectedCity = await CityPreferenceService().getSelectedCity();
+    if (!mounted) return;
     setState(() {
       _placesLoading = true;
       _placesError = null;
@@ -149,7 +155,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Future<void> _loadEvents() async {
-    _selectedCity = await CityPreferenceService().getSelectedCity();
+    if (!mounted) return;
     setState(() {
       _eventsLoading = true;
       _eventsError = null;
