@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
       const knownUrl = typeof place.source_url === "string" && place.source_url.trim()
         ? place.source_url : (typeof place.website === "string" ? place.website : "");
       const safeKnownUrl = knownUrl ? safePublicUrl(knownUrl) : null;
-      if (safeKnownUrl) {
+      if (safeKnownUrl && openAiKey) {
         const page = await fetch(safeKnownUrl.toString(), {
           headers: { "User-Agent": "BugunCityGuide/1.0 (source-based content refresh)" },
           signal: AbortSignal.timeout(8000),
