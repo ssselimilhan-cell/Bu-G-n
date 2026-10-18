@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/event.dart';
+import '../utils/search_text.dart';
 import '../models/place.dart';
 import '../services/event_service.dart';
 import '../services/place_service.dart';
@@ -219,24 +220,11 @@ class _ExploreScreenState extends State<ExploreScreen>
     });
   }
 
-  String _normalizeText(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll('ı', 'i')
-        .replaceAll('İ', 'i')
-        .replaceAll('ş', 's')
-        .replaceAll('ğ', 'g')
-        .replaceAll('ü', 'u')
-        .replaceAll('ö', 'o')
-        .replaceAll('ç', 'c')
-        .trim();
-  }
-
   bool _matchesPlaceCategory(Place place) {
     final category = _selectedCategory;
     if (category == null || category == 'Tümü') return true;
 
-    final value = _normalizeText([
+    final value = normalizeSearchText([
       place.category,
       place.placeType ?? '',
       ...place.tags,
@@ -287,21 +275,21 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _matchesEventCategory(Event event) {
     switch (_selectedEventCategory) {
       case 'Müzik':
-        return _normalizeText(event.category).contains('music') ||
-            _normalizeText(event.category).contains('muzik') ||
-            _normalizeText(event.title).contains('konser');
+        return normalizeSearchText(event.category).contains('music') ||
+            normalizeSearchText(event.category).contains('muzik') ||
+            normalizeSearchText(event.title).contains('konser');
       case 'Sahne':
-        final value = _normalizeText('${event.category} ${event.title}');
+        final value = normalizeSearchText('${event.category} ${event.title}');
         return value.contains('theatre') ||
             value.contains('theater') ||
             value.contains('tiyatro') ||
             value.contains('opera') ||
             value.contains('stand up');
       case 'Spor':
-        final value = _normalizeText('${event.category} ${event.title}');
+        final value = normalizeSearchText('${event.category} ${event.title}');
         return value.contains('sport') || value.contains('spor') || value.contains('mac');
       case 'Diğer':
-        final value = _normalizeText(event.category);
+        final value = normalizeSearchText(event.category);
         return value.contains('miscellaneous') ||
             value.contains('other') ||
             value.contains('diger');
@@ -325,7 +313,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return source.where((place) {
       if (!_matchesPlaceCategory(place)) return false;
       if (_searchText.isEmpty) return true;
-      final text = _normalizeText([
+      final text = normalizeSearchText([
         place.name,
         place.category,
         place.placeType ?? '',
@@ -334,7 +322,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         place.city,
         ...place.tags,
       ].join(' '));
-      return text.contains(_normalizeText(_searchText));
+      return text.contains(normalizeSearchText(_searchText));
     }).toList();
   }
 
@@ -345,7 +333,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return source.where((event) {
       if (!_matchesEventCategory(event)) return false;
       if (_searchText.isEmpty) return true;
-      final text = _normalizeText([
+      final text = normalizeSearchText([
         event.title,
         event.category,
         event.description ?? '',
@@ -353,7 +341,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         event.address ?? '',
         event.city,
       ].join(' '));
-      return text.contains(_normalizeText(_searchText));
+      return text.contains(normalizeSearchText(_searchText));
     }).toList();
   }
 
