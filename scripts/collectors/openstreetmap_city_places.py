@@ -224,6 +224,44 @@ def main():
             if response is None:
                 raise RuntimeError("Tüm Overpass uçları başarısız: " + " | ".join(endpoint_errors))
             elements = response.json().get("elements", [])
+
+            # Some geocoded city results have incomplete or unusable admin
+            # boundaries. If a boundary query returns nothing, retry around
+            # the geocoded city center so the province is not silently skipped.
+            if not elements:
+                center_lat = result.get("lat")
+                center_lon = result.get("lon")
+                if center_lat is not None and center_lon is not None:
+                    fallback_query = f"""
+                    [out:json][timeout:45];
+                    (
+                      nwr(around:35000,{center_lat},{center_lon})["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium|viewpoint|artwork|camp_site|caravan_site|picnic_site)$"];
+                      nwr(around:35000,{center_lat},{center_lon})["leisure"~"^(park|garden|nature_reserve|water_park|beach_resort)$"];
+                      nwr(around:35000,{center_lat},{center_lon})["natural"~"^(waterfall|beach|peak|cave_entrance|hot_spring)$"];
+                      nwr(around:35000,{center_lat},{center_lon})["historic"~"^(castle|monument|memorial|archaeological_site|ruins|fort|city_gate|manor|battlefield|monastery)$"];
+                      nwr(around:35000,{center_lat},{center_lon})["man_made"~"^(lighthouse|tower)$"];
+                      nwr(around:35000,{center_lat},{center_lon})["amenity"~"^(arts_centre|planetarium)$"];
+                    );
+                    out center tags 120;
+                    """
+                    print("  İl sınırı sorgusu boş; 35 km merkez araması deneniyor.", flush=True)
+                    for endpoint in OVERPASS_ENDPOINTS:
+                        try:
+                            candidate = session.post(
+                                endpoint,
+                                data={"data": fallback_query},
+                                timeout=(15, 55),
+                            )
+                            candidate.raise_for_status()
+                            fallback_elements = candidate.json().get("elements", [])
+                            if fallback_elements:
+                                elements = fallback_elements
+                                print(f"  Merkez yedeği kaynağı: {endpoint}", flush=True)
+                                break
+                        except requests.RequestException as exc:
+                            print(f"  Merkez yedeği başarısız ({endpoint}): {exc}", flush=True)
+                            time.sleep(1)
+
             for el in elements:
                 tags = el.get("tags") or {}
                 name = tags.get("name") or tags.get("name:tr")
