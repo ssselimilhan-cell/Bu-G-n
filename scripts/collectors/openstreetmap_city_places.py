@@ -142,7 +142,7 @@ def main():
     session.headers.update({"User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)"})
     all_rows = {}
     errors = []
-    existing_cities = set()
+    existing_counts = {}
     try:
         existing_response = session.get(
             f"{SUPABASE_URL}/rest/v1/places",
