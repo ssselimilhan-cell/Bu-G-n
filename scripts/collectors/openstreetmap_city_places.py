@@ -142,7 +142,28 @@ def main():
     session.headers.update({"User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)"})
     all_rows = {}
     errors = []
+    existing_cities = set()
+    try:
+        existing_response = session.get(
+            f"{SUPABASE_URL}/rest/v1/places",
+            headers=HEADERS,
+            params={"select": "city", "is_active": "eq.true", "limit": "10000"},
+            timeout=20,
+        )
+        existing_response.raise_for_status()
+        existing_cities = {
+            row.get("city")
+            for row in existing_response.json()
+            if row.get("city")
+        }
+        print(f"Mevcut aktif yer verisi olan şehir: {len(existing_cities)}/81", flush=True)
+    except requests.RequestException as exc:
+        print(f"Mevcut şehirler okunamadı; tüm şehirler kontrol edilecek: {exc}", flush=True)
+
     for index, city in enumerate(CITIES, 1):
+        if city in existing_cities:
+            print(f"[{index}/{len(CITIES)}] {city}: aktif yer verisi zaten var; atlanıyor", flush=True)
+            continue
         city_rows = []
         print(f"[{index}/{len(CITIES)}] {city}: sınır ve ziyaret yerleri aranıyor", flush=True)
         try:
@@ -203,24 +224,19 @@ def main():
             response = None
             endpoint_errors = []
             for endpoint in OVERPASS_ENDPOINTS:
-                for attempt in range(1, 3):
-                    try:
-                        candidate = session.post(
-                            endpoint,
-                            data={"data": query},
-                            timeout=(15, 55),
-                        )
-                        candidate.raise_for_status()
-                        response = candidate
-                        print(f"  Overpass kaynağı: {endpoint}", flush=True)
-                        break
-                    except requests.RequestException as exc:
-                        endpoint_errors.append(f"{endpoint} deneme {attempt}: {type(exc).__name__}: {exc}")
-                        print(f"  Overpass yanıt vermedi ({attempt}/2): {endpoint}", flush=True)
-                        if attempt < 2:
-                            time.sleep(3 * attempt)
-                if response is not None:
+                try:
+                    candidate = session.post(
+                        endpoint,
+                        data={"data": query},
+                        timeout=(8, 25),
+                    )
+                    candidate.raise_for_status()
+                    response = candidate
+                    print(f"  Overpass kaynağı: {endpoint}", flush=True)
                     break
+                except requests.RequestException as exc:
+                    endpoint_errors.append(f"{endpoint}: {type(exc).__name__}: {exc}")
+                    print(f"  Overpass yedek kaynağa geçiliyor: {endpoint}", flush=True)
             if response is None:
                 raise RuntimeError("Tüm Overpass uçları başarısız: " + " | ".join(endpoint_errors))
             elements = response.json().get("elements", [])
