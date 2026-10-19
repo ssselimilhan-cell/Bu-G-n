@@ -31,6 +31,23 @@ jobs:
           done
 
           NOW_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          END_UTC="$(date -u -d '+365 days' +"%Y-%m-%dT%H:%M:%SZ")"
+
+          # Her etkinliğe kaynak tablosundaki Ticketmaster kaydını bağla.
+          SOURCE_RESPONSE="$(curl --silent --show-error --fail-with-body \
+            --get "${SUPABASE_URL%/}/rest/v1/sources" \
+            --data-urlencode "select=id" \
+            --data-urlencode "name=eq.Ticketmaster" \
+            --data-urlencode "is_active=eq.true" \
+            --data-urlencode "limit=1" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}")"
+          SOURCE_ID="$(printf '%s' "$SOURCE_RESPONSE" | jq -r '.[0].id // empty')"
+          if [ -z "$SOURCE_ID" ]; then
+            echo "HATA: Aktif Ticketmaster kaynak kaydı bulunamadı; etkinlikler aktarılmadı."
+            exit 1
+          fi
+
           mkdir -p city-events
           failures=0
           total=0
@@ -52,6 +69,7 @@ jobs:
                 --data-urlencode "city=${API_CITY}" \
                 --data-urlencode "countryCode=TR" \
                 --data-urlencode "startDateTime=${NOW_UTC}" \
+                --data-urlencode "endDateTime=${END_UTC}" \
                 --data-urlencode "size=200" \
                 --data-urlencode "page=${PAGE}" \
                 --data-urlencode "sort=date,asc" \
@@ -79,11 +97,12 @@ jobs:
             echo "$DB_CITY toplam bulunan kayıt: $COUNT"
 
             if [ "$COUNT" -gt 0 ]; then
-              jq --arg syncedAt "$NOW_UTC" --arg city "$DB_CITY" '
+              jq --arg syncedAt "$NOW_UTC" --arg city "$DB_CITY" --arg sourceId "$SOURCE_ID" '
                 [
                   .[]
                   | select(.id != null and .name != null and .dates.start.dateTime != null)
                   | {
+                      source_id: $sourceId,
                       external_id: .id,
                       external_source: "ticketmaster",
                       title: .name,
