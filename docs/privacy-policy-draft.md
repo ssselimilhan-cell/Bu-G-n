@@ -4,9 +4,9 @@
 
 ## 1. Veri sorumlusu
 
-- **Veri sorumlusu / geliştirici:** Selim İlhan (gerçek kişi)
-- **Tebligat / iş adresi:** Yücetepe Mahallesi, İleri Sokak No: 4/10, Çankaya, Ankara, Türkiye
-- **Gizlilik ve veri talepleri e-posta adresi:** ssselimilhan@gmail.com
+- **Veri sorumlusu / geliştirici:** [YAYIN ÖNCESİ DOĞRULANACAK]
+- **Tebligat / iş adresi:** [YAYIN ÖNCESİ EKLENECEK; EV ADRESİ YAYINLAMAYIN]
+- **Gizlilik ve veri talepleri e-posta adresi:** [YAYIN ÖNCESİ DOĞRULANACAK]
 - **Başvuru yöntemi:** E-posta veya yukarıdaki posta adresi üzerinden başvuru. Başvurular değerlendirilirken ilgili kişinin kimliği ve başvuru yetkisi, gereğinden fazla veri toplanmadan doğrulanmalıdır.
 
 ## 2. İşlenebilecek kişisel veri kategorileri
