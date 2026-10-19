@@ -1,6 +1,6 @@
 # BUGÜN — KVKK Aydınlatma Metni (yayın öncesi taslak)
 
-> **YAYINA ALINAMAZ:** Veri sorumlusu iletişim bilgileri eklendi; ancak veri akışları, saklama süreleri ve özellikle yurt dışına aktarım mekanizması doğrulanmadan bu metin nihai aydınlatma metni değildir. Yayın öncesinde hukuk uzmanı tarafından kontrol edilmelidir.
+> **YAYINA ALINAMAZ:** Veri sorumlusu iletişim alanları henüz tamamlanmadı. Gerçek veri akışları, saklama süreleri ve özellikle yurt dışına aktarım mekanizması doğrulanmadan bu metin nihai aydınlatma metni değildir. Yayın öncesinde hukuk uzmanı tarafından kontrol edilmelidir.
 
 ## 1. Veri sorumlusu
 
