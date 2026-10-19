@@ -151,19 +151,22 @@ def main():
             timeout=20,
         )
         existing_response.raise_for_status()
-        existing_cities = {
-            row.get("city")
-            for row in existing_response.json()
-            if row.get("city")
-        }
-        print(f"Mevcut aktif yer verisi olan şehir: {len(existing_cities)}/81", flush=True)
+        existing_counts = {}
+        for row in existing_response.json():
+            city_name = row.get("city")
+            if city_name:
+                existing_counts[city_name] = existing_counts.get(city_name, 0) + 1
+        print(f"Mevcut aktif yer verisi olan şehir: {len(existing_counts)}/81", flush=True)
     except requests.RequestException as exc:
         print(f"Mevcut şehirler okunamadı; tüm şehirler kontrol edilecek: {exc}", flush=True)
 
     for index, city in enumerate(CITIES, 1):
-        if city in existing_cities:
-            print(f"[{index}/{len(CITIES)}] {city}: aktif yer verisi zaten var; atlanıyor", flush=True)
+        existing_count = existing_counts.get(city, 0)
+        if existing_count >= 20:
+            print(f"[{index}/{len(CITIES)}] {city}: {existing_count} aktif kayıt var; yeterli kapsam nedeniyle atlanıyor", flush=True)
             continue
+        if existing_count:
+            print(f"[{index}/{len(CITIES)}] {city}: yalnızca {existing_count} aktif kayıt var; veriler tamamlanacak", flush=True)
         city_rows = []
         print(f"[{index}/{len(CITIES)}] {city}: sınır ve ziyaret yerleri aranıyor", flush=True)
         try:
@@ -330,14 +333,39 @@ def main():
                 )
                 saved.raise_for_status()
             print(f"  Supabase'e yazılan yer: {len(city_rows)}", flush=True)
+            if len(city_rows) == 0:
+                errors.append(f"{city}: sorgudan kaydedilebilir yer bulunamadı")
             time.sleep(1.1)
         except Exception as exc:
             errors.append(f"{city}: {type(exc).__name__}: {exc}")
             print(f"  UYARI: {errors[-1]}", flush=True)
             time.sleep(2)
     rows = list(all_rows.values())
+    # Verify coverage from the database after collection, not just from the local scrape.
+    try:
+        verify = session.get(
+            f"{SUPABASE_URL}/rest/v1/places",
+            headers=HEADERS,
+            params={"select": "city", "is_active": "eq.true", "limit": "10000"},
+            timeout=30,
+        )
+        verify.raise_for_status()
+        final_counts = {}
+        for item in verify.json():
+            city_name = item.get("city")
+            if city_name:
+                final_counts[city_name] = final_counts.get(city_name, 0) + 1
+        missing = [city for city in CITIES if final_counts.get(city, 0) == 0]
+        underfilled = [f"{city} ({final_counts.get(city, 0)})" for city in CITIES if 0 < final_counts.get(city, 0) < 5]
+        print(f"DOĞRULAMA: aktif kaydı olan il {len(CITIES) - len(missing)}/81", flush=True)
+        print(f"DOĞRULAMA: kaydı olmayan iller: {', '.join(missing) if missing else 'yok'}", flush=True)
+        print(f"DOĞRULAMA: 5'ten az kaydı olan iller: {', '.join(underfilled) if underfilled else 'yok'}", flush=True)
+        if missing:
+            errors.extend([f"{city}: son doğrulamada aktif kayıt yok" for city in missing])
+    except requests.RequestException as exc:
+        errors.append(f"Son veritabanı doğrulaması başarısız: {exc}")
     print(f"Toplam tekil yer: {len(rows)}; sorunlu şehir sayısı: {len(errors)}", flush=True)
-    print('Şehir bazlı aktarımlar tamamlandı.', flush=True)
+    print('Şehir bazlı aktarımlar ve kapsam doğrulaması tamamlandı.', flush=True)
     if errors:
         print("Bazı şehirler işlenemedi:")
         for error in errors:
