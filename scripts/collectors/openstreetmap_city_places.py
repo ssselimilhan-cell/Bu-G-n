@@ -369,6 +369,10 @@ def main():
         print(f"DOĞRULAMA: 5'ten az kaydı olan iller: {', '.join(underfilled) if underfilled else 'yok'}", flush=True)
         if missing:
             errors.extend([f"{city}: son doğrulamada aktif kayıt yok" for city in missing])
+            raise RuntimeError(
+                "81 il kapsamı tamamlanmadı. Aktif yer kaydı olmayan iller: "
+                + ", ".join(missing)
+            )
     except requests.RequestException as exc:
         errors.append(f"Son veritabanı doğrulaması başarısız: {exc}")
     print(f"Toplam tekil yer: {len(rows)}; sorunlu şehir sayısı: {len(errors)}", flush=True)
