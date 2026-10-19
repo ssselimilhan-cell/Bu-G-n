@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import unicodedata
 import requests
 
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
@@ -19,6 +20,10 @@ HEADERS = {
     "Content-Type": "application/json",
     "Prefer": "resolution=merge-duplicates,return=minimal",
 }
+def normalize_city(value):
+    value = unicodedata.normalize("NFKD", value.casefold().replace("ı", "i"))
+    return "".join(char for char in value if not unicodedata.combining(char)).strip()
+
 CITIES = [
     "Ankara",
     "İstanbul",
@@ -155,13 +160,14 @@ def main():
         for row in existing_response.json():
             city_name = row.get("city")
             if city_name:
-                existing_counts[city_name] = existing_counts.get(city_name, 0) + 1
+                key = normalize_city(city_name)
+                existing_counts[key] = existing_counts.get(key, 0) + 1
         print(f"Mevcut aktif yer verisi olan şehir: {len(existing_counts)}/81", flush=True)
     except requests.RequestException as exc:
         print(f"Mevcut şehirler okunamadı; tüm şehirler kontrol edilecek: {exc}", flush=True)
 
     for index, city in enumerate(CITIES, 1):
-        existing_count = existing_counts.get(city, 0)
+        existing_count = existing_counts.get(normalize_city(city), 0)
         if existing_count >= 20:
             print(f"[{index}/{len(CITIES)}] {city}: {existing_count} aktif kayıt var; yeterli kapsam nedeniyle atlanıyor", flush=True)
             continue
@@ -354,9 +360,10 @@ def main():
         for item in verify.json():
             city_name = item.get("city")
             if city_name:
-                final_counts[city_name] = final_counts.get(city_name, 0) + 1
-        missing = [city for city in CITIES if final_counts.get(city, 0) == 0]
-        underfilled = [f"{city} ({final_counts.get(city, 0)})" for city in CITIES if 0 < final_counts.get(city, 0) < 5]
+                key = normalize_city(city_name)
+                final_counts[key] = final_counts.get(key, 0) + 1
+        missing = [city for city in CITIES if final_counts.get(normalize_city(city), 0) == 0]
+        underfilled = [f"{city} ({final_counts.get(normalize_city(city), 0)})" for city in CITIES if 0 < final_counts.get(normalize_city(city), 0) < 5]
         print(f"DOĞRULAMA: aktif kaydı olan il {len(CITIES) - len(missing)}/81", flush=True)
         print(f"DOĞRULAMA: kaydı olmayan iller: {', '.join(missing) if missing else 'yok'}", flush=True)
         print(f"DOĞRULAMA: 5'ten az kaydı olan iller: {', '.join(underfilled) if underfilled else 'yok'}", flush=True)
