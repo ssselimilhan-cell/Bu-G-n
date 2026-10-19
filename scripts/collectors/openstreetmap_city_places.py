@@ -10,6 +10,7 @@ OVERPASS_ENDPOINTS = [
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
 ]
 HEADERS = {
     "User-Agent": "BUGUN-city-discovery/1.0 (+https://github.com/ssselimilhan-cell/Bu-G-n)",
@@ -145,11 +146,22 @@ def main():
         city_rows = []
         print(f"[{index}/{len(CITIES)}] {city}: sınır ve ziyaret yerleri aranıyor", flush=True)
         try:
-            geo = session.get(NOMINATIM, params={
-                "city": city, "country": "Türkiye", "format": "jsonv2",
-                "limit": 1, "addressdetails": 1,
-            }, timeout=15)
-            geo.raise_for_status()
+            geo = None
+            geo_errors = []
+            for geo_attempt in range(1, 4):
+                try:
+                    geo = session.get(NOMINATIM, params={
+                        "city": city, "country": "Türkiye", "format": "jsonv2",
+                        "limit": 1, "addressdetails": 1,
+                    }, timeout=30)
+                    geo.raise_for_status()
+                    break
+                except requests.RequestException as exc:
+                    geo_errors.append(f"deneme {geo_attempt}: {type(exc).__name__}: {exc}")
+                    if geo_attempt < 3:
+                        time.sleep(2 * geo_attempt)
+            if geo is None:
+                raise RuntimeError("Nominatim başarısız: " + " | ".join(geo_errors))
             results = geo.json()
             if not results:
                 errors.append(f"{city}: geocoding sonucu yok")
@@ -176,7 +188,7 @@ def main():
                 scope = f"nwr(around:20000,{latitude},{longitude})"
                 area_statement = ""
             query = f"""
-            [out:json][timeout:15];
+            [out:json][timeout:45];
             {area_statement}
             (
               {scope}["tourism"~"^(museum|zoo|gallery|theme_park|attraction|aquarium|viewpoint|artwork|camp_site|caravan_site|picnic_site)$"];
@@ -191,19 +203,24 @@ def main():
             response = None
             endpoint_errors = []
             for endpoint in OVERPASS_ENDPOINTS:
-                try:
-                    candidate = session.post(
-                        endpoint,
-                        data={"data": query},
-                        timeout=22,
-                    )
-                    candidate.raise_for_status()
-                    response = candidate
-                    print(f"  Overpass kaynağı: {endpoint}", flush=True)
+                for attempt in range(1, 3):
+                    try:
+                        candidate = session.post(
+                            endpoint,
+                            data={"data": query},
+                            timeout=(15, 55),
+                        )
+                        candidate.raise_for_status()
+                        response = candidate
+                        print(f"  Overpass kaynağı: {endpoint}", flush=True)
+                        break
+                    except requests.RequestException as exc:
+                        endpoint_errors.append(f"{endpoint} deneme {attempt}: {type(exc).__name__}: {exc}")
+                        print(f"  Overpass yanıt vermedi ({attempt}/2): {endpoint}", flush=True)
+                        if attempt < 2:
+                            time.sleep(3 * attempt)
+                if response is not None:
                     break
-                except requests.RequestException as exc:
-                    endpoint_errors.append(f"{endpoint}: {type(exc).__name__}: {exc}")
-                    print(f"  Overpass yedek kaynağa geçiliyor: {endpoint}", flush=True)
             if response is None:
                 raise RuntimeError("Tüm Overpass uçları başarısız: " + " | ".join(endpoint_errors))
             elements = response.json().get("elements", [])
