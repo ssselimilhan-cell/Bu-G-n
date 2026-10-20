@@ -306,6 +306,9 @@ class _HomeScreenState
           setState(() {
             _selectedIndex = 0;
           });
+          // Refresh the home screen after returning from Profile/Explore so
+          // a newly saved city is reflected immediately, including Android Back.
+          _loadHome();
         }
       },
       child: _buildCurrentPage(),
