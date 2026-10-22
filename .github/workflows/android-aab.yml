@@ -1,6 +1,9 @@
 name: BUGUN Google Play AAB
 
 on:
+  push:
+    branches:
+      - restore-core-features
   workflow_dispatch:
 
 permissions:
