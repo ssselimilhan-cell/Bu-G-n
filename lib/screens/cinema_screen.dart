@@ -47,9 +47,30 @@ class _CinemaScreenState extends State<CinemaScreen> {
         .order('starts_at')
         .limit(100);
 
+    List<Map<String, dynamic>> movies = [];
+    String? tmdbMessage;
+    try {
+      final response = await client.functions.invoke(
+        'tmdb-cinema',
+        queryParameters: const {'category': 'now_playing', 'page': '1'},
+      );
+      if (response.status == 200 && response.data is Map) {
+        final results = (response.data as Map)['results'];
+        if (results is List) {
+          movies = results.whereType<Map<String, dynamic>>().toList();
+        }
+      } else {
+        tmdbMessage = 'TMDB yanıtı alınamadı (HTTP ${response.status}).';
+      }
+    } catch (_) {
+      tmdbMessage = 'TMDB bağlantısı henüz yapılandırılmamış olabilir.';
+    }
+
     return _CinemaData(
       venues: venues.whereType<Map<String, dynamic>>().toList(),
       screenings: screenings.whereType<Map<String, dynamic>>().toList(),
+      movies: movies,
+      tmdbMessage: tmdbMessage,
     );
   }
 
@@ -106,6 +127,60 @@ class _CinemaScreenState extends State<CinemaScreen> {
                   subtitle: const Text('Film, salon ve bilet bilgileri sağlayıcının kendi sitesinde'),
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () => _openLink('https://www.paribucineverse.com/'),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('TÜRKİYE’DE VİZYONDA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              const SizedBox(height: 8),
+              if (data.tmdbMessage != null)
+                _empty('${data.tmdbMessage} Yönetici TMDB API Read Access Token bilgisini Supabase Function Secret olarak eklemeli.')
+              else if (data.movies.isEmpty)
+                _empty('TMDB şu anda vizyondaki film listesini döndürmedi.')
+              else
+                ...data.movies.map((movie) {
+                  final posterPath = movie['poster_path']?.toString();
+                  final posterUrl = posterPath == null || posterPath.isEmpty
+                      ? null
+                      : 'https://image.tmdb.org/t/p/w342$posterPath';
+                  final title = movie['title']?.toString() ?? 'İsimsiz film';
+                  final release = movie['release_date']?.toString() ?? '';
+                  final overview = movie['overview']?.toString() ?? '';
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: posterUrl == null
+                          ? const SizedBox(width: 58, child: Icon(Icons.movie_outlined, size: 32))
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                posterUrl,
+                                width: 58,
+                                height: 82,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox(width: 58, child: Icon(Icons.movie_outlined)),
+                              ),
+                            ),
+                      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: Text([
+                        if (release.isNotEmpty) 'Vizyon tarihi: $release',
+                        if (overview.isNotEmpty) overview,
+                      ].join(' • '), maxLines: 3, overflow: TextOverflow.ellipsis),
+                      isThreeLine: true,
+                      onTap: () => _openLink('https://www.themoviedb.org/search?query=${Uri.encodeComponent(title)}'),
+                    ),
+                  );
+                }),
+              const SizedBox(height: 8),
+              const Text(
+                'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+                style: TextStyle(fontSize: 11, color: Colors.black54, height: 1.35),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => _openLink('https://www.themoviedb.org/'),
+                  child: const Text('TMDB — The Movie Database'),
                 ),
               ),
               const SizedBox(height: 20),
@@ -168,7 +243,14 @@ class _CinemaScreenState extends State<CinemaScreen> {
 }
 
 class _CinemaData {
-  const _CinemaData({required this.venues, required this.screenings});
+  const _CinemaData({
+    required this.venues,
+    required this.screenings,
+    required this.movies,
+    required this.tmdbMessage,
+  });
   final List<Map<String, dynamic>> venues;
   final List<Map<String, dynamic>> screenings;
+  final List<Map<String, dynamic>> movies;
+  final String? tmdbMessage;
 }
