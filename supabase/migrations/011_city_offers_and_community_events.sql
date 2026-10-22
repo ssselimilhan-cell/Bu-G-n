@@ -59,3 +59,7 @@ create policy "Creators update own community events"
 drop policy if exists "Creators delete own community events" on public.community_events;
 create policy "Creators delete own community events"
   on public.community_events for delete to authenticated using (creator_id = auth.uid());
+
+grant select on public.offers to anon, authenticated;
+grant insert, update, delete on public.offers to authenticated;
+grant select, insert, update, delete on public.community_events to authenticated;
