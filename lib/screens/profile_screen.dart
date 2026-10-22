@@ -273,18 +273,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Gizlilik ve verilerin'),
         content: const SingleChildScrollView(
           child: Text(
-            'BUGÜN’de gizliliğin önemlidir. Uygulama, şehirindeki etkinlikleri ve gezilecek yerleri keşfetmene yardımcı olmak için aşağıdaki bilgileri kullanır.\\n\\n'
-            'HESAP VE PROFİL\\n'
-            '• Hesap oluşturduğunda e-posta adresin, oturum açma ve hesap güvenliği amacıyla işlenir.\\n'
-            '• Profil adın, seçtiğin şehir ve ilgi alanların tercihlerini hesabınla ilişkilendirmek ve sana uygun içerikleri göstermek için saklanır.\\n'
-            '• Giriş yapmadan kullandığında seçtiğin şehir ve ilgi alanları cihazında saklanır.\\n\\n'
-            'KONUM VE UYGULAMA İÇERİĞİ\\n'
-            '• Konum erişimi isteğe bağlıdır. İzin verdiğinde konumun yakındaki yerleri bulmak ve mesafeye göre sıralamak için kullanılabilir. Konum izni olmadan da şehir seçerek uygulamayı kullanabilirsin. Uygulama konumunu sürekli arka planda takip etmez.\\n'
-            '• Etkinlik, yer ve sinema bilgileri ilgili içerik sağlayıcılarından alınabilir. Harici bilet veya bilgi bağlantılarını açtığında ilgili hizmet sağlayıcının gizlilik koşulları geçerli olur.\\n\\n'
-            'VERİLERİNİN KORUNMASI VE TALEPLER\\n'
-            '• Hesap ve profil verileri, uygulamanın çalışması için kullanılan Supabase hizmetlerinde işlenir. Bilgilerin reklam amacıyla satılmaz.\\n'
-            '• Kişisel verilerinle ilgili bilgi, düzeltme veya silme talebi için sssselimilhan@gmail.com adresinden bize ulaşabilirsin. Hesap silme talebini Profil bölümündeki “Hesabı ve verileri sil” seçeneğinden de başlatabilirsin.\\n'
-            '• Konum iznini cihaz ayarlarından istediğin zaman değiştirebilirsin.\\n\\n'
+            'BUGÜN’de gizliliğin önemlidir. Uygulama, şehirindeki etkinlikleri ve gezilecek yerleri keşfetmene yardımcı olmak için aşağıdaki bilgileri kullanır.\n\n'
+            'HESAP VE PROFİL\n'
+            '• Hesap oluşturduğunda e-posta adresin, oturum açma ve hesap güvenliği amacıyla işlenir.\n'
+            '• Profil adın, seçtiğin şehir ve ilgi alanların tercihlerini hesabınla ilişkilendirmek ve sana uygun içerikleri göstermek için saklanır.\n'
+            '• Giriş yapmadan kullandığında seçtiğin şehir ve ilgi alanları cihazında saklanır.\n\n'
+            'KONUM VE UYGULAMA İÇERİĞİ\n'
+            '• Konum erişimi isteğe bağlıdır. İzin verdiğinde konumun yakındaki yerleri bulmak ve mesafeye göre sıralamak için kullanılabilir. Konum izni olmadan da şehir seçerek uygulamayı kullanabilirsin. Uygulama konumunu sürekli arka planda takip etmez.\n'
+            '• Etkinlik, yer ve sinema bilgileri ilgili içerik sağlayıcılarından alınabilir. Harici bilet veya bilgi bağlantılarını açtığında ilgili hizmet sağlayıcının gizlilik koşulları geçerli olur.\n\n'
+            'VERİLERİNİN KORUNMASI VE TALEPLER\n'
+            '• Hesap ve profil verileri, uygulamanın çalışması için kullanılan Supabase hizmetlerinde işlenir. Bilgilerin reklam amacıyla satılmaz.\n'
+            '• Kişisel verilerinle ilgili bilgi, düzeltme veya silme talebi için sssselimilhan@gmail.com adresinden bize ulaşabilirsin. Hesap silme talebini Profil bölümündeki “Hesabı ve verileri sil” seçeneğinden de başlatabilirsin.\n'
+            '• Konum iznini cihaz ayarlarından istediğin zaman değiştirebilirsin.\n\n'
             'Gizlilik soruların için: sssselimilhan@gmail.com',
           ),
         ),
