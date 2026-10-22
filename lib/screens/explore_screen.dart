@@ -8,6 +8,8 @@ import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 import 'cinema_screen.dart';
+import 'city_offers_screen.dart';
+import 'together_event_screen.dart';
 import '../widgets/city_picker_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -67,7 +69,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     _tabController = TabController(
-      length: 3,
+      length: 5,
       vsync: this,
     );
 
@@ -317,6 +319,8 @@ class _ExploreScreenState extends State<ExploreScreen>
             Tab(
               text: 'Sinema',
             ),
+            Tab(text: 'Fırsatlar'),
+            Tab(text: 'Birlikte'),
           ],
         ),
       ),
@@ -327,6 +331,8 @@ class _ExploreScreenState extends State<ExploreScreen>
             _buildPlacesTab(),
             _buildEventsTab(),
             CinemaScreen(city: _selectedCity),
+            CityOffersScreen(city: _selectedCity),
+            TogetherEventScreen(city: _selectedCity),
           ],
         ),
       ),
