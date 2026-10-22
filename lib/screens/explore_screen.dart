@@ -574,7 +574,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24),
           children: [
-            const SizedBox(height: 110),
+            const SizedBox(height: 28),
             const Icon(Icons.explore_off_outlined, size: 48, color: Colors.black54),
             const SizedBox(height: 14),
             Text(
@@ -672,7 +672,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             const SizedBox(
-              height: 150,
+              height: 32,
             ),
             Center(
               child: Padding(
