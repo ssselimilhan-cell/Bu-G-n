@@ -302,6 +302,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
         ),
         bottom: TabBar(
+          isScrollable: true,
           controller: _tabController,
           onTap: (_) {
             setState(() {});
