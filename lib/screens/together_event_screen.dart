@@ -30,7 +30,7 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     if (!_signedIn) return [];
     final rows = await _client.from('community_events').select(
       'id,title,city,starts_at,meeting_point,description,invite_code,creator_id'
-    ).eq('city', widget.city).order('starts_at').limit(100);
+    ).eq('city', widget.city).eq('creator_id', _client.auth.currentUser!.id).order('starts_at').limit(100);
     return rows.whereType<Map<String, dynamic>>().toList();
   }
 
