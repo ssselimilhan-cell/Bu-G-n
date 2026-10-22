@@ -217,122 +217,65 @@ extension _RecommendationQueueMethods on _RecommendationScreenState {
       return const SizedBox.shrink();
     }
 
+    final navigableCount = _queue
+        .where((item) =>
+            _activityLatitude(item) != null &&
+            _activityLongitude(item) != null)
+        .length;
+
     return SafeArea(
       top: false,
-      child:
-          Container(
-        padding:
-            const EdgeInsets.fromLTRB(
-          16,
-          10,
-          16,
-          10,
-        ),
-        decoration:
-            const BoxDecoration(
-          color:
-              Colors.white,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+        decoration: const BoxDecoration(
+          color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color:
-                  Color(0x16000000),
-              blurRadius:
-                  15,
-              offset:
-                  Offset(0, -5),
+              color: Color(0x16000000),
+              blurRadius: 15,
+              offset: Offset(0, -5),
             ),
           ],
         ),
-        child:
-            Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child:
-                  Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
-                children: [
-                  Text(
-                    '${_queue.length} aktivite seçildi',
-                    style:
-                        const TextStyle(
-                      fontSize:
-                          13,
-                      fontWeight:
-                          FontWeight
-                              .w900,
-                    ),
-                  ),
-                  const SizedBox(
-                    height:
-                        3,
-                  ),
-                  Text(
-                    '${_queue.where((item) => _activityLatitude(item) != null && _activityLongitude(item) != null).length} konum rotaya eklenecek',
-                    maxLines:
-                        1,
-                    overflow:
-                        TextOverflow
-                            .ellipsis,
-                    style:
-                        TextStyle(
-                      fontSize:
-                          10,
-                    ),
-                  ),
-                ],
+            Text(
+              '${_queue.length} aktivite seçildi',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(
-              width:
-                  10,
+            const SizedBox(height: 3),
+            Text(
+              navigableCount == 0
+                  ? 'Rota için konum bilgisi gerekli'
+                  : '$navigableCount konum tek rotada açılacak',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
             ),
-            FilledButton.icon(
-              onPressed:
-                  _buildRoute,
-              icon:
-                  const Icon(
-                Icons.route,
-                size:
-                    18,
-              ),
-              label:
-                  const Text(
-                'ROTAYI AÇ',
-                style:
-                    TextStyle(
-                  fontSize:
-                      10,
-                  fontWeight:
-                      FontWeight
-                          .w900,
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: navigableCount == 0 ? null : _buildRoute,
+                icon: const Icon(Icons.route, size: 18),
+                label: const Text(
+                  'ROTAYI AÇ',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
                 ),
-              ),
-              style:
-                  FilledButton
-                      .styleFrom(
-                backgroundColor:
-                    Colors.black,
-                foregroundColor:
-                    Colors.white,
-                minimumSize:
-                    const Size(
-                  0,
-                  45,
-                ),
-                padding:
-                    const EdgeInsets
-                        .symmetric(
-                  horizontal:
-                      14,
-                ),
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius
-                          .circular(
-                    13,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
                   ),
                 ),
               ),
