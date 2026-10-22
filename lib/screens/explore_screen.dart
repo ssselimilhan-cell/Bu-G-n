@@ -233,6 +233,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_tabController.index == 2) {
       return 'Sinema';
     }
+    if (_tabController.index == 3) {
+      return 'Haritada keşfet';
+    }
 
     return _selectedCategory ?? '$_selectedCity’yi keşfet';
   }
