@@ -405,13 +405,32 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'BUGÜN',
-          style: TextStyle(
-            fontSize: 27,
-            fontWeight:
-                FontWeight.w900,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF3FB),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.wb_twilight_rounded,
+                size: 24,
+                color: Color(0xFFE87935),
+              ),
+            ),
+            const SizedBox(width: 9),
+            const Text(
+              'BUGÜN',
+              style: TextStyle(
+                fontSize: 25,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -459,7 +478,8 @@ class _HomeScreenState
                 'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
                     TextStyle(
-                  fontSize: 30,
+                  fontSize: 28,
+                  color: const Color(0xFF183B5B),
                   fontWeight:
                       FontWeight.w900,
                   height: 1.06,
@@ -471,11 +491,11 @@ class _HomeScreenState
               ),
               _buildRecommendationButton(),
               const SizedBox(
-                height: 25,
+                height: 18,
               ),
               _buildCategories(),
               const SizedBox(
-                height: 28,
+                height: 22,
               ),
               _buildEventsSection(),
               const SizedBox(
@@ -577,131 +597,57 @@ class _HomeScreenState
 
   Widget _buildCategories() {
     const categories = [
-      {
-        'name': 'Doğa',
-        'icon': Icons
-            .park_outlined,
-      },
-      {
-        'name': 'Park',
-        'icon': Icons
-            .grass_outlined,
-      },
-      {
-        'name': 'Tarih',
-        'icon': Icons
-            .account_balance_outlined,
-      },
-      {
-        'name': 'Müze',
-        'icon': Icons
-            .museum_outlined,
-      },
-      {
-        'name': 'Kültür',
-        'icon': Icons
-            .theater_comedy_outlined,
-      },
-      {
-        'name': 'Sinema',
-        'icon': Icons
-            .movie_outlined,
-      },
+      {'name': 'Doğa', 'icon': Icons.park_outlined},
+      {'name': 'Park', 'icon': Icons.grass_outlined},
+      {'name': 'Tarih', 'icon': Icons.account_balance_outlined},
+      {'name': 'Müze', 'icon': Icons.museum_outlined},
+      {'name': 'Kültür', 'icon': Icons.theater_comedy_outlined},
+      {'name': 'Sinema', 'icon': Icons.movie_outlined},
     ];
 
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'KATEGORİLER',
-          style:
-              TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            fontWeight:
-                FontWeight.w900,
+            fontWeight: FontWeight.w900,
             letterSpacing: 1,
-            color:
-                Colors.black54,
+            color: Colors.black54,
           ),
         ),
-        const SizedBox(
-          height: 10,
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics:
-              const NeverScrollableScrollPhysics(),
-          itemCount:
-              categories.length,
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1.45,
-          ),
-          itemBuilder:
-              (context, index) {
-            final item =
-                categories[index];
-
-            return InkWell(
-              borderRadius:
-                  BorderRadius.circular(
-                16,
-              ),
-              onTap: () =>
-                  _openCategory(
-                item['name']
-                    as String,
-              ),
-              child:
-                  Container(
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(
-                    16,
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: categories.map((item) {
+            final name = item['name'] as String;
+            final icon = item['icon'] as IconData;
+            return Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: () => _openCategory(name),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFE6E6E2)),
                   ),
-                  border:
-                      Border.all(
-                    color:
-                        Colors.grey.shade200,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 16, color: const Color(0xFF2769A6)),
+                      const SizedBox(width: 6),
+                      Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    ],
                   ),
-                ),
-                child:
-                    Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .center,
-                  children: [
-                    Icon(
-                      item['icon']
-                          as IconData,
-                      size: 23,
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    Text(
-                      item['name']
-                          as String,
-                      style:
-                          const TextStyle(
-                        fontSize:
-                            11,
-                        fontWeight:
-                            FontWeight.w800,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             );
-          },
+          }).toList(),
         ),
       ],
     );
