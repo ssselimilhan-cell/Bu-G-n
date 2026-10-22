@@ -1,4 +1,4 @@
-name: BUGUN Google Play AAB
+name: BUGUN Android release builds
 
 on:
   push:
@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  build-aab:
+  build-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -104,5 +104,21 @@ jobs:
         with:
           name: bugun-google-play-aab
           path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build signed installable APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/bugun-upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
