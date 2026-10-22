@@ -61,6 +61,7 @@ class _HomeScreenState
       EventPeriod.today;
 
   int _selectedIndex = 0;
+  int _exploreScreenVersion = 0;
   bool _exploreInitialMap = false;
 
   String _eventSearch = '';
@@ -353,7 +354,10 @@ class _HomeScreenState
   ) {
     setState(() {
       _selectedIndex = index;
-      if (index == 1) _exploreInitialMap = false;
+      if (index == 1) {
+        _exploreInitialMap = false;
+        _exploreScreenVersion++;
+      }
     });
     if (index == 0) {
       _loadHome();
@@ -364,6 +368,7 @@ class _HomeScreenState
     setState(() {
       _exploreInitialMap = true;
       _selectedIndex = 1;
+      _exploreScreenVersion++;
     });
   }
 
@@ -394,7 +399,10 @@ class _HomeScreenState
     switch (_selectedIndex) {
       case 1:
         return Scaffold(
-          body: ExploreScreen(initialMapView: _exploreInitialMap),
+          body: ExploreScreen(
+            key: ValueKey('explore-$_exploreScreenVersion'),
+            initialMapView: _exploreInitialMap,
+          ),
           bottomNavigationBar: _buildBottomNavigationBar(),
         );
       case 2:
