@@ -232,6 +232,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _openWebPage('mailto:ssselimilhan@gmail.com?subject=BUG%C3%9CN%20hesap%20ve%20veri%20silme%20talebi&body=Merhaba%2C%0A%0ABUG%C3%9CN%20hesab%C4%B1m%C4%B1n%20ve%20ili%C5%9Fkili%20verilerimin%20silinmesini%20talep%20ediyorum.%0A%0AHesab%C4%B1mda%20kulland%C4%B1%C4%9F%C4%B1m%20e-posta%20adresi%3A%20$email%0A');
   }
 
+  void _showAboutAndSources() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hakkında ve veri kaynakları'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'BUGÜN, şehir keşfi ve etkinlik bilgileri sunan bağımsız bir uygulamadır.\n\n'
+            'Sinema film kataloğunda The Movie Database (TMDB) API kullanılır. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.\n\n'
+            'TMDB, BUGÜN uygulamasını desteklemez veya onaylamaz. Film bilgileri ve afişler TMDB kaynaklıdır; '
+            'Türkiye’deki gerçek sinema salonu ve seans saatleri TMDB film kataloğundan sağlanmaz.\n\n'
+            'TMDB logo ve atıf koşulları: https://www.themoviedb.org/about/logos-attribution\n'
+            'API koşulları ve ticari lisans: https://developer.themoviedb.org/docs/faq',
+            style: TextStyle(height: 1.45),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('KAPAT'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _openWebPage('https://www.themoviedb.org/about/logos-attribution');
+            },
+            child: const Text('TMDB ATIF KOŞULLARI'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -315,6 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingCard(icon: Icons.location_searching_rounded, title: 'Konum izni', subtitle: 'Yakınındaki etkinlikleri sıralamaya yardımcı olur', onTap: _requestLocation),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
+                  _settingCard(icon: Icons.info_outline_rounded, title: 'Hakkında ve veri kaynakları', subtitle: 'TMDB atfı ve veri kullanımı', onTap: _showAboutAndSources),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Anlık bildirimler bu sürümde etkin değil', onTap: () => _showSnack('Bildirim gönderimi henüz etkinleştirilmedi; şu anda bildirim izni istenmiyor.')),
                   const SizedBox(height: 24),
