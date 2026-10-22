@@ -29,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Set<String> _selectedInterests = {'🌳 Doğa', '🍔 Yeme-İçme'};
   bool _loading = true;
   bool _saving = false;
+  bool _interestSaveNoticeShown = false;
   User? _user;
   String? _displayName;
   String? _message;
@@ -93,12 +94,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _savePreferences() async {
-    setState(() => _saving = true);
+  Future<void> _savePreferences({bool showSuccess = true}) async {
+    if (mounted) setState(() => _saving = true);
     try {
       await _cityService.saveSelectedCity(_city);
       await _saveProfile();
-      if (mounted) _showSnack('Tercihlerin kaydedildi.');
+      if (mounted && showSuccess) _showSnack('Tercihlerin kaydedildi.');
     } catch (_) {
       if (mounted) _showSnack('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
     } finally {
@@ -118,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (chosen == null || !mounted || chosen == _city) return;
     setState(() => _city = chosen);
-    await _savePreferences();
+    await _savePreferences(showSuccess: false);
     if (mounted) _showSnack('Şehir tercihi kaydedildi: $chosen');
   }
 
@@ -130,7 +131,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _selectedInterests.add(interest);
       }
     });
-    await _savePreferences();
+    // Persist every change, but show the success notice only once per visit.
+    final showNotice = !_interestSaveNoticeShown;
+    _interestSaveNoticeShown = true;
+    await _savePreferences(showSuccess: showNotice);
   }
 
   Future<void> _openAccount() async {
@@ -294,7 +298,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 2),
+      ));
+  }
+
+  @override
+  void dispose() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    super.dispose();
   }
 
   @override
