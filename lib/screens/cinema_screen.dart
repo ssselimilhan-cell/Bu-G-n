@@ -96,7 +96,18 @@ class _CinemaScreenState extends State<CinemaScreen> {
             children: [
               Text('${widget.city} sinemaları', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
               const SizedBox(height: 6),
-              const Text('Salon ve seans bilgileri, yetkili veri sağlayıcıları bağlandığında burada güncel olarak gösterilir.', style: TextStyle(height: 1.4)),
+              const Text('Güncel seanslar için resmî sinema sağlayıcısının sayfasını açabilirsin. Uygulama, lisans sözleşmesi olmayan sitelerden seans verisi kopyalamaz.', style: TextStyle(height: 1.4)),
+              const SizedBox(height: 12),
+              Card(
+                color: Colors.white,
+                child: ListTile(
+                  leading: const Icon(Icons.verified_outlined),
+                  title: const Text('Paribu Cineverse — resmî seanslar'),
+                  subtitle: const Text('Film, salon ve bilet bilgileri sağlayıcının kendi sitesinde'),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _openLink('https://www.paribucineverse.com/'),
+                ),
+              ),
               const SizedBox(height: 20),
               const Text('VİZYONDAKİ SEANSLAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
