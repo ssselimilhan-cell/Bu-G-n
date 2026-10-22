@@ -106,6 +106,14 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   @override
+  void didUpdateWidget(covariant ExploreScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialMapView != widget.initialMapView) {
+      _tabController.animateTo(widget.initialMapView ? 3 : 0);
+    }
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     _searchController.removeListener(
