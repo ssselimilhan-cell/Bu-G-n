@@ -13,46 +13,22 @@ class PlaceService {
   }) async {
     const columns = 'id,name,category,city,address,latitude,longitude,website,short_description,long_description,source_url,verified_at,content_review_status,is_free,visit_duration_min,indoor,outdoor,parking_available,kids_friendly,pet_friendly,difficulty_level,best_time,tags,verified,trust_score,place_type';
 
+    // Fetch a bounded active set first, then normalize city names locally.
+    // This avoids relying on database collation for Turkish dotted/dotless I.
     var query = _client
         .from('places')
         .select(columns)
-        .ilike('city', '%${city.trim()}%')
         .eq('is_active', true);
 
     if (category != null &&
         category.trim().isNotEmpty &&
         category != 'Tümü') {
-      query = query.eq(
-        'category',
-        category,
-      );
+      query = query.eq('category', category);
     }
 
-    final rows = await query.limit(limit);
-
-    // The city filter is normally handled by Postgres. If it returns no rows,
-    // retry the active list and normalize the city locally so Turkish casing
-    // or unexpected whitespace in a stored city name cannot blank the screen.
-    if (rows.isNotEmpty) {
-      return rows
-          .whereType<Map<String, dynamic>>()
-          .map(Place.fromMap)
-          .toList();
-    }
-
-    var fallback = _client
-        .from('places')
-        .select(columns)
-        .eq('is_active', true);
-    if (category != null &&
-        category.trim().isNotEmpty &&
-        category != 'Tümü') {
-      fallback = fallback.eq('category', category);
-    }
-
-    final fallbackRows = await fallback.limit(2000);
+    final rows = await query.limit(2000);
     final normalizedCity = _normalizeCity(city);
-    return fallbackRows
+    return rows
         .whereType<Map<String, dynamic>>()
         .where((row) => _normalizeCity(row['city']?.toString() ?? '') == normalizedCity)
         .map(Place.fromMap)
