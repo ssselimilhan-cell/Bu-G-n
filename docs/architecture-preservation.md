@@ -22,3 +22,10 @@
 - Yer/etkinlik verileri Supabase'ten gelir; şehir filtresi mevcut şehir tercihine bağlıdır.
 - Sinema katalog tabloları `cinema_venues`, `cinema_movies`, `cinema_screenings` olarak ayrıdır. Şu anda canlı veritabanında bu tablolarda sinema salonu/seans kaydı bulunmadığı için seanslar gösterilemez. Gerçek seanslar için lisanslı/resmî bir veri sağlayıcısı veya doğrulanmış veri aktarımı bağlanmalıdır; sahte seans üretilmemelidir.
 - Özellik dalı `restore-core-features` üzerinde APK derlemesi ve `flutter analyze` çalıştıran doğrulama iş akışı bulunur.
+
+
+## 2026-10-22 bağlantı ve sinema kontrolü
+- Flutter uygulamasındaki `AppConfig` varsayılan URL'si `https://yvshqvethzbwcgpqaptd.supabase.co`; kontrol edilen Supabase projesiyle eşleşiyor.
+- Supabase'te `public.places` tablosunda 2.985 kayıt var ve sorgulanan şehirlerde `is_active=true` kayıtları mevcut (ör. Ankara 97, Adana 43). `public.events` tablosunda da aktif ve ileri tarihli etkinlikler mevcut (ör. Ankara 204, Adana 42). `places` ve `events` için anon/authenticated SELECT politikaları yalnızca aktif kayıtları okumaya izin veriyor. Bu, veritabanında veri bulunduğunu ve uygulama yapılandırmasının doğru projeye işaret ettiğini doğrular; gerçek Android cihazdaki ağ isteği ayrıca cihazda çalıştırılarak doğrulanmalıdır.
+- Sinema tabloları canlı veritabanında boş: `cinema_venues=0`, `cinema_movies=0`, `cinema_screenings=0`. Dolayısıyla sinema ekranının boş olmasının doğrudan nedeni veri aktarımının/sağlayıcı bağlantısının henüz kurulmamasıdır; Supabase bağlantısı genel olarak yanlış projeye gitmiyor.
+- Araştırmada TMDB, film kataloğu/görsel API'si sunuyor; ücretsiz kullanım ticari olmayan projeler ve atıf koşullarıyla sınırlı, ticari kullanım için lisans görüşmesi gerekiyor. TMDB film katalog API'si Türkiye'deki gerçek sinema seanslarının kaynağı değildir. Paribu Cineverse resmî sitesinde güncel seanslar yayınlanıyor ancak kamuya açık, lisanslı bir seans API'si doğrulanamadı. Uygulamaya resmî Paribu Cineverse sitesine yönlendirme eklendi; izinsiz site API'si kazınmıyor. Uygulama içinde otomatik seans göstermek için sağlayıcıdan yazılı veri/API izni ve kimlik bilgileri gerekir.
