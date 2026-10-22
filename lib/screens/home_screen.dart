@@ -606,46 +606,41 @@ class _HomeScreenState
   }
 
   Widget _buildCommunityShortcuts() {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _homeShortcut(
-                icon: Icons.local_offer_outlined,
-                title: 'Şehir fırsatları',
-                subtitle: 'Şehrindeki fırsatları gör',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => CityOffersScreen(city: _selectedCity),
-                  ),
-                ),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.local_offer_outlined,
+            title: 'Şehir fırsatları',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => CityOffersScreen(city: _selectedCity),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _homeShortcut(
-                icon: Icons.groups_outlined,
-                title: 'Birlikte planla',
-                subtitle: 'Arkadaşlarınla plan yap',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => TogetherEventScreen(city: _selectedCity),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 10),
-        _homeShortcut(
-          icon: Icons.map_outlined,
-          title: 'Haritada keşfet',
-          subtitle: 'Yerleri harita üzerinde gör',
-          onTap: _openExploreMap,
+        const SizedBox(width: 8),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.groups_outlined,
+            title: 'Birlikte planla',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => TogetherEventScreen(city: _selectedCity),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.map_outlined,
+            title: 'Haritada keşfet',
+            onTap: _openExploreMap,
+          ),
         ),
       ],
     );
@@ -654,30 +649,34 @@ class _HomeScreenState
   Widget _homeShortcut({
     required IconData icon,
     required String title,
-    required String subtitle,
     required VoidCallback onTap,
   }) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(15),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(15),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 106),
-          padding: const EdgeInsets.all(13),
+          constraints: const BoxConstraints(minHeight: 104),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(15),
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 23),
-              const SizedBox(height: 9),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-              const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(color: Colors.black54, fontSize: 10, height: 1.3)),
+              Icon(icon, size: 22),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, height: 1.15),
+              ),
             ],
           ),
         ),
