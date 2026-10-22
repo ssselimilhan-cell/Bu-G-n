@@ -353,10 +353,18 @@ class _HomeScreenState
   ) {
     setState(() {
       _selectedIndex = index;
+      if (index == 1) _exploreInitialMap = false;
     });
     if (index == 0) {
       _loadHome();
     }
+  }
+
+  void _openExploreMap() {
+    setState(() {
+      _exploreInitialMap = true;
+      _selectedIndex = 1;
+    });
   }
 
   @override
@@ -532,12 +540,8 @@ class _HomeScreenState
               const SizedBox(
                 height: 25,
               ),
-              _buildCategories(),
-              const SizedBox(height: 16),
               _buildCommunityShortcuts(),
-              const SizedBox(
-                height: 28,
-              ),
+              const SizedBox(height: 24),
               _buildEventsSection(),
               const SizedBox(
                 height: 30,
@@ -546,7 +550,6 @@ class _HomeScreenState
               const SizedBox(
                 height: 25,
               ),
-              _buildExploreButton(),
             ],
           ),
         ),
@@ -595,34 +598,46 @@ class _HomeScreenState
   }
 
   Widget _buildCommunityShortcuts() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: _homeShortcut(
-            icon: Icons.local_offer_outlined,
-            title: 'Şehir fırsatları',
-            subtitle: 'Yakınındaki fırsatları gör',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => CityOffersScreen(city: _selectedCity),
+        Row(
+          children: [
+            Expanded(
+              child: _homeShortcut(
+                icon: Icons.local_offer_outlined,
+                title: 'Şehir fırsatları',
+                subtitle: 'Şehrindeki fırsatları gör',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => CityOffersScreen(city: _selectedCity),
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _homeShortcut(
+                icon: Icons.groups_outlined,
+                title: 'Birlikte planla',
+                subtitle: 'Arkadaşlarınla plan yap',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => TogetherEventScreen(city: _selectedCity),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _homeShortcut(
-            icon: Icons.groups_outlined,
-            title: 'Birlikte planla',
-            subtitle: 'Arkadaşlarınla plan yap',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => TogetherEventScreen(city: _selectedCity),
-              ),
-            ),
-          ),
+        const SizedBox(height: 10),
+        _homeShortcut(
+          icon: Icons.map_outlined,
+          title: 'Haritada keşfet',
+          subtitle: 'Yerleri harita üzerinde gör',
+          onTap: _openExploreMap,
         ),
       ],
     );
@@ -1352,51 +1367,7 @@ class _HomeScreenState
     );
   }
 
-  Widget _buildExploreButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child:
-          OutlinedButton.icon(
-        onPressed: () => setState(() {
-          _exploreInitialMap = true;
-          _selectedIndex = 1;
-        }),
-        icon:
-            const Icon(
-          Icons.map_outlined,
-        ),
-        label:
-            const Text(
-          'Haritada keşfet',
-          style:
-              TextStyle(
-            fontWeight:
-                FontWeight.w800,
-          ),
-        ),
-        style:
-            OutlinedButton.styleFrom(
-          foregroundColor:
-              Colors.black,
-          backgroundColor:
-              Colors.white,
-          side:
-              BorderSide(
-            color:
-                Colors.grey.shade300,
-          ),
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(
-              17,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyCard(
     String text,
