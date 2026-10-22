@@ -162,10 +162,10 @@ class _RecommendationScreenState
                     padding:
                         const EdgeInsets
                             .fromLTRB(
-                      20,
-                      8,
-                      20,
-                      10,
+                      14,
+                      2,
+                      14,
+                      4,
                     ),
                     child:
                         Column(
@@ -177,7 +177,7 @@ class _RecommendationScreenState
                                 const EdgeInsets
                                     .only(
                               bottom:
-                                  95,
+                                  12,
                             ),
                             children: [
                               const Text(
@@ -185,7 +185,7 @@ class _RecommendationScreenState
                                 style:
                                     TextStyle(
                                   fontSize:
-                                      29,
+                                      24,
                                   fontWeight:
                                       FontWeight
                                           .w900,
@@ -197,7 +197,7 @@ class _RecommendationScreenState
                               ),
                               const SizedBox(
                                 height:
-                                    20,
+                                    10,
                               ),
                               _buildLocationStatus(),
                               _buildFilterChips(),
