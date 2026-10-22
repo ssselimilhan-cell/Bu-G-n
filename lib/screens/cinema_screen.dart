@@ -47,6 +47,25 @@ class _CinemaScreenState extends State<CinemaScreen> {
         .order('starts_at')
         .limit(100);
 
+    List<Map<String, dynamic>> googleCinemas = [];
+    String? googlePlacesMessage;
+    try {
+      final response = await client.functions.invoke(
+        'google-cinemas',
+        queryParameters: {'city': widget.city},
+      );
+      if (response.status == 200 && response.data is Map) {
+        final results = (response.data as Map)['places'];
+        if (results is List) {
+          googleCinemas = results.whereType<Map<String, dynamic>>().toList();
+        }
+      } else {
+        googlePlacesMessage = 'Google Places yanıtı alınamadı (HTTP ${response.status}).';
+      }
+    } catch (_) {
+      googlePlacesMessage = 'Google Places API henüz yapılandırılmamış olabilir.';
+    }
+
     List<Map<String, dynamic>> movies = [];
     String? tmdbMessage;
     try {
@@ -68,6 +87,8 @@ class _CinemaScreenState extends State<CinemaScreen> {
 
     return _CinemaData(
       venues: venues.whereType<Map<String, dynamic>>().toList(),
+      googleCinemas: googleCinemas,
+      googlePlacesMessage: googlePlacesMessage,
       screenings: screenings.whereType<Map<String, dynamic>>().toList(),
       movies: movies,
       tmdbMessage: tmdbMessage,
@@ -129,6 +150,43 @@ class _CinemaScreenState extends State<CinemaScreen> {
                   onTap: () => _openLink('https://www.paribucineverse.com/'),
                 ),
               ),
+              const SizedBox(height: 20),
+              Text('${widget.city.toUpperCase()} SİNEMA SALONLARI', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              const SizedBox(height: 8),
+              if (data.googlePlacesMessage != null)
+                _empty('${data.googlePlacesMessage} Google Cloud Console üzerinden Places API (New) etkinleştirilmeli ve GOOGLE_PLACES_API_KEY Supabase Function Secret olarak eklenmeli.')
+              else if (data.googleCinemas.isEmpty)
+                _empty('Google Places bu şehir için sinema sonucu döndürmedi.')
+              else
+                ...data.googleCinemas.map((place) {
+                  final displayName = place['displayName'];
+                  final name = displayName is Map ? displayName['text']?.toString() : null;
+                  final address = place['formattedAddress']?.toString() ?? '';
+                  final mapUrl = place['googleMapsUri']?.toString();
+                  final rating = place['rating']?.toString();
+                  final website = place['websiteUri']?.toString();
+                  final phone = place['nationalPhoneNumber']?.toString();
+                  final hours = place['regularOpeningHours'];
+                  final weekdayDescriptions = hours is Map ? hours['weekdayDescriptions'] : null;
+                  final subtitleParts = <String>[
+                    if (address.isNotEmpty) address,
+                    if (rating != null) 'Google puanı: $rating',
+                    if (phone != null && phone.isNotEmpty) phone,
+                    if (weekdayDescriptions is List) weekdayDescriptions.whereType<String>().join(' • '),
+                  ];
+                  return Card(
+                    color: Colors.white,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: const Icon(Icons.theaters_outlined),
+                      title: Text(name ?? 'Sinema salonu', style: const TextStyle(fontWeight: FontWeight.w800)),
+                      subtitle: Text(subtitleParts.join('\\n'), maxLines: 4, overflow: TextOverflow.ellipsis),
+                      isThreeLine: subtitleParts.length > 1,
+                      trailing: const Icon(Icons.map_outlined),
+                      onTap: () => _openLink(mapUrl ?? website),
+                    ),
+                  );
+                }),
               const SizedBox(height: 20),
               const Text('TÜRKİYE’DE VİZYONDA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
@@ -208,7 +266,7 @@ class _CinemaScreenState extends State<CinemaScreen> {
                   );
                 }),
               const SizedBox(height: 18),
-              const Text('SİNEMA SALONLARI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              const Text('KAYITLI SİNEMA SALONLARI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (data.venues.isEmpty)
                 _empty('Bu şehir için henüz doğrulanmış salon kaydı bulunmuyor.')
@@ -245,11 +303,15 @@ class _CinemaScreenState extends State<CinemaScreen> {
 class _CinemaData {
   const _CinemaData({
     required this.venues,
+    required this.googleCinemas,
+    required this.googlePlacesMessage,
     required this.screenings,
     required this.movies,
     required this.tmdbMessage,
   });
   final List<Map<String, dynamic>> venues;
+  final List<Map<String, dynamic>> googleCinemas;
+  final String? googlePlacesMessage;
   final List<Map<String, dynamic>> screenings;
   final List<Map<String, dynamic>> movies;
   final String? tmdbMessage;
