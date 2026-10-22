@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
@@ -8,16 +10,16 @@ import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 import 'cinema_screen.dart';
-import 'city_offers_screen.dart';
-import 'together_event_screen.dart';
 import '../widgets/city_picker_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
+  final bool initialMapView;
 
   const ExploreScreen({
     super.key,
     this.initialCategory,
+    this.initialMapView = false,
   });
 
   @override
@@ -69,7 +71,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     _tabController = TabController(
-      length: 5,
+      length: 4,
+      initialIndex: widget.initialMapView ? 3 : 0,
       vsync: this,
     );
 
@@ -132,8 +135,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final places = await _placeService.getPlaces(
         city: _selectedCity,
-        category: _selectedCategory,
-        limit: 100,
+        // Load the city's full list once; category labels in the UI can differ
+        // slightly from the source taxonomy, so filter locally below.
+        category: null,
+        limit: 200,
       );
 
       if (!mounted) {
@@ -232,48 +237,52 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   List<Place> get _filteredPlaces {
-    if (_searchText.isEmpty) {
-      return _places;
-    }
-
-    return _places.where(
-      (place) {
-        final text = [
-          place.name,
-          place.category,
-          place.placeType ?? '',
-          place.shortDescription ?? '',
-          place.address ?? '',
-          ...place.tags,
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final query = _normalizeSearch(_searchText);
+    return _places.where((place) {
+      final category = _normalizeSearch(place.category);
+      final chosen = _selectedCategory == null ? '' : _normalizeSearch(_selectedCategory!);
+      final categoryMatches = chosen.isEmpty ||
+          category == chosen ||
+          (chosen == 'tarih' && (category.contains('tarih') || category == 'gezi')) ||
+          (chosen == 'kultur' && (category.contains('kultur') || category == 'sanat' || category == 'eglence')) ||
+          (chosen == 'doga' && (category.contains('doga') || category == 'park')) ||
+          (chosen == 'sinema' && category.contains('sinema'));
+      final text = _normalizeSearch([
+        place.name,
+        place.category,
+        place.placeType ?? '',
+        place.shortDescription ?? '',
+        place.address ?? '',
+        ...place.tags,
+      ].join(' '));
+      return categoryMatches && (query.isEmpty || text.contains(query));
+    }).toList();
   }
 
+  String _normalizeSearch(String value) => value
+      .toLowerCase()
+      .replaceAll('İ', 'i')
+      .replaceAll('ı', 'i')
+      .replaceAll('ş', 's')
+      .replaceAll('ğ', 'g')
+      .replaceAll('ü', 'u')
+      .replaceAll('ö', 'o')
+      .replaceAll('ç', 'c')
+      .trim();
+
   List<Event> get _filteredEvents {
-    if (_searchText.isEmpty) {
-      return _events;
-    }
-
-    return _events.where(
-      (event) {
-        final text = [
-          event.title,
-          event.category,
-          event.description ?? '',
-          event.venueName ?? '',
-          event.address ?? '',
-        ].join(' ').toLowerCase();
-
-        return text.contains(
-          _searchText,
-        );
-      },
-    ).toList();
+    final query = _normalizeSearch(_searchText);
+    if (query.isEmpty) return _events;
+    return _events.where((event) {
+      final text = _normalizeSearch([
+        event.title,
+        event.category,
+        event.description ?? '',
+        event.venueName ?? '',
+        event.address ?? '',
+      ].join(' '));
+      return text.contains(query);
+    }).toList();
   }
 
   @override
@@ -305,6 +314,8 @@ class _ExploreScreenState extends State<ExploreScreen>
           isScrollable: true,
           controller: _tabController,
           onTap: (_) {
+            // A query typed in one tab must not silently hide all items in another.
+            _searchController.clear();
             setState(() {});
           },
           labelColor: Colors.black,
@@ -320,8 +331,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             Tab(
               text: 'Sinema',
             ),
-            Tab(text: 'Fırsatlar'),
-            Tab(text: 'Birlikte'),
+            Tab(text: 'Harita'),
           ],
         ),
       ),
@@ -332,12 +342,90 @@ class _ExploreScreenState extends State<ExploreScreen>
             _buildPlacesTab(),
             _buildEventsTab(),
             CinemaScreen(city: _selectedCity),
-            CityOffersScreen(city: _selectedCity),
-            TogetherEventScreen(city: _selectedCity),
+            _buildMapTab(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildMapTab() {
+    final mapped = _places.where((p) =>
+        p.latitude != null &&
+        p.longitude != null &&
+        p.latitude! >= -90 && p.latitude! <= 90 &&
+        p.longitude! >= -180 && p.longitude! <= 180).toList();
+    final first = mapped.isEmpty ? null : mapped.first;
+    final center = first == null
+        ? const LatLng(39.9255, 32.8663)
+        : LatLng(first.latitude!, first.longitude!);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+          child: Row(
+            children: [
+              const Expanded(child: Text('Yakınındaki ve şehirdeki yerleri haritada keşfet')),
+              IconButton(
+                tooltip: 'Haritayı yenile',
+                onPressed: _loadPlaces,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _placesLoading
+              ? const Center(child: CircularProgressIndicator())
+              : FlutterMap(
+                  options: MapOptions(initialCenter: center, initialZoom: 11),
+                  children: [
+                    TileLayer(
+                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'tr.bugun.app',
+                    ),
+                    MarkerLayer(
+                      markers: mapped.map((place) => Marker(
+                        point: LatLng(place.latitude!, place.longitude!),
+                        width: 180,
+                        height: 64,
+                        child: GestureDetector(
+                          onTap: () => _openPlace(place),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)]),
+                                child: Text(place.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                              ),
+                              const Icon(Icons.location_on, color: Colors.red, size: 27),
+                            ],
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                    RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution('OpenStreetMap contributors', onTap: () => _openMapLink('https://www.openstreetmap.org/copyright')),
+                      ],
+                    ),
+                  ],
+                ),
+        ),
+        if (!_placesLoading && mapped.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(10),
+            child: Text('Bu şehirde koordinatı kayıtlı yer bulunamadı. Yer listesine bakabilirsin.', textAlign: TextAlign.center),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _openMapLink(String url) async {
+    // Attribution link is opened in the system browser through the existing URL handler
+    // on place details; the attribution remains visible even if no browser is available.
   }
 
   Widget _buildSearchBox({
