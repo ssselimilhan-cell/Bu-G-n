@@ -30,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _interestSaveNoticeShown = false;
+  ScaffoldMessengerState? _messenger;
   User? _user;
   String? _displayName;
   String? _message;
@@ -38,6 +39,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   Future<void> _loadProfile() async {
@@ -298,7 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSnack(String text) {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = _messenger ?? ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
@@ -309,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _messenger?.hideCurrentSnackBar();
     super.dispose();
   }
 
