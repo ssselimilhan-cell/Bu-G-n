@@ -187,64 +187,75 @@ class EventService {
     required DateTime end,
     required int limit,
   }) async {
-    final rows = await _client
+    const columns = '''
+      id,
+      title,
+      category,
+      city,
+      subcategory,
+      description,
+      starts_at,
+      ends_at,
+      price_min,
+      price_max,
+      image_url,
+      source_url,
+      ticket_url,
+      venue_name,
+      venue_address,
+      latitude,
+      longitude,
+      trust_score,
+      recommendation_score,
+      is_active
+    ''';
+
+    var rows = await _client
         .from('events')
-        .select('''
-          id,
-          title,
-          category,
-          subcategory,
-          description,
-          starts_at,
-          ends_at,
-          price_min,
-          price_max,
-          image_url,
-          source_url,
-          ticket_url,
-          venue_name,
-          venue_address,
-          latitude,
-          longitude,
-          trust_score,
-          recommendation_score,
-          is_active
-        ''')
-        .ilike(
-          'city',
-          '%${city.trim()}%',
-        )
-        .eq(
-          'is_active',
-          true,
-        )
-        .gte(
-          'starts_at',
-          start.toIso8601String(),
-        )
-        .lte(
-          'starts_at',
-          end.toIso8601String(),
-        )
-        .order(
-          'starts_at',
-          ascending: true,
-        )
-        .order(
-          'recommendation_score',
-          ascending: false,
-        )
+        .select(columns)
+        .ilike('city', '%${city.trim()}%')
+        .eq('is_active', true)
+        .gte('starts_at', start.toIso8601String())
+        .lte('starts_at', end.toIso8601String())
+        .order('starts_at', ascending: true)
+        .order('recommendation_score', ascending: false)
         .limit(limit);
+
+    // Retry without the SQL city match when it returns no rows; then compare
+    // normalized city names locally to tolerate Turkish casing/spacing.
+    if (rows.isEmpty) {
+      rows = await _client
+          .from('events')
+          .select(columns)
+          .eq('is_active', true)
+          .gte('starts_at', start.toIso8601String())
+          .lte('starts_at', end.toIso8601String())
+          .order('starts_at', ascending: true)
+          .order('recommendation_score', ascending: false)
+          .limit(2000);
+
+      final normalizedCity = _normalizeCity(city);
+      rows = rows.where((row) =>
+          _normalizeCity(row['city']?.toString() ?? '') == normalizedCity).toList();
+    }
 
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Event.fromMap)
-        .where(
-          (event) =>
-              event.startsAt.isAfter(
-            DateTime.now(),
-          ),
-        )
+        .where((event) => event.startsAt.isAfter(DateTime.now()))
+        .take(limit)
         .toList();
   }
+
+  String _normalizeCity(String value) => value
+      .trim()
+      .toLowerCase()
+      .replaceAll('İ', 'i')
+      .replaceAll('ı', 'i')
+      .replaceAll('ş', 's')
+      .replaceAll('ğ', 'g')
+      .replaceAll('ü', 'u')
+      .replaceAll('ö', 'o')
+      .replaceAll('ç', 'c');
+
 }
