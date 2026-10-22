@@ -210,37 +210,20 @@ class EventService {
       is_active
     ''';
 
-    var rows = await _client
+    final rows = await _client
         .from('events')
         .select(columns)
-        .ilike('city', '%${city.trim()}%')
         .eq('is_active', true)
         .gte('starts_at', start.toIso8601String())
         .lte('starts_at', end.toIso8601String())
         .order('starts_at', ascending: true)
         .order('recommendation_score', ascending: false)
-        .limit(limit);
+        .limit(2000);
 
-    // Retry without the SQL city match when it returns no rows; then compare
-    // normalized city names locally to tolerate Turkish casing/spacing.
-    if (rows.isEmpty) {
-      rows = await _client
-          .from('events')
-          .select(columns)
-          .eq('is_active', true)
-          .gte('starts_at', start.toIso8601String())
-          .lte('starts_at', end.toIso8601String())
-          .order('starts_at', ascending: true)
-          .order('recommendation_score', ascending: false)
-          .limit(2000);
-
-      final normalizedCity = _normalizeCity(city);
-      rows = rows.where((row) =>
-          _normalizeCity(row['city']?.toString() ?? '') == normalizedCity).toList();
-    }
-
+    final normalizedCity = _normalizeCity(city);
     return rows
         .whereType<Map<String, dynamic>>()
+        .where((row) => _normalizeCity(row['city']?.toString() ?? '') == normalizedCity)
         .map(Event.fromMap)
         .where((event) => event.startsAt.isAfter(DateTime.now()))
         .take(limit)
