@@ -268,7 +268,7 @@ extension _RecommendationQueueMethods on _RecommendationScreenState {
                     height:
                         3,
                   ),
-                  const Text(
+                  Text(
                     '${_queue.where((item) => _activityLatitude(item) != null && _activityLongitude(item) != null).length} konum rotaya eklenecek',
                     maxLines:
                         1,
