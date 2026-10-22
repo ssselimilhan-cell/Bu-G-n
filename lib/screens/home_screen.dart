@@ -12,6 +12,8 @@ import 'place_detail_screen.dart';
 import 'profile_screen.dart';
 import 'recommendation_screen.dart';
 import 'saved_screen.dart';
+import 'city_offers_screen.dart';
+import 'together_event_screen.dart';
 
 enum EventPeriod {
   today,
@@ -59,6 +61,7 @@ class _HomeScreenState
       EventPeriod.today;
 
   int _selectedIndex = 0;
+  bool _exploreInitialMap = false;
 
   String _eventSearch = '';
 
@@ -383,7 +386,7 @@ class _HomeScreenState
     switch (_selectedIndex) {
       case 1:
         return Scaffold(
-          body: const ExploreScreen(),
+          body: ExploreScreen(initialMapView: _exploreInitialMap),
           bottomNavigationBar: _buildBottomNavigationBar(),
         );
       case 2:
@@ -530,6 +533,8 @@ class _HomeScreenState
                 height: 25,
               ),
               _buildCategories(),
+              const SizedBox(height: 16),
+              _buildCommunityShortcuts(),
               const SizedBox(
                 height: 28,
               ),
@@ -583,6 +588,74 @@ class _HomeScreenState
                 BorderRadius.circular(
               18,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommunityShortcuts() {
+    return Row(
+      children: [
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.local_offer_outlined,
+            title: 'Şehir fırsatları',
+            subtitle: 'Yakınındaki fırsatları gör',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => CityOffersScreen(city: _selectedCity),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.groups_outlined,
+            title: 'Birlikte planla',
+            subtitle: 'Arkadaşlarınla plan yap',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => TogetherEventScreen(city: _selectedCity),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _homeShortcut({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 106),
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 23),
+              const SizedBox(height: 9),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: const TextStyle(color: Colors.black54, fontSize: 10, height: 1.3)),
+            ],
           ),
         ),
       ),
@@ -1285,8 +1358,8 @@ class _HomeScreenState
       height: 54,
       child:
           OutlinedButton.icon(
-        onPressed: () =>
-            setState(() {
+        onPressed: () => setState(() {
+          _exploreInitialMap = true;
           _selectedIndex = 1;
         }),
         icon:
