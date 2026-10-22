@@ -112,32 +112,32 @@ extension _RecommendationQueueMethods on _RecommendationScreenState {
         '${_activityLatitude(navigable.last)},'
         '${_activityLongitude(navigable.last)}';
 
-    final waypoints =
-        navigable.length > 2
-            ? navigable
-                .sublist(
-                  0,
-                  navigable.length - 1,
-                )
-                .map(
-                  (item) =>
-                      '${_activityLatitude(item)},'
-                      '${_activityLongitude(item)}',
-                )
-                .join('|')
-            : null;
-
-    final parameters =
-        <String, String>{
+    // Include the first selected stop as the origin, not just as a waypoint.
+    final parameters = <String, String>{
       'api': '1',
       'destination': destination,
       'travelmode': 'driving',
     };
 
-    if (waypoints != null &&
-        waypoints.isNotEmpty) {
-      parameters['waypoints'] =
-          waypoints;
+    if (navigable.length > 1) {
+      parameters['origin'] =
+          '${_activityLatitude(navigable.first)},'
+          '${_activityLongitude(navigable.first)}';
+    }
+
+    final waypoints = navigable.length > 2
+        ? navigable
+            .sublist(1, navigable.length - 1)
+            .map(
+              (item) =>
+                  '${_activityLatitude(item)},'
+                  '${_activityLongitude(item)}',
+            )
+            .join('|')
+        : null;
+
+    if (waypoints != null && waypoints.isNotEmpty) {
+      parameters['waypoints'] = waypoints;
     }
 
     final uri = Uri.https(
@@ -269,7 +269,7 @@ extension _RecommendationQueueMethods on _RecommendationScreenState {
                         3,
                   ),
                   const Text(
-                    'Seçtiklerini tek rota olarak açabilirsin.',
+                    '${_queue.where((item) => _activityLatitude(item) != null && _activityLongitude(item) != null).length} konum rotaya eklenecek',
                     maxLines:
                         1,
                     overflow:
@@ -299,7 +299,7 @@ extension _RecommendationQueueMethods on _RecommendationScreenState {
               ),
               label:
                   const Text(
-                'ROTA',
+                'ROTAYI AÇ',
                 style:
                     TextStyle(
                   fontSize:
