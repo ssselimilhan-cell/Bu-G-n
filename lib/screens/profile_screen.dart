@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
 
@@ -193,6 +194,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+
+  Future<void> _openWebPage(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) return;
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) _showSnack('Bağlantı açılamadı. Daha sonra tekrar dene.');
+    } catch (_) {
+      if (mounted) _showSnack('Bağlantı açılamadı. Daha sonra tekrar dene.');
+    }
+  }
+
+  Future<void> _contactUs() async {
+    await _openWebPage('mailto:ssselimilhan@gmail.com?subject=BUG%C3%9CN%20-%20Bize%20ula%C5%9F%C4%B1n');
+  }
+
+  Future<void> _requestAccountDeletion() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      await _openWebPage('https://ssselimilhan-cell.github.io/Bu-G-n/account-deletion.html');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hesap ve verileri sil'),
+        content: const Text('Bu işlem hesap ve ilişkili verilerin silinmesi için talep e-postası oluşturur. Talebi gönderdikten sonra doğrulama gerekebilir. Parolanı veya doğrulama kodunu e-postaya ekleme.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('VAZGEÇ')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('TALEP OLUŞTUR')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final email = Uri.encodeComponent(user.email ?? '');
+    await _openWebPage('mailto:ssselimilhan@gmail.com?subject=BUG%C3%9CN%20hesap%20ve%20veri%20silme%20talebi&body=Merhaba%2C%0A%0ABUG%C3%9CN%20hesab%C4%B1m%C4%B1n%20ve%20ili%C5%9Fkili%20verilerimin%20silinmesini%20talep%20ediyorum.%0A%0AHesab%C4%B1mda%20kulland%C4%B1%C4%9F%C4%B1m%20e-posta%20adresi%3A%20$email%0A');
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -278,6 +317,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Anlık bildirimler bu sürümde etkin değil', onTap: () => _showSnack('Bildirim gönderimi henüz etkinleştirilmedi; şu anda bildirim izni istenmiyor.')),
+                  const SizedBox(height: 24),
+                  const _SectionLabel('YARDIM VE HESAP'),
+                  const SizedBox(height: 10),
+                  _settingCard(icon: Icons.mail_outline_rounded, title: 'Bize ulaşın', subtitle: 'E-posta ile destek al', onTap: _contactUs),
+                  const SizedBox(height: 10),
+                  _settingCard(icon: Icons.open_in_browser_rounded, title: 'Web üzerinden hesap silme', subtitle: 'Hesap silme talebi sayfasını aç', onTap: () => _openWebPage('https://ssselimilhan-cell.github.io/Bu-G-n/account-deletion.html')),
+                  const SizedBox(height: 10),
+                  _settingCard(icon: Icons.delete_outline_rounded, title: 'Hesabı ve verileri sil', subtitle: 'Hesap ve ilişkili verilerin silinmesini talep et', onTap: _requestAccountDeletion),
                   const SizedBox(height: 22),
                   if (!signedIn)
                     FilledButton(
