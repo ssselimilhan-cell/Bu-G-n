@@ -212,7 +212,7 @@ class EventService {
         ''')
         .ilike(
           'city',
-          city.trim(),
+          '%${city.trim()}%',
         )
         .eq(
           'is_active',
