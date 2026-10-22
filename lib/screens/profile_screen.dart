@@ -233,14 +233,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 children: [
                   if (_message != null) ...[
                     Text(_message!, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 12),
                   ],
                   _profileHeader(signedIn),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   const _SectionLabel('ŞEHİR'),
                   const SizedBox(height: 10),
                   _settingCard(
@@ -249,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     subtitle: signedIn ? 'Hesabına kaydedilen şehir' : 'Bu cihazda kaydedilen şehir',
                     onTap: _chooseCity,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   Row(children: [
                     const Expanded(child: _SectionLabel('İLGİ ALANLARIN')),
                     Text('${_selectedInterests.length} seçili', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
@@ -270,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       side: BorderSide.none,
                     );
                   }).toList()),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   const _SectionLabel('AYARLAR'),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.location_searching_rounded, title: 'Konum izni', subtitle: 'Yakınındaki etkinlikleri sıralamaya yardımcı olur', onTap: _requestLocation),
@@ -304,41 +304,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _profileHeader(bool signedIn) {
     final name = _displayName ?? _user?.userMetadata?['display_name'] as String?;
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEAF3FB), Color(0xFFFFF1E5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE6E9EC)),
-      ),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(26)),
       child: Row(children: [
-        Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(17),
-          ),
-          child: const Icon(Icons.wb_twilight_rounded, size: 32, color: Color(0xFFE87935)),
-        ),
-        const SizedBox(width: 13),
+        Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.person_outline_rounded, size: 34)),
+        const SizedBox(width: 15),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            signedIn ? (name?.isNotEmpty == true ? name! : 'BUGÜN kullanıcısı') : 'Misafir Kullanıcı',
-            style: const TextStyle(color: Color(0xFF183B5B), fontSize: 16, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            signedIn ? (_user?.email ?? 'Hesabın bağlı') : 'Hesap açmadan kullanabilirsin',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF52616D), fontSize: 11),
-          ),
+          Text(signedIn ? (name?.isNotEmpty == true ? name! : 'BUGÜN kullanıcısı') : 'Misafir Kullanıcı', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 5),
+          Text(signedIn ? (_user?.email ?? 'Hesabın bağlı') : 'Hesap açmadan kullanabilirsin', style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 3),
-          Text('$_city · BUGÜN', style: const TextStyle(color: Color(0xFF52616D), fontSize: 11)),
+          Text('$_city · BUGÜN', style: const TextStyle(color: Colors.white70, fontSize: 12)),
         ])),
       ]),
     );
@@ -352,9 +328,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.all(16),
           child: Row(children: [
-            Icon(icon, size: 21, color: const Color(0xFF2769A6)),
+            Icon(icon, size: 23),
             const SizedBox(width: 13),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
