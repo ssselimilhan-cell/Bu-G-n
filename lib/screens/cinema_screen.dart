@@ -154,9 +154,9 @@ class _CinemaScreenState extends State<CinemaScreen> {
               Text('${widget.city.toUpperCase()} SİNEMA SALONLARI', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (data.googlePlacesMessage != null)
-                _empty('${data.googlePlacesMessage} Google Cloud Console üzerinden Places API (New) etkinleştirilmeli ve GOOGLE_PLACES_API_KEY Supabase Function Secret olarak eklenmeli.')
+                _empty('Sinema salonları şu anda getirilemiyor. Lütfen biraz sonra tekrar dene.')
               else if (data.googleCinemas.isEmpty)
-                _empty('Google Places bu şehir için sinema sonucu döndürmedi.')
+                _empty('Bu şehir için salon bilgisi bulunamadı. Başka bir şehir seçebilir veya daha sonra tekrar deneyebilirsin.')
               else
                 ...data.googleCinemas.map((place) {
                   final displayName = place['displayName'];
@@ -180,7 +180,7 @@ class _CinemaScreenState extends State<CinemaScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.theaters_outlined),
                       title: Text(name ?? 'Sinema salonu', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      subtitle: Text(subtitleParts.join('\\n'), maxLines: 4, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(subtitleParts.join('\n'), maxLines: 3, overflow: TextOverflow.ellipsis),
                       isThreeLine: subtitleParts.length > 1,
                       trailing: const Icon(Icons.map_outlined),
                       onTap: () => _openLink(mapUrl ?? website),
@@ -191,9 +191,9 @@ class _CinemaScreenState extends State<CinemaScreen> {
               const Text('TÜRKİYE’DE VİZYONDA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (data.tmdbMessage != null)
-                _empty('${data.tmdbMessage} Yönetici TMDB API Read Access Token bilgisini Supabase Function Secret olarak eklemeli.')
+                _empty('Vizyondaki filmler şu anda yüklenemiyor. Lütfen biraz sonra tekrar dene.')
               else if (data.movies.isEmpty)
-                _empty('TMDB şu anda vizyondaki film listesini döndürmedi.')
+                _empty('Şu anda vizyondaki filmler listelenemiyor.')
               else
                 ...data.movies.map((movie) {
                   final posterPath = movie['poster_path']?.toString();
@@ -221,9 +221,9 @@ class _CinemaScreenState extends State<CinemaScreen> {
                             ),
                       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                       subtitle: Text([
-                        if (release.isNotEmpty) 'Vizyon tarihi: $release',
+                        if (release.isNotEmpty) 'Vizyon: ${release.split('-').reversed.join('.')}',
                         if (overview.isNotEmpty) overview,
-                      ].join(' • '), maxLines: 3, overflow: TextOverflow.ellipsis),
+                      ].join(' • '), maxLines: 2, overflow: TextOverflow.ellipsis),
                       isThreeLine: true,
                       onTap: () => _openLink('https://www.themoviedb.org/search?query=${Uri.encodeComponent(title)}'),
                     ),
@@ -242,10 +242,10 @@ class _CinemaScreenState extends State<CinemaScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('VİZYONDAKİ SEANSLAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              const Text('SEANS BİLGİLERİ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (data.screenings.isEmpty)
-                _empty('Bu şehir için henüz doğrulanmış seans verisi bulunmuyor.')
+                _empty('Bu şehir için doğrulanmış seans saatleri henüz mevcut değil. Güncel seanslar için yukarıdaki salon bilgilerini veya sinemanın resmî sitesini kullanabilirsin.')
               else
                 ...data.screenings.map((item) {
                   final movie = item['cinema_movies'] as Map<String, dynamic>? ?? {};
@@ -266,10 +266,10 @@ class _CinemaScreenState extends State<CinemaScreen> {
                   );
                 }),
               const SizedBox(height: 18),
-              const Text('KAYITLI SİNEMA SALONLARI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              const Text('DİĞER SİNEMA SALONLARI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
               const SizedBox(height: 8),
               if (data.venues.isEmpty)
-                _empty('Bu şehir için henüz doğrulanmış salon kaydı bulunmuyor.')
+                _empty('Ek salon kaydı bulunmuyor.')
               else
                 ...data.venues.map((venue) => Card(
                   color: Colors.white,
