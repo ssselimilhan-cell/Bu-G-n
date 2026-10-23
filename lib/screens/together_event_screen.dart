@@ -130,7 +130,7 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 28), children: [
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 38, 16, 28), children: [
         Text('${widget.city} · Birlikte planla', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text('Arkadaşlarınla bir etkinlik planla, davet kodunu paylaş ve kodu daha sonra tekrar görüntüle.', style: TextStyle(height: 1.4)),
