@@ -210,15 +210,18 @@ class EventService {
       is_active
     ''';
 
+    // Filter by city on the server before limiting, so other cities cannot
+    // consume the result window and hide this city's events.
     final rows = await _client
         .from('events')
         .select(columns)
         .eq('is_active', true)
+        .ilike('city', city.trim())
         .gte('starts_at', start.toIso8601String())
         .lte('starts_at', end.toIso8601String())
         .order('starts_at', ascending: true)
         .order('recommendation_score', ascending: false)
-        .limit(2000);
+        .limit(limit);
 
     final normalizedCity = _normalizeCity(city);
     return rows
@@ -226,7 +229,6 @@ class EventService {
         .where((row) => _normalizeCity(row['city']?.toString() ?? '') == normalizedCity)
         .map(Event.fromMap)
         .where((event) => event.startsAt.isAfter(DateTime.now()))
-        .take(limit)
         .toList();
   }
 
