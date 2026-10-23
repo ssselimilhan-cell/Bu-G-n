@@ -187,7 +187,7 @@ class _HomeScreenState
       final places =
           await _placeService.getPlaces(
         city: _selectedCity,
-        limit: 50,
+        limit: 200,
       );
 
       if (!mounted) {
@@ -776,30 +776,7 @@ class _HomeScreenState
           )
         else
           ...events
-              .take(
-            _selectedPeriod == EventPeriod.month ? 10 : 5,
-          )
-              .map(
-            _buildEventCard,
-          ),
-          if (events.length >
-              (_selectedPeriod == EventPeriod.month ? 10 : 5))
-            Align(
-              alignment: Alignment.center,
-              child: TextButton.icon(
-                onPressed: () => _selectPeriod(
-                  _selectedPeriod == EventPeriod.today
-                      ? EventPeriod.week
-                      : EventPeriod.month,
-                ),
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text(
-                  _selectedPeriod == EventPeriod.month
-                      ? 'Daha az etkinlik gösteriliyor'
-                      : 'Daha fazla etkinlik için diğer zaman aralığını seç',
-                ),
-              ),
-            ),
+              .map(_buildEventCard),
       ],
     );
   }
