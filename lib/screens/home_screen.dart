@@ -1109,9 +1109,22 @@ class _HomeScreenState
       );
     }
 
-    if (_placesError != null ||
-        _places.isEmpty) {
-      return const SizedBox.shrink();
+    if (_placesError != null || _places.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'KEŞFEDİLECEK YERLER',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          _buildEmptyCard(
+            _placesError != null
+                ? 'Yerler şu anda yüklenemedi. Yenilemek için ekranı aşağı çek.'
+                : 'Bu şehir için henüz yer eklenmemiş.',
+          ),
+        ],
+      );
     }
 
     return Column(
