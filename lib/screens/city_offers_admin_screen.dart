@@ -33,10 +33,14 @@ class _CityOffersAdminScreenState extends State<CityOffersAdminScreen> {
     try {
       var query = _client.from('offers').select(
         'id,city,title,description,discount_text,source_url,image_url,advertiser_name,starts_at,ends_at,is_active,featured'
-      ).eq('city', _city).order('created_at', ascending: false);
-      if (_filter == 'Aktif') query = query.eq('is_active', true);
-      if (_filter == 'Pasif') query = query.eq('is_active', false);
-      final data = await query.limit(200);
+      ).eq('city', _city);
+      if (_filter == 'Aktif') {
+        query = query.eq('is_active', true);
+      }
+      if (_filter == 'Pasif') {
+        query = query.eq('is_active', false);
+      }
+      final data = await query.order('created_at', ascending: false).limit(200);
       if (mounted) setState(() {
         _rows = data.whereType<Map<String, dynamic>>().toList();
         _loading = false;
