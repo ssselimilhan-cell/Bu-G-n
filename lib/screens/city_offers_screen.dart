@@ -142,11 +142,11 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
             final rows = snapshot.data ?? [];
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+              padding: const EdgeInsets.fromLTRB(16, 38, 16, 28),
               children: [
                 Text('${widget.city} fırsatları', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 6),
-                const Text('Yayınlanan indirimler ve yerel fırsatlar. Yalnızca yönetici yeni fırsat ekleyebilir.', style: TextStyle(height: 1.4)),
+                const Text('Yayınlanan indirimler ve yerel fırsatlar.', style: TextStyle(height: 1.4)),
                 if (_isAdmin) ...[
                   const SizedBox(height: 14),
                   FilledButton.icon(onPressed: _saving ? null : _createOffer, icon: const Icon(Icons.add), label: Text(_saving ? 'Kaydediliyor…' : 'Şehir fırsatı ekle')),
