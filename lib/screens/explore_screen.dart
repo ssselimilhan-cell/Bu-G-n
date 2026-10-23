@@ -836,7 +836,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       final month = value.month.toString().padLeft(2, '0');
       final hour = value.hour.toString().padLeft(2, '0');
       final minute = value.minute.toString().padLeft(2, '0');
-      return '$day.$month.\${value.year} · $hour:$minute';
+      return '$day.$month.${value.year} · $hour:$minute';
     }
 
     String eventPrice(Event event) {
@@ -845,9 +845,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (min == null && max == null) return '';
       if ((min == null || min == 0) && (max == null || max == 0)) return 'Ücretsiz';
       if (min != null && max != null && min != max) {
-        return '\${min.round()}–\${max.round()} TL';
+        return '${min.round()}–${max.round()} TL';
       }
-      return '\${(min ?? max)!.round()} TL';
+      return '${(min ?? max)!.round()} TL';
     }
 
     return Column(
@@ -857,7 +857,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              '\${events.length} etkinlik bulundu',
+              '${events.length} etkinlik bulundu',
               style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600),
             ),
           ),
