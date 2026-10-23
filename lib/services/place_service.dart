@@ -13,12 +13,14 @@ class PlaceService {
   }) async {
     const columns = 'id,name,category,city,address,latitude,longitude,website,short_description,long_description,source_url,verified_at,content_review_status,is_free,visit_duration_min,indoor,outdoor,parking_available,kids_friendly,pet_friendly,difficulty_level,best_time,tags,verified,trust_score,place_type';
 
-    // Fetch a bounded active set first, then normalize city names locally.
-    // This avoids relying on database collation for Turkish dotted/dotless I.
+    // Filter by city in the database BEFORE applying the row limit.
+    // Filtering a global 2,000-row sample locally can omit every place for
+    // a city simply because its rows occur later in the table.
     var query = _client
         .from('places')
         .select(columns)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .ilike('city', city.trim());
 
     if (category != null &&
         category.trim().isNotEmpty &&
@@ -26,13 +28,13 @@ class PlaceService {
       query = query.eq('category', category);
     }
 
-    final rows = await query.limit(2000);
+    final rows = await query.limit(limit);
     final normalizedCity = _normalizeCity(city);
     return rows
         .whereType<Map<String, dynamic>>()
+        // Keep a local normalized check as a defensive guard.
         .where((row) => _normalizeCity(row['city']?.toString() ?? '') == normalizedCity)
         .map(Place.fromMap)
-        .take(limit)
         .toList();
   }
 
