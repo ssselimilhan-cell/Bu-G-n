@@ -250,15 +250,34 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   List<Place> get _filteredPlaces {
     final query = _normalizeSearch(_searchText);
+    final selected = _selectedCategory == null
+        ? ''
+        : _normalizeSearch(_selectedCategory!);
+
+    // Preserve the original fast path: when "Tümü" is selected and the
+    // search field is empty, return the loaded list directly. In particular,
+    // do not rebuild searchable text for every row unless the user is
+    // actually searching.
+    if (query.isEmpty && selected.isEmpty) return _places;
+
     return _places.where((place) {
-      final category = _normalizeSearch(place.category);
-      final chosen = _selectedCategory == null ? '' : _normalizeSearch(_selectedCategory!);
-      final categoryMatches = chosen.isEmpty ||
-          category == chosen ||
-          (chosen == 'tarih' && (category.contains('tarih') || category == 'gezi')) ||
-          (chosen == 'kultur' && (category.contains('kultur') || category == 'sanat' || category == 'eglence')) ||
-          (chosen == 'doga' && (category.contains('doga') || category == 'park')) ||
-          (chosen == 'sinema' && category.contains('sinema'));
+      if (selected.isNotEmpty) {
+        final category = _normalizeSearch(place.category);
+        final matchesCategory = category == selected ||
+            (selected == 'tarih' &&
+                (category.contains('tarih') || category == 'gezi')) ||
+            (selected == 'kultur' &&
+                (category.contains('kultur') ||
+                    category == 'sanat' ||
+                    category == 'eglence')) ||
+            (selected == 'doga' &&
+                (category.contains('doga') || category == 'park')) ||
+            (selected == 'sinema' && category.contains('sinema'));
+        if (!matchesCategory) return false;
+      }
+
+      if (query.isEmpty) return true;
+
       final text = _normalizeSearch([
         place.name,
         place.category,
@@ -267,7 +286,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         place.address ?? '',
         ...place.tags,
       ].join(' '));
-      return categoryMatches && (query.isEmpty || text.contains(query));
+      return text.contains(query);
     }).toList();
   }
 
