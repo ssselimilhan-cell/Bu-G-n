@@ -459,58 +459,39 @@ class _ExploreScreenState extends State<ExploreScreen>
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Widget _buildSearchBox({
-    required String hint,
-  }) {
+  Widget _buildSearchBox({required String hint}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        6,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
       child: TextField(
         controller: _searchController,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
+          isDense: true,
           hintText: hint,
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-          ),
+          prefixIcon: const Icon(Icons.search_rounded, size: 21),
+          prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 40),
           suffixIcon: _searchText.isNotEmpty
               ? IconButton(
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                   onPressed: _searchController.clear,
-                  icon: const Icon(
-                    Icons.clear,
-                  ),
+                  icon: const Icon(Icons.clear, size: 19),
                 )
               : null,
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 14,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 9),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(
-              16,
-            ),
+            borderRadius: BorderRadius.circular(13),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(
-              16,
-            ),
-            borderSide: BorderSide(
-              color: Colors.grey.shade200,
-            ),
+            borderRadius: BorderRadius.circular(13),
+            borderSide: BorderSide(color: Colors.grey.shade200),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(
-              16,
-            ),
-            borderSide: const BorderSide(
-              color: Colors.black,
-            ),
+            borderRadius: BorderRadius.circular(13),
+            borderSide: const BorderSide(color: Colors.black),
           ),
         ),
       ),
@@ -580,6 +561,73 @@ class _ExploreScreenState extends State<ExploreScreen>
                   );
                 },
               ).toList(),
+            ),
+          ),
+        ),
+        Expanded(child: _buildPlacesContent()),
+      ],
+    );
+  }
+
+  Widget _buildPlacesTab() {
+    final selected = _selectedCategory ?? 'Tümü';
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 12, 1),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Nereye gitmek istersin?',
+                  style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _tabController.animateTo(3),
+                icon: const Icon(Icons.map_outlined, size: 17),
+                label: const Text('Harita'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+        ),
+        _buildSearchBox(hint: '$_selectedCity içinde yer ara...'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _categories.map((category) {
+                final isSelected = selected == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: ChoiceChip(
+                    label: Text(category),
+                    selected: isSelected,
+                    onSelected: (_) => _selectCategory(category),
+                    selectedColor: Colors.black,
+                    backgroundColor: Colors.white,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300),
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -731,38 +779,25 @@ class _ExploreScreenState extends State<ExploreScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
+          padding: EdgeInsets.fromLTRB(16, 5, 16, 0),
           child: Text(
             'Yakında ne var?',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w800),
           ),
         ),
-        _buildSearchBox(
-          hint: '$_selectedCity etkinliklerinde ara...',
-        ),
-        Expanded(
-          child: _buildEventsContent(),
-        ),
+        _buildSearchBox(hint: '$_selectedCity etkinliklerinde ara...'),
+        Expanded(child: _buildEventsContent()),
       ],
     );
   }
 
   Widget _buildEventsContent() {
     if (_eventsLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_eventsError != null) {
-      return _buildErrorState(
-        message: _eventsError!,
-        onRetry: _loadEvents,
-      );
+      return _buildErrorState(message: _eventsError!, onRetry: _loadEvents);
     }
 
     final events = _filteredEvents;
@@ -772,56 +807,141 @@ class _ExploreScreenState extends State<ExploreScreen>
         onRefresh: _loadEvents,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           children: [
-            const SizedBox(
-              height: 32,
+            const SizedBox(height: 28),
+            const Icon(Icons.event_busy_outlined, size: 42, color: Colors.black54),
+            const SizedBox(height: 12),
+            Text(
+              _searchText.isNotEmpty
+                  ? 'Aramana uygun etkinlik bulunamadı.'
+                  : 'Önümüzdeki 31 gün içinde $_selectedCity için etkinlik bulunamadı.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                ),
-                child: Text(
-                  _searchText.isNotEmpty
-                      ? 'Aramana uygun etkinlik bulunamadı.'
-                      : 'Önümüzdeki 31 gün içinde $_selectedCity için etkinlik bulunamadı.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
+            const SizedBox(height: 8),
+            const Text(
+              'Aşağı çekerek etkinlikleri yeniden yükleyebilirsin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54, height: 1.4),
             ),
           ],
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadEvents,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          24,
-        ),
-        itemCount: events.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
-        itemBuilder: (context, index) {
-          final event = events[index];
+    String eventDate(Event event) {
+      final value = event.startsAt.toLocal();
+      final day = value.day.toString().padLeft(2, '0');
+      final month = value.month.toString().padLeft(2, '0');
+      final hour = value.hour.toString().padLeft(2, '0');
+      final minute = value.minute.toString().padLeft(2, '0');
+      return '$day.$month.\${value.year} · $hour:$minute';
+    }
 
-          return _EventCard(
-            event: event,
-            onTap: () => _openEvent(
-              event,
+    String eventPrice(Event event) {
+      final min = event.priceMin;
+      final max = event.priceMax;
+      if (min == null && max == null) return '';
+      if ((min == null || min == 0) && (max == null || max == 0)) return 'Ücretsiz';
+      if (min != null && max != null && min != max) {
+        return '\${min.round()}–\${max.round()} TL';
+      }
+      return '\${(min ?? max)!.round()} TL';
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 3),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '\${events.length} etkinlik bulundu',
+              style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadEvents,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              itemCount: events.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final event = events[index];
+                final date = eventDate(event);
+                final price = eventPrice(event);
+                final venue = (event.venueName ?? '').trim();
+                final address = (event.address ?? '').trim();
+
+                return Card(
+                  margin: EdgeInsets.zero,
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: ListTile(
+                    isThreeLine: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    leading: CircleAvatar(
+                      radius: 21,
+                      backgroundColor: const Color(0xFFF0F0EE),
+                      child: Icon(Icons.event_outlined, color: Colors.grey.shade800),
+                    ),
+                    title: Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('${event.category} · $date', maxLines: 2, overflow: TextOverflow.ellipsis),
+                          if (venue.isNotEmpty)
+                            Text(venue, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          if (address.isNotEmpty && address != venue)
+                            Text(address, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                    trailing: price.isEmpty
+                        ? const Icon(Icons.chevron_right_rounded)
+                        : SizedBox(
+                            width: 72,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  price,
+                                  textAlign: TextAlign.end,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                                ),
+                                const SizedBox(height: 2),
+                                const Icon(Icons.chevron_right_rounded, size: 18),
+                              ],
+                            ),
+                          ),
+                    onTap: () => _openEvent(event),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
