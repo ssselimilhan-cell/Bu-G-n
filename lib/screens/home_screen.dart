@@ -604,8 +604,11 @@ class _HomeScreenState
   }
 
   Widget _buildCommunityShortcuts() {
+    // This row lives inside a vertically scrolling ListView, whose height is
+    // unbounded. Stretching children to the row's maximum height can produce
+    // invalid/infinite constraints and prevent the home screen from rendering.
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: _homeShortcut(
