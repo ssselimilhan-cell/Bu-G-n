@@ -257,27 +257,27 @@ extension _RecommendationFilterControlMethods on _RecommendationScreenState {
     return Padding(
       padding:
           const EdgeInsets.only(
-        right: 7,
-        bottom: 7,
+        right: 4, bottom: 3,
       ),
       child: ChoiceChip(
-        label:
-            Text(label),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         selected:
             selected,
         onSelected:
             (_) => onTap(),
         labelStyle:
             TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight:
               FontWeight.w700,
           color: selected
               ? Colors.white
               : Colors.black,
         ),
-        selectedColor:
-            Colors.black,
+        visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+        selectedColor: Colors.black,
         backgroundColor:
             Colors.white,
         side:
@@ -297,7 +297,7 @@ extension _RecommendationFilterControlMethods on _RecommendationScreenState {
     return Padding(
       padding:
           const EdgeInsets.only(
-        bottom: 20,
+        bottom: 8,
       ),
       child:
           Column(
@@ -317,7 +317,7 @@ extension _RecommendationFilterControlMethods on _RecommendationScreenState {
             ),
           ),
           const SizedBox(
-            height: 9,
+            height: 3,
           ),
           child,
         ],

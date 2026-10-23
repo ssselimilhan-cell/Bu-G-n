@@ -12,6 +12,8 @@ import 'place_detail_screen.dart';
 import 'profile_screen.dart';
 import 'recommendation_screen.dart';
 import 'saved_screen.dart';
+import 'city_offers_screen.dart';
+import 'together_event_screen.dart';
 
 enum EventPeriod {
   today,
@@ -59,6 +61,8 @@ class _HomeScreenState
       EventPeriod.today;
 
   int _selectedIndex = 0;
+  int _exploreScreenVersion = 0;
+  bool _exploreInitialMap = false;
 
   String _eventSearch = '';
 
@@ -183,7 +187,7 @@ class _HomeScreenState
       final places =
           await _placeService.getPlaces(
         city: _selectedCity,
-        limit: 50,
+        limit: 200,
       );
 
       if (!mounted) {
@@ -350,10 +354,22 @@ class _HomeScreenState
   ) {
     setState(() {
       _selectedIndex = index;
+      if (index == 1) {
+        _exploreInitialMap = false;
+        _exploreScreenVersion++;
+      }
     });
     if (index == 0) {
       _loadHome();
     }
+  }
+
+  void _openExploreMap() {
+    setState(() {
+      _exploreInitialMap = true;
+      _selectedIndex = 1;
+      _exploreScreenVersion++;
+    });
   }
 
   @override
@@ -383,7 +399,10 @@ class _HomeScreenState
     switch (_selectedIndex) {
       case 1:
         return Scaffold(
-          body: const ExploreScreen(),
+          body: ExploreScreen(
+            key: ValueKey('explore-$_exploreScreenVersion'),
+            initialMapView: _exploreInitialMap,
+          ),
           bottomNavigationBar: _buildBottomNavigationBar(),
         );
       case 2:
@@ -523,16 +542,12 @@ class _HomeScreenState
                 ),
               ),
               const SizedBox(
-                height: 18,
+                height: 16,
               ),
+              _buildCommunityShortcuts(),
+              const SizedBox(height: 16),
               _buildRecommendationButton(),
-              const SizedBox(
-                height: 25,
-              ),
-              _buildCategories(),
-              const SizedBox(
-                height: 28,
-              ),
+              const SizedBox(height: 22),
               _buildEventsSection(),
               const SizedBox(
                 height: 30,
@@ -541,7 +556,6 @@ class _HomeScreenState
               const SizedBox(
                 height: 25,
               ),
-              _buildExploreButton(),
             ],
           ),
         ),
@@ -589,135 +603,85 @@ class _HomeScreenState
     );
   }
 
-  Widget _buildCategories() {
-    const categories = [
-      {
-        'name': 'Doğa',
-        'icon': Icons
-            .park_outlined,
-      },
-      {
-        'name': 'Park',
-        'icon': Icons
-            .grass_outlined,
-      },
-      {
-        'name': 'Tarih',
-        'icon': Icons
-            .account_balance_outlined,
-      },
-      {
-        'name': 'Müze',
-        'icon': Icons
-            .museum_outlined,
-      },
-      {
-        'name': 'Kültür',
-        'icon': Icons
-            .theater_comedy_outlined,
-      },
-      {
-        'name': 'Sinema',
-        'icon': Icons
-            .movie_outlined,
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+  Widget _buildCommunityShortcuts() {
+    // This row lives inside a vertically scrolling ListView, whose height is
+    // unbounded. Stretching children to the row's maximum height can produce
+    // invalid/infinite constraints and prevent the home screen from rendering.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'KATEGORİLER',
-          style:
-              TextStyle(
-            fontSize: 11,
-            fontWeight:
-                FontWeight.w900,
-            letterSpacing: 1,
-            color:
-                Colors.black54,
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.local_offer_outlined,
+            title: 'Şehir fırsatları',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => CityOffersScreen(city: _selectedCity),
+              ),
+            ),
           ),
         ),
-        const SizedBox(
-          height: 10,
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics:
-              const NeverScrollableScrollPhysics(),
-          itemCount:
-              categories.length,
-          gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1.45,
+        const SizedBox(width: 8),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.groups_outlined,
+            title: 'Birlikte planla',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => TogetherEventScreen(city: _selectedCity),
+              ),
+            ),
           ),
-          itemBuilder:
-              (context, index) {
-            final item =
-                categories[index];
-
-            return InkWell(
-              borderRadius:
-                  BorderRadius.circular(
-                16,
-              ),
-              onTap: () =>
-                  _openCategory(
-                item['name']
-                    as String,
-              ),
-              child:
-                  Container(
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(
-                    16,
-                  ),
-                  border:
-                      Border.all(
-                    color:
-                        Colors.grey.shade200,
-                  ),
-                ),
-                child:
-                    Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .center,
-                  children: [
-                    Icon(
-                      item['icon']
-                          as IconData,
-                      size: 23,
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    Text(
-                      item['name']
-                          as String,
-                      style:
-                          const TextStyle(
-                        fontSize:
-                            11,
-                        fontWeight:
-                            FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _homeShortcut(
+            icon: Icons.map_outlined,
+            title: 'Haritada keşfet',
+            onTap: _openExploreMap,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _homeShortcut({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 104),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, height: 1.15),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -812,15 +776,7 @@ class _HomeScreenState
           )
         else
           ...events
-              .take(
-            _selectedPeriod ==
-                    EventPeriod.month
-                ? 30
-                : 10,
-          )
-              .map(
-            _buildEventCard,
-          ),
+              .map(_buildEventCard),
       ],
     );
   }
@@ -1146,9 +1102,22 @@ class _HomeScreenState
       );
     }
 
-    if (_placesError != null ||
-        _places.isEmpty) {
-      return const SizedBox.shrink();
+    if (_placesError != null || _places.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'KEŞFEDİLECEK YERLER',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          _buildEmptyCard(
+            _placesError != null
+                ? 'Yerler şu anda yüklenemedi. Yenilemek için ekranı aşağı çek.'
+                : 'Bu şehir için henüz yer eklenmemiş.',
+          ),
+        ],
+      );
     }
 
     return Column(
@@ -1279,51 +1248,7 @@ class _HomeScreenState
     );
   }
 
-  Widget _buildExploreButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child:
-          OutlinedButton.icon(
-        onPressed: () =>
-            setState(() {
-          _selectedIndex = 1;
-        }),
-        icon:
-            const Icon(
-          Icons.map_outlined,
-        ),
-        label:
-            const Text(
-          'Haritada keşfet',
-          style:
-              TextStyle(
-            fontWeight:
-                FontWeight.w800,
-          ),
-        ),
-        style:
-            OutlinedButton.styleFrom(
-          foregroundColor:
-              Colors.black,
-          backgroundColor:
-              Colors.white,
-          side:
-              BorderSide(
-            color:
-                Colors.grey.shade300,
-          ),
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(
-              17,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildEmptyCard(
     String text,

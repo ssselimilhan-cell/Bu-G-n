@@ -162,10 +162,10 @@ class _RecommendationScreenState
                     padding:
                         const EdgeInsets
                             .fromLTRB(
-                      20,
-                      8,
-                      20,
-                      10,
+                      14,
+                      2,
+                      14,
+                      4,
                     ),
                     child:
                         Column(
@@ -177,27 +177,24 @@ class _RecommendationScreenState
                                 const EdgeInsets
                                     .only(
                               bottom:
-                                  95,
+                                  12,
                             ),
                             children: [
                               const Text(
-                                'Bugünü sana göre\nbirlikte planlayalım.',
+                                'Planını kendine göre seç',
                                 style:
                                     TextStyle(
-                                  fontSize:
-                                      29,
+                                  fontSize: 19,
                                   fontWeight:
                                       FontWeight
                                           .w900,
-                                  height:
-                                      1.06,
+                                  height: 1.0,
                                   letterSpacing:
                                       -0.8,
                                 ),
                               ),
                               const SizedBox(
-                                height:
-                                    20,
+                                height: 5,
                               ),
                               _buildLocationStatus(),
                               _buildFilterChips(),

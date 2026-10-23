@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
+import 'city_offers_admin_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,6 +30,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Set<String> _selectedInterests = {'🌳 Doğa', '🍔 Yeme-İçme'};
   bool _loading = true;
   bool _saving = false;
+  bool _interestSaveNoticeShown = false;
+  ScaffoldMessengerState? _messenger;
   User? _user;
   String? _displayName;
   String? _message;
@@ -37,6 +40,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _messenger = ScaffoldMessenger.maybeOf(context);
   }
 
   Future<void> _loadProfile() async {
@@ -93,12 +102,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _savePreferences() async {
-    setState(() => _saving = true);
+  Future<void> _savePreferences({bool showSuccess = true}) async {
+    if (mounted) setState(() => _saving = true);
     try {
       await _cityService.saveSelectedCity(_city);
       await _saveProfile();
-      if (mounted) _showSnack('Tercihlerin kaydedildi.');
+      if (mounted && showSuccess) _showSnack('Tercihlerin kaydedildi.');
     } catch (_) {
       if (mounted) _showSnack('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
     } finally {
@@ -118,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (chosen == null || !mounted || chosen == _city) return;
     setState(() => _city = chosen);
-    await _savePreferences();
+    await _savePreferences(showSuccess: false);
     if (mounted) _showSnack('Şehir tercihi kaydedildi: $chosen');
   }
 
@@ -130,7 +139,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _selectedInterests.add(interest);
       }
     });
-    await _savePreferences();
+    // Persist every change, but show the success notice only once per visit.
+    final showNotice = !_interestSaveNoticeShown;
+    _interestSaveNoticeShown = true;
+    await _savePreferences(showSuccess: showNotice);
   }
 
   Future<void> _openAccount() async {
@@ -232,6 +244,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _openWebPage('mailto:ssselimilhan@gmail.com?subject=BUG%C3%9CN%20hesap%20ve%20veri%20silme%20talebi&body=Merhaba%2C%0A%0ABUG%C3%9CN%20hesab%C4%B1m%C4%B1n%20ve%20ili%C5%9Fkili%20verilerimin%20silinmesini%20talep%20ediyorum.%0A%0AHesab%C4%B1mda%20kulland%C4%B1%C4%9F%C4%B1m%20e-posta%20adresi%3A%20$email%0A');
   }
 
+  void _showAboutAndSources() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hakkında ve veri kaynakları'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'BUGÜN, şehir keşfi ve etkinlik bilgileri sunan bağımsız bir uygulamadır.\n\n'
+            'Sinema film kataloğunda The Movie Database (TMDB) API kullanılır. '
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.\n\n'
+            'TMDB, BUGÜN uygulamasını desteklemez veya onaylamaz. Film bilgileri ve afişler TMDB kaynaklıdır; '
+            'Türkiye’deki gerçek sinema salonu ve seans saatleri TMDB film kataloğundan sağlanmaz.\n\n'
+            'TMDB logo ve atıf koşulları: https://www.themoviedb.org/about/logos-attribution\n'
+            'API koşulları ve ticari lisans: https://developer.themoviedb.org/docs/faq',
+            style: TextStyle(height: 1.45),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('KAPAT'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _openWebPage('https://www.themoviedb.org/about/logos-attribution');
+            },
+            child: const Text('TMDB ATIF KOŞULLARI'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPrivacy() {
     showDialog<void>(
       context: context,
@@ -239,13 +285,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: const Text('Gizlilik ve verilerin'),
         content: const SingleChildScrollView(
           child: Text(
-            'BUGÜN, şehirdeki etkinlik ve gezilecek yerleri bulmana yardımcı olur.\n\n'
-            '• Hesap açarsan e-posta adresin Supabase Auth tarafından oturum açma ve hesap güvenliği için işlenir.\n'
-            '• Profil adı, seçtiğin şehir ve ilgi alanların hesabına kaydedilir; yalnızca giriş yaptığın hesabın kendi profilini okuyup değiştirmesine izin veren erişim kuralları kullanılmalıdır.\n'
-            '• Giriş yapmadan seçtiğin şehir ve ilgi alanları bu cihazda saklanır.\n'
-            '• Konum izni isteğe bağlıdır; yakınlık sıralaması için kullanılır. İzin vermeden de uygulamayı kullanabilirsin.\n'
-            '• Etkinlik araması için etkinlik/yer verileri Supabase sunucusundan alınır. Bilet satın alma işlemleri ilgili sağlayıcının sitesinde yapılabilir.\n\n'
-            'Bu ekran uygulama içi bilgilendirmedir; yayına çıkmadan önce işletmeci iletişim bilgileri, veri saklama süreleri, kullanıcı hakları ve başvuru yöntemiyle birlikte hukuken gözden geçirilmiş bir Gizlilik Politikası ve gerekiyorsa KVKK aydınlatma metni yayımlanmalıdır.',
+            'BUGÜN’de gizliliğin önemlidir. Uygulama, şehirindeki etkinlikleri ve gezilecek yerleri keşfetmene yardımcı olmak için aşağıdaki bilgileri kullanır.\n\n'
+            'HESAP VE PROFİL\n'
+            '• Hesap oluşturduğunda e-posta adresin, oturum açma ve hesap güvenliği amacıyla işlenir.\n'
+            '• Profil adın, seçtiğin şehir ve ilgi alanların tercihlerini hesabınla ilişkilendirmek ve sana uygun içerikleri göstermek için saklanır.\n'
+            '• Giriş yapmadan kullandığında seçtiğin şehir ve ilgi alanları cihazında saklanır.\n\n'
+            'KONUM VE UYGULAMA İÇERİĞİ\n'
+            '• Konum erişimi isteğe bağlıdır. İzin verdiğinde konumun yakındaki yerleri bulmak ve mesafeye göre sıralamak için kullanılabilir. Konum izni olmadan da şehir seçerek uygulamayı kullanabilirsin. Uygulama konumunu sürekli arka planda takip etmez.\n'
+            '• Etkinlik, yer ve sinema bilgileri ilgili içerik sağlayıcılarından alınabilir. Harici bilet veya bilgi bağlantılarını açtığında ilgili hizmet sağlayıcının gizlilik koşulları geçerli olur.\n\n'
+            'VERİLERİNİN KORUNMASI VE TALEPLER\n'
+            '• Hesap ve profil verileri, uygulamanın çalışması için kullanılan Supabase hizmetlerinde işlenir. Bilgilerin reklam amacıyla satılmaz.\n'
+            '• Kişisel verilerinle ilgili bilgi, düzeltme veya silme talebi için sssselimilhan@gmail.com adresinden bize ulaşabilirsin. Hesap silme talebini Profil bölümündeki “Hesabı ve verileri sil” seçeneğinden de başlatabilirsin.\n'
+            '• Konum iznini cihaz ayarlarından istediğin zaman değiştirebilirsin.\n\n'
+            'Gizlilik soruların için: sssselimilhan@gmail.com',
           ),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))],
@@ -254,7 +306,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    final messenger = _messenger ?? ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(text),
+        duration: const Duration(seconds: 2),
+      ));
+  }
+
+  @override
+  void dispose() {
+    _messenger?.hideCurrentSnackBar();
+    super.dispose();
   }
 
   @override
@@ -279,6 +343,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 12),
                   ],
                   _profileHeader(signedIn),
+                  if (_client.auth.currentUser?.appMetadata['role'] == 'admin') ...[
+                    const SizedBox(height: 14),
+                    _settingCard(
+                      icon: Icons.campaign_outlined,
+                      title: 'Yönetici paneli · Şehir fırsatları',
+                      subtitle: '81 ilde reklam kampanyaları ekle, düzenle ve yayın takvimini yönet',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const CityOffersAdminScreen()),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const _SectionLabel('ŞEHİR'),
                   const SizedBox(height: 10),
@@ -315,6 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _settingCard(icon: Icons.location_searching_rounded, title: 'Konum izni', subtitle: 'Yakınındaki etkinlikleri sıralamaya yardımcı olur', onTap: _requestLocation),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.lock_outline_rounded, title: 'Gizlilik ve veriler', subtitle: 'Hangi verilerin neden kullanıldığını öğren', onTap: _showPrivacy),
+                  _settingCard(icon: Icons.info_outline_rounded, title: 'Hakkında ve veri kaynakları', subtitle: 'TMDB atfı ve veri kullanımı', onTap: _showAboutAndSources),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.notifications_none_rounded, title: 'Bildirimler', subtitle: 'Anlık bildirimler bu sürümde etkin değil', onTap: () => _showSnack('Bildirim gönderimi henüz etkinleştirilmedi; şu anda bildirim izni istenmiyor.')),
                   const SizedBox(height: 24),

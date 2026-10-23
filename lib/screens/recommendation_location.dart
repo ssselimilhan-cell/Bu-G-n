@@ -221,12 +221,12 @@ extension _RecommendationLocationMethods on _RecommendationScreenState {
     return Container(
       margin:
           const EdgeInsets.only(
-        bottom: 18,
+        bottom: 8,
       ),
       padding:
           const EdgeInsets.symmetric(
-        horizontal: 13,
-        vertical: 11,
+        horizontal: 10,
+        vertical: 6,
       ),
       decoration:
           BoxDecoration(
@@ -251,12 +251,10 @@ extension _RecommendationLocationMethods on _RecommendationScreenState {
                     .my_location_rounded
                 : Icons
                     .location_off_outlined,
-            size:
-                20,
+            size: 18,
           ),
           const SizedBox(
-            width:
-                10,
+            width: 7,
           ),
           Expanded(
             child:

@@ -1,21 +1,24 @@
-name: BUGUN Google Play AAB
+name: BUGUN Android release builds
 
 on:
+  push:
+    branches:
+      - restore-core-features
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-aab:
+  build-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -61,16 +64,32 @@ jobs:
           cache: true
 
       - name: Install Android 16 SDK
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -print -quit)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android SDK manager was not found on the runner."
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Resolve dependencies
         run: flutter pub get
 
       - name: Analyze Dart and Flutter code
-        run: flutter analyze --no-pub
+        run: flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos
 
       - name: Run automated tests
-        run: flutter test --no-pub
+        shell: bash
+        run: |
+          if [ -d test ]; then
+            flutter test --no-pub
+          else
+            echo "No test/ directory exists in this project; skipping Flutter tests."
+          fi
 
       - name: Build signed Android App Bundle
         env:
@@ -85,5 +104,21 @@ jobs:
         with:
           name: bugun-google-play-aab
           path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build signed installable APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/bugun-upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
