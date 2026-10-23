@@ -32,7 +32,7 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     final rows = await _client.from('offers').select(
-      'id,city,title,description,discount_text,source_url,starts_at,ends_at'
+      'id,city,title,description,discount_text,source_url,image_url,advertiser_name,starts_at,ends_at'
     ).eq('is_active', true).ilike('city', widget.city.trim())
       .order('created_at', ascending: false).limit(100);
     return rows.whereType<Map<String, dynamic>>().toList();
@@ -161,9 +161,12 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(14),
-                      leading: const Icon(Icons.local_offer_outlined, size: 30),
+                      leading: (row['image_url'] is String && (row['image_url'] as String).startsWith('https://'))
+                          ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(row['image_url'] as String, width: 58, height: 58, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.local_offer_outlined, size: 30)))
+                          : const Icon(Icons.local_offer_outlined, size: 30),
                       title: Text(row['title']?.toString() ?? 'Şehir fırsatı', style: const TextStyle(fontWeight: FontWeight.w800)),
                       subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text([
+                        if ((row['advertiser_name'] ?? '').toString().isNotEmpty) row['advertiser_name'].toString(),
                         if ((row['discount_text'] ?? '').toString().isNotEmpty) row['discount_text'].toString(),
                         if ((row['description'] ?? '').toString().isNotEmpty) row['description'].toString(),
                         row['city']?.toString() ?? widget.city,
