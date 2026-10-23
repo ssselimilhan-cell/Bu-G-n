@@ -590,9 +590,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildPlacesContent() {
     if (_placesLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_placesError != null) {
@@ -619,13 +617,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                   ? 'Aramana uygun yer bulunamadı.'
                   : _selectedCategory != null
                       ? '$_selectedCity için bu kategoride henüz yer bulunmuyor.'
-                      : '$_selectedCity için yer listesi hazırlanıyor.',
+                      : '$_selectedCity için yer bulunamadı.',
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Şimdilik etkinliklere bakabilir veya aşağı çekerek listeyi yenileyebilirsin.',
+              'Aşağı çekerek yeniden deneyebilirsin.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.black54, height: 1.4),
             ),
@@ -645,31 +643,86 @@ class _ExploreScreenState extends State<ExploreScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadPlaces,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          16,
-          6,
-          16,
-          24,
-        ),
-        itemCount: places.length,
-        separatorBuilder: (_, __) => const SizedBox(
-          height: 12,
-        ),
-        itemBuilder: (context, index) {
-          final place = places[index];
-
-          return _PlaceCard(
-            place: place,
-            onTap: () => _openPlace(
-              place,
+    // Use Flutter's standard Card/ListTile layout here. It avoids the custom
+    // stretch-row layout that could leave the Explore viewport visually empty
+    // on some devices, while retaining place details and navigation.
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${places.length} yer bulundu',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.black54,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadPlaces,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+              itemCount: places.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final place = places[index];
+                return Card(
+                  margin: EdgeInsets.zero,
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFF0F0EE),
+                      child: Icon(
+                        Icons.place_outlined,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    title: Text(
+                      place.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        [
+                          place.category,
+                          if (place.shortDescription != null &&
+                              place.shortDescription!.trim().isNotEmpty)
+                            place.shortDescription!,
+                          if (place.address != null &&
+                              place.address!.trim().isNotEmpty)
+                            place.address!,
+                        ].join(' · '),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _openPlace(place),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
