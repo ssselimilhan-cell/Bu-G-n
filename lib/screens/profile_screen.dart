@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
+import 'city_offers_admin_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -342,6 +343,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 12),
                   ],
                   _profileHeader(signedIn),
+                  if (_client.auth.currentUser?.appMetadata['role'] == 'admin') ...[
+                    const SizedBox(height: 14),
+                    _settingCard(
+                      icon: Icons.campaign_outlined,
+                      title: 'Yönetici paneli · Şehir fırsatları',
+                      subtitle: '81 ilde reklam kampanyaları ekle, düzenle ve yayın takvimini yönet',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const CityOffersAdminScreen()),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const _SectionLabel('ŞEHİR'),
                   const SizedBox(height: 10),
