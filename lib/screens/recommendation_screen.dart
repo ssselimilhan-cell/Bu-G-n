@@ -181,23 +181,20 @@ class _RecommendationScreenState
                             ),
                             children: [
                               const Text(
-                                'Bugünü sana göre\nbirlikte planlayalım.',
+                                'Planını kendine göre seç',
                                 style:
                                     TextStyle(
-                                  fontSize:
-                                      24,
+                                  fontSize: 19,
                                   fontWeight:
                                       FontWeight
                                           .w900,
-                                  height:
-                                      1.06,
+                                  height: 1.0,
                                   letterSpacing:
                                       -0.8,
                                 ),
                               ),
                               const SizedBox(
-                                height:
-                                    10,
+                                height: 5,
                               ),
                               _buildLocationStatus(),
                               _buildFilterChips(),
