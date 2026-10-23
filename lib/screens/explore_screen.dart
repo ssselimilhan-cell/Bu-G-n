@@ -147,7 +147,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         // Load the city's full list once; category labels in the UI can differ
         // slightly from the source taxonomy, so filter locally below.
         category: null,
-        limit: 200,
+        limit: 1000,
       );
 
       if (!mounted) {
@@ -181,7 +181,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       final events = await _eventService.getUpcomingEvents(
         city: _selectedCity,
         days: 31,
-        limit: 200,
+        limit: 1000,
       );
 
       if (!mounted) {
@@ -656,9 +656,21 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildEventsTab() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
+          child: Text(
+            'Yakında ne var?',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
         _buildSearchBox(
-          hint: 'Etkinliklerde ara...',
+          hint: '$_selectedCity etkinliklerinde ara...',
         ),
         Expanded(
           child: _buildEventsContent(),
