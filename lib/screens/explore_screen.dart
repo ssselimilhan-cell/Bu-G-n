@@ -503,16 +503,38 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 12, 6),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Nereye gitmek istersin?',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _tabController.animateTo(3),
+                icon: const Icon(Icons.map_outlined, size: 19),
+                label: const Text('Harita'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
         _buildSearchBox(
           hint: '$_selectedCity içinde yer ara...',
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            4,
-            16,
-            8,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Wrap(
@@ -525,9 +547,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   return ChoiceChip(
                     label: Text(category),
                     selected: isSelected,
-                    onSelected: (_) => _selectCategory(
-                      category,
-                    ),
+                    onSelected: (_) => _selectCategory(category),
                     selectedColor: Colors.black,
                     backgroundColor: Colors.white,
                     labelStyle: TextStyle(
@@ -544,9 +564,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
         ),
-        Expanded(
-          child: _buildPlacesContent(),
-        ),
+        Expanded(child: _buildPlacesContent()),
       ],
     );
   }
