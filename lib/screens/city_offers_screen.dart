@@ -124,9 +124,10 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
-      body: RefreshIndicator(
-        onRefresh: () async { final next = _load(); setState(() => _offers = next); await next; },
-        child: FutureBuilder<List<Map<String, dynamic>>>(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async { final next = _load(); setState(() => _offers = next); await next; },
+          child: FutureBuilder<List<Map<String, dynamic>>>(
           future: _offers,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -142,7 +143,7 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
             final rows = snapshot.data ?? [];
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 38, 16, 28),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
                 Text('${widget.city} fırsatları', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 6),
@@ -174,6 +175,7 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
               ],
             );
           },
+          ),
         ),
       ),
     );
