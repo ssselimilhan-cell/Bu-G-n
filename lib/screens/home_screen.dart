@@ -542,14 +542,12 @@ class _HomeScreenState
                 ),
               ),
               const SizedBox(
-                height: 18,
-              ),
-              _buildRecommendationButton(),
-              const SizedBox(
-                height: 25,
+                height: 16,
               ),
               _buildCommunityShortcuts(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              _buildRecommendationButton(),
+              const SizedBox(height: 22),
               _buildEventsSection(),
               const SizedBox(
                 height: 30,
@@ -776,14 +774,29 @@ class _HomeScreenState
         else
           ...events
               .take(
-            _selectedPeriod ==
-                    EventPeriod.month
-                ? 30
-                : 10,
+            _selectedPeriod == EventPeriod.month ? 10 : 5,
           )
               .map(
             _buildEventCard,
           ),
+          if (events.length >
+              (_selectedPeriod == EventPeriod.month ? 10 : 5))
+            Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () => _selectPeriod(
+                  _selectedPeriod == EventPeriod.today
+                      ? EventPeriod.week
+                      : EventPeriod.month,
+                ),
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: Text(
+                  _selectedPeriod == EventPeriod.month
+                      ? 'Daha az etkinlik gösteriliyor'
+                      : 'Daha fazla etkinlik için diğer zaman aralığını seç',
+                ),
+              ),
+            ),
       ],
     );
   }
