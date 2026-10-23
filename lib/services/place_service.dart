@@ -11,14 +11,12 @@ class PlaceService {
     String? category,
     int limit = 50,
   }) async {
-    const columns = 'id,name,category,city,address,latitude,longitude,website,short_description,long_description,source_url,verified_at,content_review_status,is_free,visit_duration_min,indoor,outdoor,parking_available,kids_friendly,pet_friendly,difficulty_level,best_time,tags,verified,trust_score,place_type';
-
     // Filter by city in the database BEFORE applying the row limit.
     // Filtering a global 2,000-row sample locally can omit every place for
     // a city simply because its rows occur later in the table.
     var query = _client
         .from('places')
-        .select(columns)
+        .select()
         .eq('is_active', true)
         .ilike('city', city.trim());
 
