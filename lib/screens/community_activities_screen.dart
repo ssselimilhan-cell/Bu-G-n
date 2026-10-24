@@ -359,7 +359,10 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Birlikte yapalım', style: TextStyle(fontWeight: FontWeight.w800)),
-      actions: [\n      IconButton(tooltip: 'Bildirimler', onPressed: _showNotifications, icon: const Icon(Icons.notifications_none_outlined)),\n      IconButton(tooltip: 'Davet koduyla katıl', onPressed: _joinByCode, icon: const Icon(Icons.vpn_key_outlined)),\n    ],
+      actions: [
+        IconButton(tooltip: 'Bildirimler', onPressed: _showNotifications, icon: const Icon(Icons.notifications_none_outlined)),
+        IconButton(tooltip: 'Davet koduyla katıl', onPressed: _joinByCode, icon: const Icon(Icons.vpn_key_outlined)),
+      ],
     ),
     floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('Etkinlik oluştur')),
     body: _loading ? const Center(child: CircularProgressIndicator())
