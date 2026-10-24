@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/city_preference_service.dart';
 import '../core/config.dart';
+import '../core/config.dart';
 
 class CommunityActivitiesScreen extends StatefulWidget {
   const CommunityActivitiesScreen({super.key, this.initialInviteCode});
