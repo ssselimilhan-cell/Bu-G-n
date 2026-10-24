@@ -1,0 +1,52 @@
+name: BUGUN Flutter CI
+
+on:
+  push:
+    branches:
+      - feature/event-invite-growth
+  pull_request:
+    branches:
+      - bugun-codespaces-ready
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -path '*/bin/sdkmanager' -print -quit 2>/dev/null || true)"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+            "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-36" "build-tools;36.0.0"
+          else
+            echo "::warning::sdkmanager not found; Flutter analysis and tests will still run."
+          fi
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze Dart and Flutter code
+        run: flutter analyze --no-pub
+      - name: Run automated tests
+        run: flutter test --no-pub
+      - name: Build debug APK
+        run: flutter build apk --debug
