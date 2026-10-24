@@ -78,10 +78,10 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   }
 
 
-  Future<void> _joinActivity(String activityId) async {
+  Future<void> _joinActivity(String activityId, {String response = 'going'}) async {
     final user = _client.auth.currentUser;
     if (user == null) {
-      _message('Etkinliğe katılmak için önce profilinden giriş yap.');
+      _message('Yanıt vermek için önce profilinden giriş yap.');
       return;
     }
     try {
@@ -90,23 +90,29 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
           .eq('activity_id', activityId)
           .eq('user_id', user.id)
           .maybeSingle();
-      if (existing != null && existing['status'] == 'going') {
-        _message('Bu etkinliğe zaten katılıyorsun.');
+      if (existing != null && existing['status'] == response) {
+        _message('Yanıtın zaten kayıtlı.');
         return;
       }
       if (existing != null) {
-        await _client.from('activity_participants').update({'status': 'going'})
+        await _client.from('activity_participants').update({'status': response})
             .eq('activity_id', activityId).eq('user_id', user.id);
       } else {
         await _client.from('activity_participants').insert({
           'activity_id': activityId,
           'user_id': user.id,
-          'status': 'going',
+          'status': response,
         });
       }
-      _message('Etkinliğe katılımın kaydedildi.');
+      final message = switch (response) {
+        'going' => 'Katılacağın kaydedildi.',
+        'maybe' => 'Belki katılacağın kaydedildi.',
+        'declined' => 'Katılamayacağın kaydedildi.',
+        _ => 'Yanıtın kaydedildi.',
+      };
+      _message(message);
     } catch (_) {
-      _message('Katılım kaydedilemedi. Etkinlik başlamış veya kapanmış olabilir.');
+      _message('Yanıt kaydedilemedi. Etkinlik başlamış veya kapanmış olabilir.');
     }
   }
 
@@ -372,7 +378,9 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                   runSpacing: 8,
                   children: [
                     Text(item['is_free'] == true ? 'Ücretsiz' : (item['estimated_cost'] == null ? 'Ücret belirtilmedi' : 'Tahmini kişi başı: ₺${item['estimated_cost']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString()), icon: const Icon(Icons.check_circle_outline, size: 17), label: const Text('Katıl')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'going'), icon: const Icon(Icons.check_circle_outline, size: 17), label: const Text('Katılıyorum')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'maybe'), icon: const Icon(Icons.help_outline, size: 17), label: const Text('Belki')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'declined'), icon: const Icon(Icons.close_rounded, size: 17), label: const Text('Katılamıyorum')),
                     OutlinedButton.icon(onPressed: () => _share(item), icon: const Icon(Icons.share_outlined, size: 17), label: const Text('Davet et')),
                   ],
                 ),
