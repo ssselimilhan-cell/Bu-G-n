@@ -52,7 +52,23 @@ jobs:
           keytool -list -keystore "$RUNNER_TEMP/bugun-upload.jks" \
             -storepass "$ANDROID_KEYSTORE_PASSWORD" \
             -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          keytool -export -rfc -keystore "$RUNNER_TEMP/bugun-upload.jks" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -file "$RUNNER_TEMP/upload_certificate.pem" >/dev/null
+          echo "Upload certificate SHA-1 (compare with Play Console > App integrity > Upload key certificate):"
+          keytool -list -v -keystore "$RUNNER_TEMP/bugun-upload.jks" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" | grep -E 'SHA1:|SHA-1:'
           echo "Release package ID, target API, version, and upload-key alias validated."
+
+      - name: Publish public upload certificate for Play upload-key reset
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-upload-certificate
+          path: ${{ runner.temp }}/upload_certificate.pem
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
