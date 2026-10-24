@@ -78,6 +78,66 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   }
 
 
+  Future<void> _showNotifications() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      _message('Bildirimleri görmek için önce giriş yap.');
+      return;
+    }
+    try {
+      final rows = await _client.from('activity_notifications')
+          .select('id, activity_id, actor_user_id, kind, created_at, read_at')
+          .eq('recipient_user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(50);
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.65,
+            child: rows.isEmpty
+              ? const Center(child: Text('Henüz etkinlik bildirimin yok.'))
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const Text('Etkinlik bildirimleri', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 12),
+                    for (final row in rows)
+                      ListTile(
+                        leading: Icon(
+                          row['kind'] == 'going' ? Icons.check_circle_outline
+                            : row['kind'] == 'maybe' ? Icons.help_outline : Icons.person_off_outlined,
+                        ),
+                        title: Text(
+                          row['kind'] == 'going' ? 'Bir kişi katılacağını bildirdi'
+                            : row['kind'] == 'maybe' ? 'Bir kişi belki katılacağını bildirdi'
+                            : 'Bir kişi katılamayacağını bildirdi',
+                        ),
+                        subtitle: Text(DateFormat('d MMM yyyy · HH:mm', 'tr_TR').format(
+                          DateTime.tryParse(row['created_at']?.toString() ?? '')?.toLocal() ?? DateTime.now(),
+                        )),
+                        trailing: row['read_at'] == null ? const Icon(Icons.circle, size: 9) : null,
+                        onTap: row['read_at'] == null ? () async {
+                          try {
+                            await _client.from('activity_notifications').update({
+                              'read_at': DateTime.now().toUtc().toIso8601String(),
+                            }).eq('id', row['id']).eq('recipient_user_id', user.id);
+                          } catch (_) {}
+                        } : null,
+                      ),
+                  ],
+                ),
+          ),
+        ),
+      );
+    } catch (_) {
+      _message('Bildirimler yüklenemedi. Veritabanı izinlerini kontrol et.');
+    }
+  }
+
   Future<void> _joinActivity(String activityId, {String response = 'going'}) async {
     final user = _client.auth.currentUser;
     if (user == null) {
@@ -298,7 +358,7 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Birlikte yapalım', style: TextStyle(fontWeight: FontWeight.w800)),
-      actions: [IconButton(tooltip: 'Davet koduyla katıl', onPressed: _joinByCode, icon: const Icon(Icons.vpn_key_outlined))],
+      actions: [\n      IconButton(tooltip: 'Bildirimler', onPressed: _showNotifications, icon: const Icon(Icons.notifications_none_outlined)),\n      IconButton(tooltip: 'Davet koduyla katıl', onPressed: _joinByCode, icon: const Icon(Icons.vpn_key_outlined)),\n    ],
     ),
     floatingActionButton: FloatingActionButton.extended(onPressed: _create, icon: const Icon(Icons.add), label: const Text('Etkinlik oluştur')),
     body: _loading ? const Center(child: CircularProgressIndicator())
