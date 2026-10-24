@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/city_preference_service.dart';
+import '../core/config.dart';
 
 class CommunityActivitiesScreen extends StatefulWidget {
-  const CommunityActivitiesScreen({super.key});
+  const CommunityActivitiesScreen({super.key, this.initialInviteCode});
+
+  final String? initialInviteCode;
   @override
   State<CommunityActivitiesScreen> createState() => _CommunityActivitiesScreenState();
 }
@@ -19,7 +22,21 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   String? _error;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    final code = widget.initialInviteCode;
+    if (code != null && code.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _joinByCode(initialCode: code);
+      });
+    }
+  }
+
+  String _inviteLink(Map<String, dynamic> item) {
+    final code = Uri.encodeQueryComponent(item['invite_code'].toString());
+    return '${AppConfig.supabaseUrl}/functions/v1/activity-invite?code=$code';
+  }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
@@ -61,10 +78,10 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
   }
 
 
-  Future<void> _joinActivity(String activityId) async {
+  Future<void> _joinActivity(String activityId, {String response = 'going'}) async {
     final user = _client.auth.currentUser;
     if (user == null) {
-      _message('Etkinliğe katılmak için önce profilinden giriş yap.');
+      _message('Yanıt vermek için önce profilinden giriş yap.');
       return;
     }
     try {
@@ -73,33 +90,39 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
           .eq('activity_id', activityId)
           .eq('user_id', user.id)
           .maybeSingle();
-      if (existing != null && existing['status'] == 'going') {
-        _message('Bu etkinliğe zaten katılıyorsun.');
+      if (existing != null && existing['status'] == response) {
+        _message('Yanıtın zaten kayıtlı.');
         return;
       }
       if (existing != null) {
-        await _client.from('activity_participants').update({'status': 'going'})
+        await _client.from('activity_participants').update({'status': response})
             .eq('activity_id', activityId).eq('user_id', user.id);
       } else {
         await _client.from('activity_participants').insert({
           'activity_id': activityId,
           'user_id': user.id,
-          'status': 'going',
+          'status': response,
         });
       }
-      _message('Etkinliğe katılımın kaydedildi.');
+      final message = switch (response) {
+        'going' => 'Katılacağın kaydedildi.',
+        'maybe' => 'Belki katılacağın kaydedildi.',
+        'declined' => 'Katılamayacağın kaydedildi.',
+        _ => 'Yanıtın kaydedildi.',
+      };
+      _message(message);
     } catch (_) {
-      _message('Katılım kaydedilemedi. Etkinlik başlamış veya kapanmış olabilir.');
+      _message('Yanıt kaydedilemedi. Etkinlik başlamış veya kapanmış olabilir.');
     }
   }
 
-  Future<void> _joinByCode() async {
+  Future<void> _joinByCode({String? initialCode}) async {
     final user = _client.auth.currentUser;
     if (user == null) {
       _message('Davet kodunu kullanmak için önce profilinden giriş yap.');
       return;
     }
-    final controller = TextEditingController();
+    final controller = TextEditingController(text: initialCode ?? '');
     final code = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -235,7 +258,8 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                       '${row['title']}\n${row['city']} · ${DateFormat('d MMM yyyy · HH:mm', 'tr_TR').format(date)}\n'
                       '${venueText.isEmpty ? '' : '$venueText\n'}${addressText.isEmpty ? '' : '$addressText\n'}'
                       '${description.text.trim()}\n\nEtkinlik kodu: ${row['invite_code']}\n'
-                      'BUGÜN uygulamasındaki “Birlikte yapalım” bölümünden buluşalım.',
+                      'Etkinlik bağlantısı: ${_inviteLink(row)}\n\n'
+                      'Bağlantıyı açarak etkinlik detaylarını gör, BUGÜN ile katılımını bildir. Uygulama yüklü değilse indirme sayfası açılır.',
                       subject: title.text.trim(),
                     );
                   } catch (_) {
@@ -259,7 +283,9 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
       'Seni BUGÜN üzerinden bir etkinliğe davet ediyorum!\n\n'
       '${item['title']}\n${item['city']} · ${rawDate == null ? '' : DateFormat('d MMM yyyy · HH:mm', 'tr_TR').format(rawDate)}\n'
       '${item['venue'] ?? ''}\n${item['address'] ?? ''}\n${item['description'] ?? ''}\n\n'
-      'Etkinlik kodu: ${item['invite_code']}\nBUGÜN uygulamasındaki “Birlikte yapalım” bölümünden buluşalım.',
+      'Etkinlik kodu: ${item['invite_code']}\n'
+      'Etkinlik bağlantısı: ${_inviteLink(item)}\n\n'
+      'Bağlantıyı açarak etkinlik detaylarını gör, BUGÜN ile katılımını bildir. Uygulama yüklü değilse indirme sayfası açılır.',
       subject: item['title']?.toString() ?? 'BUGÜN etkinliği',
     );
   }
@@ -352,7 +378,9 @@ class _CommunityActivitiesScreenState extends State<CommunityActivitiesScreen> {
                   runSpacing: 8,
                   children: [
                     Text(item['is_free'] == true ? 'Ücretsiz' : (item['estimated_cost'] == null ? 'Ücret belirtilmedi' : 'Tahmini kişi başı: ₺${item['estimated_cost']}'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString()), icon: const Icon(Icons.check_circle_outline, size: 17), label: const Text('Katıl')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'going'), icon: const Icon(Icons.check_circle_outline, size: 17), label: const Text('Katılıyorum')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'maybe'), icon: const Icon(Icons.help_outline, size: 17), label: const Text('Belki')),
+                    OutlinedButton.icon(onPressed: () => _joinActivity(item['id'].toString(), response: 'declined'), icon: const Icon(Icons.close_rounded, size: 17), label: const Text('Katılamıyorum')),
                     OutlinedButton.icon(onPressed: () => _share(item), icon: const Icon(Icons.share_outlined, size: 17), label: const Text('Davet et')),
                   ],
                 ),

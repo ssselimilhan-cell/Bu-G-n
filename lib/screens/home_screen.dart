@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 
 import '../models/event.dart';
@@ -45,6 +48,10 @@ class _HomeScreenState
       _eventSearchController =
       TextEditingController();
 
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+  String? _lastHandledInviteCode;
+
   List<Event> _events =
       <Event>[];
 
@@ -68,6 +75,11 @@ class _HomeScreenState
   void initState() {
     super.initState();
     _loadHome();
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingLink);
+    _appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleIncomingLink(uri);
+    }).catchError((_) {});
     _eventSearchController.addListener(
       _onSearchChanged,
     );
@@ -81,8 +93,22 @@ class _HomeScreenState
     );
 
     _eventSearchController.dispose();
+    _linkSubscription?.cancel();
 
     super.dispose();
+  }
+
+  void _handleIncomingLink(Uri uri) {
+    if (uri.scheme != 'bugun' || uri.host != 'invite' || !mounted) return;
+    final code = uri.queryParameters['code']?.trim();
+    if (code == null || code.isEmpty || code == _lastHandledInviteCode) return;
+    _lastHandledInviteCode = code;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => CommunityActivitiesScreen(initialInviteCode: code),
+      ));
+    });
   }
 
   void _onSearchChanged() {
