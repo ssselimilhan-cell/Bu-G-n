@@ -3,7 +3,7 @@ name: BUGUN Android release builds
 on:
   push:
     branches:
-      - restore-core-features
+      - main
   workflow_dispatch:
 
 permissions:
