@@ -126,24 +126,6 @@
       "editorial_note": "Resmî müze sayfasındaki çalışma saatleri ve geçici salon kapanışı yayımdan önce tekrar kontrol edilmeli."
     },
     {
-      "slug": "ahmet-arif-edebiyat-muzesi",
-      "name": "Ahmet Arif Edebiyat Müze Kütüphanesi",
-      "category": "Müze",
-      "place_type": "Edebiyat müzesi",
-      "district": "Sur",
-      "latitude": 37.9130024,
-      "longitude": 40.2356674,
-      "short_description": "Şair Ahmet Arif'in yaşamını ve edebiyat mirasını tanımaya ayrılmış müze-kütüphane; Suriçi kültür rotasına edebiyat odağı ekler.",
-      "source_ids": [
-        "diyarbakir_municipality_tourism"
-      ],
-      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
-      "external_id": "node/9661436207",
-      "review_status": "draft_coordinate_needs_check",
-      "publish": false,
-      "editorial_note": "Açık olduğu ve ziyaretçi kabul ettiği güncel kaynakla teyit edilmeli."
-    },
-    {
       "slug": "on-gozlu-kopru",
       "name": "On Gözlü Köprü (Dicle Köprüsü)",
       "category": "Tarih",
