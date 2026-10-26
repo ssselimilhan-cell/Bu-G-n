@@ -50,7 +50,7 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Etkinlik silinsin mi?'),
-        content: Text('"\${row['title'] ?? 'Etkinlik'}" etkinliğini ve davet kodunu silmek istediğine emin misin?'),
+        content: Text('${row['title'] ?? 'Etkinlik'} etkinliğini ve davet kodunu silmek istediğine emin misin?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('VAZGEÇ')),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SİL')),
