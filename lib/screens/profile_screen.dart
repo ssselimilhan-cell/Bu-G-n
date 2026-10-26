@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
 import 'city_offers_admin_screen.dart';
+import 'places_admin_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -352,6 +353,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(builder: (_) => const CityOffersAdminScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _settingCard(
+                      icon: Icons.place_outlined,
+                      title: 'Yönetici paneli · Gezilecek yerler',
+                      subtitle: 'Yer açıklaması, adres, koordinat, süre, otopark ve diğer bilgileri düzenle',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const PlacesAdminScreen()),
                       ),
                     ),
                   ],
