@@ -78,8 +78,8 @@ class _CityOffersAdminScreenState extends State<CityOffersAdminScreen> {
             TextFormField(controller: title, decoration: const InputDecoration(labelText: 'Fırsat başlığı *'), validator: (v) => (v == null || v.trim().length < 3) ? 'En az 3 karakter gir.' : null),
             TextFormField(controller: discount, decoration: const InputDecoration(labelText: 'İndirim / kampanya metni')),
             TextFormField(controller: description, decoration: const InputDecoration(labelText: 'Açıklama'), maxLines: 3),
-            TextFormField(controller: url, decoration: const InputDecoration(labelText: 'Kampanya bağlantısı (https://...)'), keyboardType: TextInputType.url),
-            TextFormField(controller: image, decoration: const InputDecoration(labelText: 'Görsel bağlantısı (https://...)'), keyboardType: TextInputType.url),
+            TextFormField(controller: url, decoration: const InputDecoration(labelText: 'Kampanya bağlantısı (isteğe bağlı, https:// önerilir)'), keyboardType: TextInputType.url),
+            TextFormField(controller: image, decoration: const InputDecoration(labelText: 'Görsel bağlantısı (isteğe bağlı, https:// önerilir)'), keyboardType: TextInputType.url),
             const SizedBox(height: 8),
             Align(alignment: Alignment.centerLeft, child: TextButton.icon(
               onPressed: () async {
