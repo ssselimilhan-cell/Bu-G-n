@@ -132,6 +132,7 @@ Deno.serve(async (req: Request) => {
 
       let shortDescription = sourceText.slice(0, 320);
       let longDescription = sourceText.slice(0, 1800);
+      // Source discovery and AI summarization never constitute administrator approval.
       let status = "source_backed";
       if (openAiKey) {
         const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -158,7 +159,7 @@ Deno.serve(async (req: Request) => {
                 generated.long_description.trim().length >= 120) {
               shortDescription = generated.short_description.trim().slice(0, 350);
               longDescription = generated.long_description.trim().slice(0, 4000);
-              status = "verified";
+              status = "source_backed";
             }
           }
         }
