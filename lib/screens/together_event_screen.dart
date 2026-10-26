@@ -40,6 +40,43 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     return List.generate(7, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
+  Future<void> _deleteEvent(Map<String, dynamic> row) async {
+    final id = row['id'];
+    if (id == null) {
+      _message('Etkinlik silinemedi: kayıt kimliği bulunamadı.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Etkinlik silinsin mi?'),
+        content: Text('"\${row['title'] ?? 'Etkinlik'}" etkinliğini ve davet kodunu silmek istediğine emin misin?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('VAZGEÇ')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('SİL')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await _client.from('community_events')
+          .delete()
+          .eq('id', id)
+          .eq('creator_id', _client.auth.currentUser!.id);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+        _saving = false;
+      });
+      _message('Etkinlik silindi.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _message('Etkinlik silinemedi. Bağlantını ve silme izinlerini kontrol et.');
+    }
+  }
+
   Future<void> _create() async {
     if (!_signedIn) { _message('Etkinlik oluşturmak için Profil bölümünden giriş yapmalısın.'); return; }
     final key = GlobalKey<FormState>();
@@ -157,7 +194,10 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
                 title: Text(row['title']?.toString() ?? 'Etkinlik', style: const TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: Text('${date ?? ''}\nDavet kodu: $code\n${row['meeting_point'] ?? ''}'),
                 isThreeLine: true,
-                trailing: IconButton(tooltip: 'Davet kodunu kopyala', icon: const Icon(Icons.copy), onPressed: () { Clipboard.setData(ClipboardData(text: code)); _message('Davet kodu kopyalandı.'); }),
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'Davet kodunu kopyala', icon: const Icon(Icons.copy), onPressed: () { Clipboard.setData(ClipboardData(text: code)); _message('Davet kodu kopyalandı.'); }),
+                IconButton(tooltip: 'Etkinliği sil', icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: _saving ? null : () => _deleteEvent(row)),
+              ]),
               ));
             }).toList());
           }),
