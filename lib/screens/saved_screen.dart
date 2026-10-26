@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
@@ -414,110 +415,139 @@ class _SavedEventCard
   }
 }
 
-class _SavedPlaceCard
-    extends StatelessWidget {
+class _SavedPlaceCard extends StatefulWidget {
   final Place place;
-
-  const _SavedPlaceCard({
-    required this.place,
-  });
+  const _SavedPlaceCard({required this.place});
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  State<_SavedPlaceCard> createState() => _SavedPlaceCardState();
+}
+
+class _SavedPlaceCardState extends State<_SavedPlaceCard> {
+  final TextEditingController _noteController = TextEditingController();
+  bool _loadingNote = true;
+  bool _savingNote = false;
+  String get _noteKey => 'bugun_saved_place_note_${widget.place.id}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNote();
+  }
+
+  Future<void> _loadNote() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    _noteController.text = prefs.getString(_noteKey) ?? '';
+    setState(() => _loadingNote = false);
+  }
+
+  Future<void> _saveNote() async {
+    setState(() => _savingNote = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_noteKey, _noteController.text.trim());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notun kaydedildi.')),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Not kaydedilemedi. Tekrar dene.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingNote = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final place = widget.place;
     return Material(
       color: Colors.white,
-      borderRadius:
-          BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius:
-            BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  PlaceDetailScreen(
-                place: place,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => PlaceDetailScreen(place: place),
+                ));
+              },
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      place.category == 'Müze'
+                          ? Icons.museum_outlined
+                          : place.outdoor == true
+                              ? Icons.landscape_outlined
+                              : Icons.place_outlined,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(place.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 4),
+                        Text(place.category, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                        const SizedBox(height: 3),
+                        const Text('Yer detaylarını aç', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.black45),
+                ],
               ),
             ),
-          );
-        },
-        child: Padding(
-          padding:
-              const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.grey.shade100,
-                  borderRadius:
-                      BorderRadius.circular(
-                    16,
-                  ),
-                ),
-                child: Icon(
-                  place.category ==
-                          'Müze'
-                      ? Icons
-                          .museum_outlined
-                      : place.outdoor ==
-                              true
-                          ? Icons
-                              .landscape_outlined
-                          : Icons
-                              .place_outlined,
-                  size: 30,
-                ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteController,
+              enabled: !_loadingNote && !_savingNote,
+              minLines: 1,
+              maxLines: 3,
+              maxLength: 240,
+              decoration: const InputDecoration(
+                labelText: 'Kişisel notun',
+                hintText: 'Örn. ailemle git, otoparkı kontrol et…',
+                border: OutlineInputBorder(),
+                isDense: true,
+                counterText: '',
               ),
-              const SizedBox(
-                width: 14,
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _loadingNote || _savingNote ? null : _saveNote,
+                icon: _savingNote
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.save_outlined, size: 18),
+                label: Text(_savingNote ? 'Kaydediliyor…' : 'Notu kaydet'),
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
-                  children: [
-                    Text(
-                      place.name,
-                      maxLines: 2,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(
-                        fontSize: 16,
-                        fontWeight:
-                            FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    Text(
-                      place.category,
-                      style:
-                          TextStyle(
-                        color:
-                            Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color:
-                    Colors.black45,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
