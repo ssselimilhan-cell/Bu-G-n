@@ -172,14 +172,14 @@ class _PlaceDetailScreenState
       body: ListView(
         padding:
             const EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          30,
+          16,
+          6,
+          16,
+          16,
         ),
         children: [
           Container(
-            height: 230,
+            height: 180,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius:
@@ -199,7 +199,7 @@ class _PlaceDetailScreenState
             ),
           ),
 
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
 
           Text(
             place.category.toUpperCase(),
@@ -245,7 +245,7 @@ class _PlaceDetailScreenState
             ),
           ],
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           _InfoRow(
             icon: Icons.location_on_outlined,
@@ -302,14 +302,17 @@ class _PlaceDetailScreenState
           ),
 
           if (place.tags.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 4,
+              runSpacing: 2,
               children: place.tags
                   .map(
                     (tag) => Chip(
-                      label: Text(tag),
+                      label: Text(tag, style: const TextStyle(fontSize: 11)),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       backgroundColor:
                           Colors.white,
                     ),
@@ -318,7 +321,7 @@ class _PlaceDetailScreenState
             ),
           ],
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           FilledButton.icon(
             onPressed: _openMaps,
@@ -330,7 +333,7 @@ class _PlaceDetailScreenState
             ),
             style: FilledButton.styleFrom(
               minimumSize:
-                  const Size.fromHeight(56),
+                  const Size.fromHeight(46),
               backgroundColor:
                   Colors.black,
               foregroundColor:
@@ -343,33 +346,21 @@ class _PlaceDetailScreenState
             ),
           ),
 
-          const SizedBox(height: 10),
-
-          OutlinedButton.icon(
-            onPressed: _toggleSaved,
-            icon: Icon(
-              _isSaved
-                  ? Icons.bookmark
-                  : Icons.bookmark_border,
-            ),
-            label: Text(
-              _isSaved
-                  ? 'KAYITLARDAN ÇIKAR'
-                  : 'KAYDET',
-            ),
-            style: OutlinedButton.styleFrom(
-              minimumSize:
-                  const Size.fromHeight(56),
-              foregroundColor:
-                  Colors.black,
-              shape:
-                  RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(17),
-              ),
-            ),
-          ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+        child: OutlinedButton.icon(
+          onPressed: _loadingSaved ? null : _toggleSaved,
+          icon: Icon(_isSaved ? Icons.bookmark : Icons.bookmark_border),
+          label: Text(_isSaved ? 'KAYITLARDAN ÇIKAR' : 'KAYDET'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(46),
+            foregroundColor: Colors.black,
+            visualDensity: VisualDensity.compact,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
       ),
     );
   }
