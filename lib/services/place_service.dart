@@ -30,7 +30,7 @@ class PlaceService {
   ];
 
   String _normalize(String value) => value
-      .toLocaleLowerCase()
+      .toLowerCase()
       .replaceAll('ı', 'i')
       .replaceAll('İ', 'i');
 
