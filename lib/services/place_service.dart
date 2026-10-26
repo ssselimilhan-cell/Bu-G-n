@@ -5,51 +5,15 @@ import '../models/place.dart';
 class PlaceService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  // A place is shown to users only when it has a usable map point and
-  // its user-facing text does not contain uncertainty/verification warnings.
-  // The same rule applies to all cities because all city lists use this service.
-  static const List<String> _uncertaintyPhrases = [
-    'teyit gerekli',
-    'teyit edilmeli',
-    'doğrulanmalıdır',
-    'doğrulanmalı',
-    'doğrulama bekliyor',
-    'kontrol edilmeli',
-    'kontrol edilmelidir',
-    'yeniden kontrol edilmeli',
-    'ziyarete açıklığı bilinmiyor',
-    'ziyarete açık olup olmadığı bilinmiyor',
-    'ziyaret durumu bilinmiyor',
-    'erişilebilirliği bilinmiyor',
-    'açılma durumu bilinmiyor',
-    'ziyaretçi erişimi belirlenmeli',
-    'erişim ayrıca belirlenmeli',
-    'konum doğrulaması bekleyen',
-    'kaynak doğrulaması bekleyen',
-    'koordinat eksik',
-  ];
-
-  String _normalize(String value) => value
-      .toLowerCase()
-      .replaceAll('ı', 'i')
-      .replaceAll('İ', 'i');
-
-  bool _isSuitableForPublicList(Place place) {
+  // Public lists must not remove a place merely because its description
+  // contains editorial uncertainty wording. Missing descriptive fields are
+  // presented as "Veri yok" in the UI; valid coordinates are still required
+  // for map directions.
+  bool _hasUsableCoordinates(Place place) {
     if (place.latitude == null || place.longitude == null) return false;
     if (place.latitude! < -90 || place.latitude! > 90) return false;
     if (place.longitude! < -180 || place.longitude! > 180) return false;
-
-    final visibleText = _normalize([
-      place.name,
-      place.address ?? '',
-      place.shortDescription ?? '',
-      place.longDescription ?? '',
-      place.bestTime ?? '',
-      ...place.tags,
-    ].join(' '));
-    return !_uncertaintyPhrases.any(
-      (phrase) => visibleText.contains(_normalize(phrase)),
-    );
+    return true;
   }
 
   Future<List<Place>> getPlaces({
@@ -75,7 +39,7 @@ class PlaceService {
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Place.fromMap)
-        .where(_isSuitableForPublicList)
+        .where(_hasUsableCoordinates)
         .toList();
   }
 
@@ -94,7 +58,7 @@ class PlaceService {
     return rows
         .whereType<Map<String, dynamic>>()
         .map(Place.fromMap)
-        .where(_isSuitableForPublicList)
+        .where(_hasUsableCoordinates)
         .toList();
   }
 }
