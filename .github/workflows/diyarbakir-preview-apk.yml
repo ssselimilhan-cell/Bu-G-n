@@ -1,0 +1,68 @@
+name: Diyarbakir draft preview APK (test only)
+
+on:
+  push:
+    branches:
+      - pilot/diyarbakir-preview-apk
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-preview-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PREVIEW_BUILD: "true"
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Android SDK platform
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager -print -quit)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android SDK manager was not found."
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Validate draft JSON
+        run: python3 -c "import json; d=json.load(open('data/place_pilots/diyarbakir_draft.json', encoding='utf-8')); assert d.get('status') == 'draft_not_imported'; assert d.get('places'); assert all(p.get('publish') is False for p in d['places']); print(f\"Validated {len(d['places'])} unpublished draft candidates\")"
+
+      - name: Build separate installable preview APK
+        run: flutter build apk --release --target lib/main_preview.dart --build-name 0.1.4 --build-number 6
+
+      - name: Verify preview package identity
+        run: |
+          grep -q 'applicationId = if (System.getenv("PREVIEW_BUILD") == "true") "tr.bugun.diyarbakir.preview"' android/app/build.gradle.kts
+          test -s build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload preview APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-diyarbakir-test-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
