@@ -26,7 +26,6 @@ class PlaceService {
         .select()
         .ilike('city', city.trim())
         .eq('is_active', true)
-        .inFilter('content_review_status', ['verified'])
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 
@@ -53,7 +52,6 @@ class PlaceService {
         .select()
         .inFilter('id', idList)
         .eq('is_active', true)
-        .inFilter('content_review_status', ['verified', 'source_backed'])
         .not('latitude', 'is', null)
         .not('longitude', 'is', null);
 
