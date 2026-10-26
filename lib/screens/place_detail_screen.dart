@@ -245,88 +245,61 @@ class _PlaceDetailScreenState
             ),
           ],
 
-          if (place.verifiedAt != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Son doğrulama: ${place.verifiedAt!.toLocal().day.toString().padLeft(2, '0')}.${place.verifiedAt!.toLocal().month.toString().padLeft(2, '0')}.${place.verifiedAt!.toLocal().year}',
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
-            ),
-          ],
-
-          if (place.sourceUrl != null && place.sourceUrl!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () async {
-                  final uri = Uri.tryParse(place.sourceUrl!);
-                  if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                icon: const Icon(Icons.open_in_new, size: 16),
-                label: const Text('Kaynağı görüntüle'),
-              ),
-            ),
-          ],
-
           const SizedBox(height: 20),
 
-          if (place.address != null &&
-              place.address!
-                  .trim()
-                  .isNotEmpty)
-            _InfoRow(
-              icon: Icons.location_on_outlined,
-              title: 'Adres',
-              value: place.address!,
-            ),
+          _InfoRow(
+            icon: Icons.location_on_outlined,
+            title: 'Adres',
+            value: _displayValue(place.address),
+          ),
 
-          if (place.visitDurationMin != null)
-            _InfoRow(
-              icon: Icons.schedule_outlined,
-              title: 'Tahmini süre',
-              value:
-                  '${place.visitDurationMin} dakika',
-            ),
+          _InfoRow(
+            icon: Icons.schedule_outlined,
+            title: 'Tahmini süre',
+            value: place.visitDurationMin == null ? 'Veri yok' : '${place.visitDurationMin} dakika',
+          ),
 
-          if (place.isFree == true)
-            const _InfoRow(
-              icon: Icons.payments_outlined,
-              title: 'Ücret',
-              value: 'Ücretsiz',
-            ),
+          _InfoRow(
+            icon: Icons.payments_outlined,
+            title: 'Ücret',
+            value: place.isFree == null ? 'Veri yok' : (place.isFree! ? 'Ücretsiz' : 'Ücretli'),
+          ),
 
-          if (place.parkingAvailable == true)
-            const _InfoRow(
-              icon: Icons.local_parking_outlined,
-              title: 'Otopark',
-              value: 'Var',
-            ),
+          _InfoRow(
+            icon: Icons.local_parking_outlined,
+            title: 'Otopark',
+            value: place.parkingAvailable == null ? 'Veri yok' : (place.parkingAvailable! ? 'Var' : 'Yok'),
+          ),
 
-          if (place.kidsFriendly == true)
-            const _InfoRow(
-              icon: Icons.child_friendly_outlined,
-              title: 'Çocuklar için',
-              value: 'Uygun',
-            ),
+          _InfoRow(
+            icon: Icons.child_friendly_outlined,
+            title: 'Çocuklar için',
+            value: place.kidsFriendly == null ? 'Veri yok' : (place.kidsFriendly! ? 'Uygun' : 'Uygun değil'),
+          ),
 
-          if (place.petFriendly == true)
-            const _InfoRow(
-              icon: Icons.pets_outlined,
-              title: 'Evcil hayvan',
-              value: 'Uygun',
-            ),
+          _InfoRow(
+            icon: Icons.pets_outlined,
+            title: 'Evcil hayvan',
+            value: place.petFriendly == null ? 'Veri yok' : (place.petFriendly! ? 'Uygun' : 'Uygun değil'),
+          ),
 
-          if (place.bestTime != null &&
-              place.bestTime!
-                  .trim()
-                  .isNotEmpty)
-            _InfoRow(
-              icon: Icons.wb_sunny_outlined,
-              title: 'En iyi zaman',
-              value: place.bestTime!,
-            ),
+          _InfoRow(
+            icon: Icons.wb_sunny_outlined,
+            title: 'En iyi zaman',
+            value: _displayValue(place.bestTime),
+          ),
+
+          _InfoRow(
+            icon: Icons.home_work_outlined,
+            title: 'Alan türü',
+            value: place.indoor == true && place.outdoor == true
+                ? 'Kapalı ve açık alan'
+                : place.indoor == true
+                    ? 'Kapalı alan'
+                    : place.outdoor == true
+                        ? 'Açık alan'
+                        : 'Veri yok',
+          ),
 
           if (place.tags.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -401,6 +374,8 @@ class _PlaceDetailScreenState
     );
   }
 }
+
+String _displayValue(String? value) => value == null || value.trim().isEmpty ? 'Veri yok' : value.trim();
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;
