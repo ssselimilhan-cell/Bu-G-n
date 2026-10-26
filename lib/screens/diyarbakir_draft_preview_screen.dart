@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DiyarbakirDraftPreviewScreen extends StatefulWidget {
   const DiyarbakirDraftPreviewScreen({super.key});
@@ -13,8 +14,7 @@ class DiyarbakirDraftPreviewScreen extends StatefulWidget {
 
 class _DiyarbakirDraftPreviewScreenState
     extends State<DiyarbakirDraftPreviewScreen> {
-  late final Future<Map<String, dynamic>> _draftFuture =
-      _loadDraft();
+  late final Future<Map<String, dynamic>> _draftFuture = _loadDraft();
   String _search = '';
   String _category = 'Tümü';
 
@@ -35,6 +35,43 @@ class _DiyarbakirDraftPreviewScreenState
       .replaceAll('ö', 'o')
       .replaceAll('ç', 'c');
 
+  Future<void> _openDirections(Map<String, dynamic> place) async {
+    final latitude = place['latitude'];
+    final longitude = place['longitude'];
+    final destination = latitude is num && longitude is num
+        ? '${latitude.toString()},${longitude.toString()}'
+        : [
+            place['name'] ?? '',
+            place['district'] ?? '',
+            'Diyarbakır',
+            'Türkiye',
+          ].where((part) => part.toString().trim().isNotEmpty).join(', ');
+
+    final uri = Uri.https(
+      'www.google.com',
+      '/maps/dir/',
+      {'api': '1', 'destination': destination, 'travelmode': 'driving'},
+    );
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Maps açılamadı.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Maps açılamadı.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,9 +83,11 @@ class _DiyarbakirDraftPreviewScreenState
             onPressed: () => showAboutDialog(
               context: context,
               applicationName: 'BUGÜN - Diyarbakır Test',
-              applicationVersion: '0.1.4-test',
+              applicationVersion: '0.1.5-test',
               children: const [
-                Text('Bu ayrı test uygulaması, paket içine eklenmiş JSON taslağını çevrimdışı gösterir. Canlı Supabase verisini değiştirmez ve mevcut BUGÜN uygulamasının yerine geçmez.'),
+                Text(
+                  'Bu ayrı test uygulaması, paket içindeki taslak verileri gösterir. Canlı Supabase verisini değiştirmez ve mevcut BUGÜN uygulamasının yerine geçmez.',
+                ),
               ],
             ),
             icon: const Icon(Icons.info_outline),
@@ -65,7 +104,9 @@ class _DiyarbakirDraftPreviewScreenState
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('Taslak dosyası açılamadı. Bu test APK içindeki veri dosyasını kontrol etmek gerekiyor.'),
+                child: Text(
+                  'Taslak dosyası açılamadı. Test APK içindeki veri dosyasını kontrol etmek gerekiyor.',
+                ),
               ),
             );
           }
@@ -77,7 +118,8 @@ class _DiyarbakirDraftPreviewScreenState
             'Tümü',
             ...places.map((p) => (p['category'] ?? 'Diğer').toString()),
           }.toList()
-            ..sort((a, b) => a == 'Tümü' ? -1 : (b == 'Tümü' ? 1 : a.compareTo(b)));
+            ..sort((a, b) =>
+                a == 'Tümü' ? -1 : (b == 'Tümü' ? 1 : a.compareTo(b)));
 
           final filtered = places.where((place) {
             final category = (place['category'] ?? 'Diğer').toString();
@@ -91,8 +133,6 @@ class _DiyarbakirDraftPreviewScreenState
                 text.contains(_normalize(_search.trim()));
           }).toList();
 
-          final withCoordinates = places.where((p) =>
-              p['latitude'] is num && p['longitude'] is num).length;
           return Column(
             children: [
               Container(
@@ -100,7 +140,7 @@ class _DiyarbakirDraftPreviewScreenState
                 color: const Color(0xFFFFF0D6),
                 padding: const EdgeInsets.all(12),
                 child: const Text(
-                  'TEST TASLAĞI • Yayımlanmış veri değildir. Bu ekrandaki kayıtlar canlı uygulamaya aktarılmaz. Konum ve kaynak doğrulaması bekleyen kayıtlar bulunur.',
+                  'TEST SÜRÜMÜ • Bu yerler henüz canlı uygulamaya aktarılmamıştır.',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                 ),
               ),
@@ -126,7 +166,8 @@ class _DiyarbakirDraftPreviewScreenState
               SizedBox(
                 height: 48,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   scrollDirection: Axis.horizontal,
                   itemCount: categories.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -142,30 +183,27 @@ class _DiyarbakirDraftPreviewScreenState
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${filtered.length} / ${places.length} aday yer',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    Text('$withCoordinates konumlu'),
-                  ],
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${filtered.length} yer',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ),
               const Divider(height: 1),
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(child: Text('Aramayla eşleşen yer bulunamadı.'))
+                    ? const Center(
+                        child: Text('Aramayla eşleşen yer bulunamadı.'),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final place = filtered[index];
-                          final hasCoordinates = place['latitude'] is num &&
-                              place['longitude'] is num;
                           return Card(
                             margin: EdgeInsets.zero,
                             child: Padding(
@@ -173,53 +211,32 @@ class _DiyarbakirDraftPreviewScreenState
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          (place['name'] ?? 'İsimsiz yer').toString(),
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        hasCoordinates ? Icons.location_on_outlined : Icons.location_off_outlined,
-                                        size: 20,
-                                        color: hasCoordinates ? Colors.green.shade700 : Colors.orange.shade800,
-                                      ),
-                                    ],
+                                  Text(
+                                    (place['name'] ?? 'İsimsiz yer').toString(),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                   const SizedBox(height: 5),
-                                  Text('${place['district'] ?? 'İlçe belirtilmemiş'} • ${place['category'] ?? 'Diğer'}'),
-                                  const SizedBox(height: 8),
-                                  Text((place['short_description'] ?? 'Açıklama henüz eklenmemiş.').toString()),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: [
-                                      _statusChip(hasCoordinates ? 'Koordinat var • doğrulama bekliyor' : 'Koordinat eksik'),
-                                      _statusChip('Yayımlanmadı'),
-                                    ],
+                                  Text(
+                                    '${place['district'] ?? 'İlçe belirtilmemiş'} • ${place['category'] ?? 'Diğer'}',
                                   ),
-                                  if (hasCoordinates) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${(place['latitude'] as num).toStringAsFixed(5)}, ${(place['longitude'] as num).toStringAsFixed(5)}',
-                                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    (place['short_description'] ??
+                                            'Açıklama henüz eklenmemiş.')
+                                        .toString(),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _openDirections(place),
+                                      icon: const Icon(Icons.directions),
+                                      label: const Text('Yol tarifi'),
                                     ),
-                                  ],
-                                  if (place['editorial_note'] != null) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Editör notu: ${place['editorial_note']}',
-                                      style: const TextStyle(fontSize: 12, color: Colors.black54),
-                                    ),
-                                  ],
+                                  ),
                                 ],
                               ),
                             ),
@@ -233,10 +250,4 @@ class _DiyarbakirDraftPreviewScreenState
       ),
     );
   }
-
-  Widget _statusChip(String label) => Chip(
-        label: Text(label, style: const TextStyle(fontSize: 11)),
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-      );
 }
