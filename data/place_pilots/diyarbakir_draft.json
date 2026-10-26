@@ -9,8 +9,8 @@
     "descriptions": "Özgün kısa metinler; kaynak metinler kopyalanmamıştır.",
     "coordinates": "Mevcut OSM tabanlı kayıtlar başlangıç noktasıdır; harita/konum doğrulaması yapılana kadar koordinatlar onaylı sayılmaz.",
     "license_note": "OSM verisi kullanılırsa ODbL ve atıf koşulları ayrıca uygulanmalı; belediye ve kamu kaynaklarının kullanım koşulları da kontrol edilmelidir.",
-    "publication_rule": "Kullanıcı listesinde yalnızca konum noktası bulunan ve kullanıcıya belirsizlik uyarısı göstermeyen yerler yer alır. Kullanıcı kendi ziyaret araştırmasını yapar. Bu pilot dosya Supabase'e aktarılmamıştır.",
-    "candidate_count_note": "Yalnızca koordinatı bulunan ve belirsizlik/teyit uyarısı içermeyen adaylar bu test listesinde tutulur. Bu test listesi canlı uygulamaya aktarılmaz.",
+    "publication_rule": "Kullanıcı listesinde yalnızca harita noktası bulunan ve kullanıcıya belirsizlik uyarısı göstermeyen yerler yer alır. Ziyaret planının kişisel araştırması kullanıcıya aittir. Bu pilot dosya Supabase'e aktarılmamıştır.",
+    "candidate_count_note": "Yalnızca koordinatı bulunan, kullanıcıya gösterilen metninde belirsizlik/teyit uyarısı olmayan ve ziyaret durumu açıkça sorunlu görünmeyen kayıtlar tutulur. Bu test listesi canlı uygulamaya aktarılmaz.",
     "review_workflow": [
       "coordinate_present",
       "manual_publish_approval"
@@ -67,7 +67,101 @@
       "used_for": "Bırkleyn, Hilar, Hasuni ve diğer mağara adaylarını ilçe bazında belirleme."
     }
   ],
-  "places": [],
+  "places": [
+    {
+      "slug": "dort-ayakli-minare",
+      "name": "Dört Ayaklı Minare",
+      "category": "Tarih",
+      "place_type": "Tarihî mimari",
+      "district": "Sur",
+      "latitude": 37.9106967,
+      "longitude": 40.2377818,
+      "short_description": "Dört taş sütun üzerine oturan minare, kendine özgü mimarisiyle Suriçi'nin en ayırt edici tarihî yapılarından biridir.",
+      "source_ids": [
+        "diyarbakir_municipality_tourism",
+        "diyarbakir_provincial_tourism"
+      ],
+      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
+      "external_id": "node/3350765397",
+      "review_status": "draft_coordinate_needs_check",
+      "publish": false
+    },
+    {
+      "slug": "keci-burcu",
+      "name": "Keçi Burcu",
+      "category": "Tarih",
+      "place_type": "Burç",
+      "district": "Sur",
+      "latitude": 37.9054544,
+      "longitude": 40.2368742,
+      "short_description": "Diyarbakır surlarının Dicle Vadisi'ne bakan kesiminde yer alan burç, sur mimarisini ve çevredeki vadi manzarasını birlikte gözlemlemek için bir duraktır.",
+      "source_ids": [
+        "diyarbakir_municipality_tourism",
+        "diyarbakir_provincial_tourism"
+      ],
+      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
+      "external_id": "node/3350749882",
+      "review_status": "draft_coordinate_needs_check",
+      "publish": false
+    },
+    {
+      "slug": "diyarbakir-arkeoloji-muzesi",
+      "name": "Diyarbakır Arkeoloji Müzesi",
+      "category": "Müze",
+      "place_type": "Arkeoloji müzesi",
+      "district": "Sur",
+      "latitude": 37.9154829,
+      "longitude": 40.2427061,
+      "address": "Cevat Paşa Mahallesi, Hz. Süleyman Caddesi, No:43, İçkale, Sur/Diyarbakır",
+      "short_description": "Bölgedeki kazılardan gelen buluntular ve farklı tarihî dönemlere ait eserler aracılığıyla Diyarbakır ile çevresinin geçmişini tanıtan müze.",
+      "source_ids": [
+        "archaeology_museum",
+        "diyarbakir_municipality_tourism"
+      ],
+      "official_url": "https://muze.gov.tr/muze-detay?DistId=MRK&SectionId=DBA01",
+      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
+      "external_id": "node/8836322687",
+      "review_status": "draft_coordinate_needs_check",
+      "publish": false,
+      "editorial_note": "Resmî müze sayfasındaki çalışma saatleri ve geçici salon kapanışı yayımdan önce tekrar kontrol edilmeli."
+    },
+    {
+      "slug": "ahmet-arif-edebiyat-muzesi",
+      "name": "Ahmet Arif Edebiyat Müze Kütüphanesi",
+      "category": "Müze",
+      "place_type": "Edebiyat müzesi",
+      "district": "Sur",
+      "latitude": 37.9130024,
+      "longitude": 40.2356674,
+      "short_description": "Şair Ahmet Arif'in yaşamını ve edebiyat mirasını tanımaya ayrılmış müze-kütüphane; Suriçi kültür rotasına edebiyat odağı ekler.",
+      "source_ids": [
+        "diyarbakir_municipality_tourism"
+      ],
+      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
+      "external_id": "node/9661436207",
+      "review_status": "draft_coordinate_needs_check",
+      "publish": false,
+      "editorial_note": "Açık olduğu ve ziyaretçi kabul ettiği güncel kaynakla teyit edilmeli."
+    },
+    {
+      "slug": "on-gozlu-kopru",
+      "name": "On Gözlü Köprü (Dicle Köprüsü)",
+      "category": "Tarih",
+      "place_type": "Tarihî köprü",
+      "district": "Sur",
+      "latitude": 37.8871683,
+      "longitude": 40.2289864,
+      "short_description": "Dicle üzerinde uzanan tarihî taş köprü, kemerleri ve nehir çevresindeki manzarasıyla kentin bilinen açık hava duraklarından biridir.",
+      "source_ids": [
+        "diyarbakir_municipality_tourism",
+        "diyarbakir_provincial_tourism"
+      ],
+      "coordinate_source": "OpenStreetMap mevcut kaydı; doğrulama bekliyor",
+      "external_id": "node/9470543910",
+      "review_status": "draft_coordinate_needs_check",
+      "publish": false
+    }
+  ],
   "rejected_existing_record_patterns": [
     {
       "pattern": "*Kavşak",
