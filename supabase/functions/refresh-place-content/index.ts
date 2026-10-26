@@ -106,7 +106,8 @@ Deno.serve(async (req: Request) => {
           return titleMatches && cityMatches;
         });
         if (!candidate) {
-          await client.from("places").update({ content_review_status: "rejected" }).eq("id", place.id);
+          // No source match is not proof that the place is invalid. Keep it in the admin review queue.
+          await client.from("places").update({ content_review_status: "needs_review" }).eq("id", place.id);
           results.push({ id: place.id, status: "no_reliable_wikipedia_match" });
           continue;
         }
