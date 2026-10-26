@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         // Keep the reviewed, permanent Google Play application ID.
-        applicationId = "tr.bugun.app"
+        applicationId = if (System.getenv("PREVIEW_BUILD") == "true") "tr.bugun.diyarbakir.preview" else "tr.bugun.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
