@@ -1,0 +1,9 @@
+-- Add three source-backed Kocaeli destinations.
+INSERT INTO public.places (name,category,place_type,city,address,latitude,longitude,slug,short_description,long_description,source_url,external_source,verified,trust_score,is_active,content_review_status,tags)
+SELECT v.name,v.category,v.place_type,v.city,v.address,v.latitude,v.longitude,v.slug,v.short_description,v.long_description,v.source_url,'curated_seed',false,85,true,'source_backed',v.tags::jsonb
+FROM (VALUES
+('Kerpe','Doğa','Kıyı Yerleşimi','Kocaeli','Kerpe, Kandıra, Kocaeli',41.1500,30.2200,'kocaeli-kerpe','Çam ormanlarıyla çevrili koyu ve doğal kıyı görünümüyle bilinen Karadeniz yerleşimi.','Kandıra ilçesindeki Kerpe, antik dönemden beri liman olarak kullanılan doğal koyu ve kıyı manzarasıyla öne çıkar.','https://www.kulturportali.gov.tr/turkiye/kocaeli/gezilecekyer/kerpe','["kıyı","doğa","tarih"]'),
+('Pembe Kayalar','Doğa','Jeolojik Oluşum','Kocaeli','Kefken, Kandıra, Kocaeli',41.1900,30.2700,'kocaeli-pembe-kayalar','Deniz kıyısındaki pembe tonlu jeolojik oluşumlarıyla tanınan doğal alan.','Kayalar tarih boyunca taş ocağı olarak kullanılmış; çıkarıldığında yumuşak, havayla temas ettikçe sertleşen yapısıyla mimari taş üretiminde değerlendirilmiştir.','https://kulturportali.gov.tr/turkiye/kocaeli/gezilecekyer/pembe-kayalar','["jeoloji","doğa","kıyı"]'),
+('Hereke Kalesi','Tarihî Yapı','Kale','Kocaeli','Hacı Akif Mahallesi, Körfez, Kocaeli',40.7860,29.6140,'kocaeli-hereke-kalesi','Körfez kıyısında, Roma dönemine kadar uzandığı düşünülen tarihî kale.','Hereke Kalesi’nin restorasyonu tamamlanarak 2023 yılında ziyarete açıldığı Kültür Portalı’nda belirtilir.','https://kulturportali.gov.tr/turkiye/kocaeli/gezilecekyer/hereke-kalesi','["kale","Roma","tarih"]')
+) AS v(name,category,place_type,city,address,latitude,longitude,slug,short_description,long_description,source_url,tags)
+WHERE NOT EXISTS (SELECT 1 FROM public.places p WHERE p.slug=v.slug);
