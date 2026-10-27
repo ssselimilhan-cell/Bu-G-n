@@ -29,10 +29,18 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     if (!_signedIn) return [];
+    final userId = _client.auth.currentUser!.id;
     final rows = await _client.from('community_events').select(
       'id,title,city,starts_at,meeting_point,description,invite_code,creator_id'
-    ).eq('city', widget.city).eq('creator_id', _client.auth.currentUser!.id).order('starts_at').limit(100);
-    return rows.whereType<Map<String, dynamic>>().toList();
+    ).eq('creator_id', userId).order('starts_at').limit(100);
+    final events = rows.whereType<Map<String, dynamic>>().toList();
+    for (final event in events) {
+      final responses = await _client.from('community_event_responses')
+          .select('user_id,status')
+          .eq('event_id', event['id']);
+      event['_responses'] = responses.whereType<Map<String, dynamic>>().toList();
+    }
+    return events;
   }
 
   String _newCode() {
@@ -211,6 +219,58 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     } catch (_) { _message('Davet aranamadı. Giriş yapıp tekrar dene.'); }
   }
 
+  String _responseSummary(Map<String, dynamic> row) {
+    final responses = (row['_responses'] as List<dynamic>? ?? []);
+    final yes = responses.where((r) => r['status'] == 'yes').length;
+    final no = responses.where((r) => r['status'] == 'no').length;
+    final maybe = responses.where((r) => r['status'] == 'maybe').length;
+    return 'Yanıtlar: Evet $yes · Hayır $no · Belki $maybe';
+  }
+
+  Future<void> _showResponses(Map<String, dynamic> row) async {
+    final responses = (row['_responses'] as List<dynamic>? ?? []);
+    final ids = responses.map((r) => r['user_id'].toString()).toList();
+    final names = <String, String>{};
+    if (ids.isNotEmpty) {
+      try {
+        final profiles = await _client.from('profiles')
+            .select('id,display_name')
+            .inFilter('id', ids);
+        for (final profile in profiles) {
+          final id = profile['id']?.toString();
+          final name = profile['display_name']?.toString().trim();
+          if (id != null && name != null && name.isNotEmpty) names[id] = name;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Katılım yanıtları · ${row['title']}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: responses.isEmpty
+              ? const Text('Henüz yanıt veren yok.')
+              : ListView(shrinkWrap: true, children: responses.map<Widget>((response) {
+                  final id = response['user_id'].toString();
+                  final status = response['status'];
+                  final label = status == 'yes' ? 'Evet, katılıyor'
+                      : status == 'no' ? 'Hayır, katılmıyor' : 'Belki';
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(status == 'yes' ? Icons.check_circle_outline
+                        : status == 'no' ? Icons.cancel_outlined : Icons.help_outline),
+                    title: Text(names[id] ?? 'Kullanıcı'),
+                    subtitle: Text(label),
+                  );
+                }).toList()),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))],
+      ),
+    );
+  }
+
   void _message(String text) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text))); }
 
   @override
@@ -242,9 +302,10 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
               final code = row['invite_code']?.toString() ?? '';
               return Card(color: Colors.white, child: ListTile(
                 title: Text(row['title']?.toString() ?? 'Etkinlik', style: const TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: Text('${date ?? ''}\nDavet kodu: $code\n${row['meeting_point'] ?? ''}'),
+                subtitle: Text('${date ?? ''}\nDavet kodu: $code\n${row['meeting_point'] ?? ''}\n${_responseSummary(row)}'),
                 isThreeLine: true,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'Yanıtlar', icon: const Icon(Icons.people_outline), onPressed: () => _showResponses(row)),
                 IconButton(tooltip: 'Davet et', icon: const Icon(Icons.share_outlined), onPressed: () => _shareEvent(row)),
                 IconButton(tooltip: 'Etkinliği güncelle', icon: const Icon(Icons.edit_outlined), onPressed: _saving ? null : () => _create(row)),
                 IconButton(tooltip: 'Davet kodunu kopyala', icon: const Icon(Icons.copy), onPressed: () { Clipboard.setData(ClipboardData(text: code)); _message('Davet kodu kopyalandı.'); }),
