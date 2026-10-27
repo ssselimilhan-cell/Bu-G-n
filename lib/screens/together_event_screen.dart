@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TogetherEventScreen extends StatefulWidget {
@@ -77,17 +78,17 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _create([Map<String, dynamic>? existing]) async {
     if (!_signedIn) { _message('Etkinlik oluşturmak için Profil bölümünden giriş yapmalısın.'); return; }
     final key = GlobalKey<FormState>();
-    final title = TextEditingController();
-    final meeting = TextEditingController();
-    final description = TextEditingController();
-    DateTime startsAt = DateTime.now().add(const Duration(days: 1));
+    final title = TextEditingController(text: existing?['title']?.toString() ?? '');
+    final meeting = TextEditingController(text: existing?['meeting_point']?.toString() ?? '');
+    final description = TextEditingController(text: existing?['description']?.toString() ?? '');
+    DateTime startsAt = DateTime.tryParse(existing?['starts_at']?.toString() ?? '')?.toLocal() ?? DateTime.now().add(const Duration(days: 1));
     final values = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Birlikte etkinlik oluştur'),
+        title: Text(existing == null ? 'Birlikte etkinlik oluştur' : 'Etkinliği güncelle'),
         content: Form(key: key, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextFormField(controller: title, decoration: const InputDecoration(labelText: 'Etkinlik adı *'), validator: (v) => (v == null || v.trim().length < 3) ? 'En az 3 karakter gir.' : null),
           TextFormField(controller: meeting, decoration: const InputDecoration(labelText: 'Buluşma noktası')),
@@ -103,26 +104,31 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
         ]))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('İPTAL')),
-          FilledButton(onPressed: () { if (key.currentState!.validate()) Navigator.pop(dialogContext, {'title': title.text.trim(), 'meeting': meeting.text.trim(), 'description': description.text.trim(), 'starts_at': startsAt.toUtc().toIso8601String()}); }, child: const Text('OLUŞTUR')),
+          FilledButton(onPressed: () { if (key.currentState!.validate()) Navigator.pop(dialogContext, {'title': title.text.trim(), 'meeting': meeting.text.trim(), 'description': description.text.trim(), 'starts_at': startsAt.toUtc().toIso8601String()}); }, child: Text(existing == null ? 'OLUŞTUR' : 'GÜNCELLE')),
         ],
       )),
     );
     title.dispose(); meeting.dispose(); description.dispose();
     if (values == null || !mounted) return;
     setState(() => _saving = true);
-    final code = _newCode();
+    final code = existing?['invite_code']?.toString() ?? _newCode();
     try {
-      await _client.from('community_events').insert({
-        'creator_id': _client.auth.currentUser!.id,
+      final payload = {
         'title': values['title'], 'city': widget.city,
         'starts_at': values['starts_at'],
         'meeting_point': (values['meeting'] as String).isEmpty ? null : values['meeting'],
         'description': (values['description'] as String).isEmpty ? null : values['description'],
-        'invite_code': code,
-      });
+      };
+      if (existing == null) {
+        payload['creator_id'] = _client.auth.currentUser!.id;
+        payload['invite_code'] = code;
+        await _client.from('community_events').insert(payload);
+      } else {
+        await _client.from('community_events').update(payload).eq('id', existing['id']).eq('creator_id', _client.auth.currentUser!.id);
+      }
       if (!mounted) return;
       setState(() => _future = _load());
-      await showDialog<void>(context: context, builder: (context) => AlertDialog(
+      if (existing == null) await showDialog<void>(context: context, builder: (context) => AlertDialog(
         title: const Text('Etkinlik oluşturuldu'),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Davet kodun:'),
@@ -139,6 +145,15 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     } catch (_) {
       _message('Etkinlik oluşturulamadı. Girişini ve 011 numaralı Supabase migration\'ını kontrol et.');
     } finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _shareEvent(Map<String, dynamic> row) async {
+    final code = row['invite_code']?.toString() ?? '';
+    final date = DateTime.tryParse(row['starts_at']?.toString() ?? '')?.toLocal();
+    final message = 'BUGÜN ile birlikte etkinlik planı: ${row['title']}\\nŞehir: ${row['city']}\\nTarih: ${date ?? ''}\\nBuluşma: ${row['meeting_point'] ?? 'Belirtilmedi'}\\nDavet kodu: $code\\nUygulamada Birlikte Planla bölümünden davet kodunu gir.';
+    final uri = Uri(scheme: 'sms', queryParameters: {'body': message});
+    try { if (!await launchUrl(uri)) { await Clipboard.setData(ClipboardData(text: message)); _message('Davet metni kopyalandı.'); } }
+    catch (_) { await Clipboard.setData(ClipboardData(text: message)); _message('Davet metni kopyalandı.'); }
   }
 
   Future<void> _findByCode() async {
@@ -195,6 +210,8 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
                 subtitle: Text('${date ?? ''}\nDavet kodu: $code\n${row['meeting_point'] ?? ''}'),
                 isThreeLine: true,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'Davet et', icon: const Icon(Icons.share_outlined), onPressed: () => _shareEvent(row)),
+                IconButton(tooltip: 'Etkinliği güncelle', icon: const Icon(Icons.edit_outlined), onPressed: _saving ? null : () => _create(row)),
                 IconButton(tooltip: 'Davet kodunu kopyala', icon: const Icon(Icons.copy), onPressed: () { Clipboard.setData(ClipboardData(text: code)); _message('Davet kodu kopyalandı.'); }),
                 IconButton(tooltip: 'Etkinliği sil', icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: _saving ? null : () => _deleteEvent(row)),
               ]),
