@@ -305,12 +305,26 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
                 subtitle: Text('${date ?? ''}\nDavet kodu: $code\n${row['meeting_point'] ?? ''}\n${_responseSummary(row)}'),
                 isThreeLine: true,
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(tooltip: 'Yanıtlar', icon: const Icon(Icons.people_outline), onPressed: () => _showResponses(row)),
-                IconButton(tooltip: 'Davet et', icon: const Icon(Icons.share_outlined), onPressed: () => _shareEvent(row)),
-                IconButton(tooltip: 'Etkinliği güncelle', icon: const Icon(Icons.edit_outlined), onPressed: _saving ? null : () => _create(row)),
-                IconButton(tooltip: 'Davet kodunu kopyala', icon: const Icon(Icons.copy), onPressed: () { Clipboard.setData(ClipboardData(text: code)); _message('Davet kodu kopyalandı.'); }),
-                IconButton(tooltip: 'Etkinliği sil', icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: _saving ? null : () => _deleteEvent(row)),
-              ]),
+                  IconButton(tooltip: 'Davet et', icon: const Icon(Icons.share_outlined), onPressed: () => _shareEvent(row)),
+                  PopupMenuButton<String>(
+                    tooltip: 'Etkinlik işlemleri',
+                    onSelected: (action) {
+                      if (action == 'responses') _showResponses(row);
+                      if (action == 'edit') _create(row);
+                      if (action == 'copy') {
+                        Clipboard.setData(ClipboardData(text: code));
+                        _message('Davet kodu kopyalandı.');
+                      }
+                      if (action == 'delete') _deleteEvent(row);
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'responses', child: Text('Katılım yanıtları')),
+                      PopupMenuItem(value: 'edit', child: Text('Etkinliği güncelle')),
+                      PopupMenuItem(value: 'copy', child: Text('Davet kodunu kopyala')),
+                      PopupMenuItem(value: 'delete', child: Text('Etkinliği sil')),
+                    ],
+                  ),
+                ]),
               ));
             }).toList());
           }),
