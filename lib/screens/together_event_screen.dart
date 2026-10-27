@@ -195,7 +195,18 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
       if (row == null) { _message('Bu davet koduyla etkinlik bulunamadı.'); return; }
       await showDialog<void>(context: context, builder: (context) {
         final date = DateTime.tryParse(row['starts_at']?.toString() ?? '')?.toLocal();
-        return AlertDialog(title: Text(row['title']?.toString() ?? 'Etkinlik'), content: Text('${row['city']}\n${date == null ? '' : date.toString()}\n${row['meeting_point'] ?? 'Buluşma noktası belirtilmemiş'}\n\n${row['description'] ?? ''}\n\nDavet kodu: ${row['invite_code']}'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT'))]);
+        return AlertDialog(
+          title: Text(row['title']?.toString() ?? 'Etkinlik'),
+          content: Text('${row['city']}\\n${date == null ? '' : date.toString()}\\n${row['meeting_point'] ?? 'Buluşma noktası belirtilmemiş'}\\n\\n${row['description'] ?? ''}\\n\\nDavet kodu: ${row['invite_code']}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT')),
+            if (row['creator_id'] != _client.auth.currentUser?.id) ...[
+              TextButton(onPressed: () => _respondToEvent(row, 'no'), child: const Text('HAYIR')),
+              TextButton(onPressed: () => _respondToEvent(row, 'maybe'), child: const Text('BELKİ')),
+              FilledButton(onPressed: () => _respondToEvent(row, 'yes'), child: const Text('EVET')),
+            ],
+          ],
+        );
       });
     } catch (_) { _message('Davet aranamadı. Giriş yapıp tekrar dene.'); }
   }
