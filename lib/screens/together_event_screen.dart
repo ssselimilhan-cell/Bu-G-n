@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TogetherEventScreen extends StatefulWidget {
@@ -150,10 +150,34 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
   Future<void> _shareEvent(Map<String, dynamic> row) async {
     final code = row['invite_code']?.toString() ?? '';
     final date = DateTime.tryParse(row['starts_at']?.toString() ?? '')?.toLocal();
-    final message = 'BUGÜN ile birlikte etkinlik planı: ${row['title']}\\nŞehir: ${row['city']}\\nTarih: ${date ?? ''}\\nBuluşma: ${row['meeting_point'] ?? 'Belirtilmedi'}\\nDavet kodu: $code\\nUygulamada Birlikte Planla bölümünden davet kodunu gir.';
-    final uri = Uri(scheme: 'sms', queryParameters: {'body': message});
-    try { if (!await launchUrl(uri)) { await Clipboard.setData(ClipboardData(text: message)); _message('Davet metni kopyalandı.'); } }
-    catch (_) { await Clipboard.setData(ClipboardData(text: message)); _message('Davet metni kopyalandı.'); }
+    final dateText = date == null ? 'Tarih belirtilmedi' : '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final message = 'Seni BUGÜN uygulamasında oluşturduğum "${row['title']}" etkinliğine davet ediyorum! Cevap vermek için BUGÜN uygulamasında daveti aç.\\n\\nŞehir: ${row['city']}\\nTarih: $dateText\\nBuluşma noktası: ${row['meeting_point'] ?? 'Belirtilmedi'}\\nDavet kodu: $code\\n\\nUygulama: https://play.google.com/store/apps/details?id=tr.bugun.app';
+    try {
+      await Share.share(message, subject: 'BUGÜN etkinlik daveti');
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: message));
+      _message('Davet metni kopyalandı. İstediğin uygulamada paylaşabilirsin.');
+    }
+  }
+
+  Future<void> _respondToEvent(Map<String, dynamic> row, String status) async {
+    if (!_signedIn) {
+      _message('Yanıt vermek için Profil bölümünden giriş yapmalısın.');
+      return;
+    }
+    try {
+      await _client.from('community_event_responses').upsert({
+        'event_id': row['id'],
+        'user_id': _client.auth.currentUser!.id,
+        'status': status,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'event_id,user_id');
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).maybePop();
+      _message('Katılım yanıtın kaydedildi.');
+    } catch (_) {
+      _message('Yanıt kaydedilemedi. Girişini ve bağlantını kontrol et.');
+    }
   }
 
   Future<void> _findByCode() async {
@@ -166,7 +190,7 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
     controller.dispose();
     if (code == null || code.isEmpty || !mounted) return;
     try {
-      final row = await _client.from('community_events').select('title,city,starts_at,meeting_point,description,invite_code').eq('invite_code', code).maybeSingle();
+      final row = await _client.from('community_events').select('id,creator_id,title,city,starts_at,meeting_point,description,invite_code').eq('invite_code', code).maybeSingle();
       if (!mounted) return;
       if (row == null) { _message('Bu davet koduyla etkinlik bulunamadı.'); return; }
       await showDialog<void>(context: context, builder: (context) {
