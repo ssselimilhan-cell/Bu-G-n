@@ -147,6 +147,22 @@ class _CityOffersAdminScreenState extends State<CityOffersAdminScreen> {
     title.dispose(); advertiser.dispose(); description.dispose(); discount.dispose(); url.dispose(); image.dispose();
   }
 
+  Future<void> _deleteOffer(Map<String, dynamic> row) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Şehir fırsatı silinsin mi?'),
+      content: Text('“${row['title'] ?? 'Fırsat'}” kalıcı olarak silinecek. Bu işlem geri alınamaz.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('VAZGEÇ')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('KALICI OLARAK SİL'))],
+    ));
+    if (confirmed != true || !mounted) return;
+    try {
+      await _client.from('offers').delete().eq('id', row['id']);
+      _message('Şehir fırsatı silindi.');
+      await _load();
+    } catch (_) {
+      _message('Silinemedi. Yönetici yetkisini ve veritabanı silme politikasını kontrol et.');
+    }
+  }
+
   Future<void> _toggleActive(Map<String, dynamic> row) async {
     try {
       await _client.from('offers').update({
@@ -192,7 +208,7 @@ class _CityOffersAdminScreenState extends State<CityOffersAdminScreen> {
               title: Text(row['title']?.toString() ?? 'Fırsat', style: const TextStyle(fontWeight: FontWeight.w800)),
               subtitle: Text('${row['advertiser_name'] ?? 'Reklamveren belirtilmedi'} · ${row['city']}\n${row['discount_text'] ?? ''}\n${expired ? 'Süresi dolmuş' : active ? 'Yayında / planlı' : 'Pasif'}'),
               isThreeLine: true,
-              trailing: PopupMenuButton<String>(onSelected: (v) { if (v == 'edit') _edit(row); if (v == 'toggle') _toggleActive(row); }, itemBuilder: (_) => [const PopupMenuItem(value: 'edit', child: Text('Düzenle')), PopupMenuItem(value: 'toggle', child: Text(active ? 'Yayından kaldır' : 'Yayımla'))]),
+              trailing: PopupMenuButton<String>(onSelected: (v) { if (v == 'edit') _edit(row); if (v == 'toggle') _toggleActive(row); if (v == 'delete') _deleteOffer(row); }, itemBuilder: (_) => [const PopupMenuItem(value: 'edit', child: Text('Düzenle')), PopupMenuItem(value: 'toggle', child: Text(active ? 'Yayından kaldır' : 'Yayımla')), const PopupMenuItem(value: 'delete', child: Text('Sil'))]),
             ));
           })),
       ])),
