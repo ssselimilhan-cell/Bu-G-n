@@ -1,0 +1,15 @@
+-- Curated additions for Sivas and Kahramanmaras.
+-- Sources: Sivas Provincial Directorate of Culture and Tourism,
+-- Sivas Municipality culture route, Kahramanmaras Provincial Directorate.
+INSERT INTO public.places
+(name,category,place_type,city,address,latitude,longitude,slug,short_description,long_description,source_url,external_source,verified,trust_score,is_active,content_review_status,tags)
+SELECT v.name,v.category,v.place_type,v.city,v.address,v.latitude,v.longitude,v.slug,v.short_description,v.long_description,v.source_url,'curated_seed',false,85,true,'source_backed',v.tags::jsonb
+FROM (VALUES
+('Buruciye Medresesi','Tarihî Yapı','Medrese','Sivas','Merkez, Sivas',39.7488,37.0162,'sivas-buruciye-medresesi','Selçuklu döneminden kalan medrese, Sivas merkezindeki tarihî yapıların başında gelir.','13. yüzyılda inşa edilen Buruciye Medresesi, taş mimarisi ve avlu düzeniyle kentin Selçuklu mirasını yansıtır.','https://sivas.ktb.gov.tr/TR-76466/gezilecek-yerler.html','["Selçuklu","mimari","tarih"]'),
+('Çifte Minareli Medrese','Tarihî Yapı','Medrese','Sivas','Merkez, Sivas',39.7481,37.0170,'sivas-cifte-minareli-medrese','Anıtsal taç kapısı ve çift minaresiyle Sivas’ın simge yapılarından biridir.','İl merkezindeki medrese, Selçuklu taş işçiliğini ve anıtsal mimari anlayışını yansıtır.','https://sivas.ktb.gov.tr/TR-76466/gezilecek-yerler.html','["Selçuklu","mimari","tarih"]'),
+('Gökpınar Gölü','Doğa','Göl','Sivas','Gürün, Sivas',38.7220,37.3650,'sivas-gokpinar-golu','Berrak ve mavi tonlarıyla bilinen doğal göl; doğa gezileri ve fotoğrafçılık için öne çıkar.','Gürün ilçesindeki Gökpınar Gölü, Sivas’ın tanınan doğal alanları arasındadır.','https://rota.sivas.bel.tr/','["doğa","göl","manzara"]'),
+('Döngel Mağarası','Doğa','Mağara','Kahramanmaraş','Döngel, Onikişubat, Kahramanmaraş',37.8800,36.5700,'kahramanmaras-dongel-magarasi','Mağara oluşumları ve çevresindeki doğal peyzajıyla bilinen gezi noktası.','Döngel Mağarası, Kahramanmaraş’ın resmî turizm tanıtımında yer alan doğal ve jeolojik alanlardan biridir.','https://kahramanmaras.ktb.gov.tr/TR-149576/gezilecek-yerler.html','["mağara","jeoloji","doğa"]'),
+('Kapıçam Tabiat Parkı','Doğa','Tabiat Parkı','Kahramanmaraş','Dulkadiroğlu, Kahramanmaraş',37.5200,36.9800,'kahramanmaras-kapicam-tabiat-parki','Kent çevresinde doğa yürüyüşü ve açık hava etkinlikleri için kullanılan tabiat parkı.','Kapıçam, Kahramanmaraş’ın resmî turizm listesinde bulunan korunan doğal alanlardan biridir.','https://kahramanmaras.ktb.gov.tr/TR-149576/gezilecek-yerler.html','["tabiat parkı","doğa","açık hava"]'),
+('Taş Han','Tarihî Yapı','Han','Kahramanmaraş','Dulkadiroğlu, Kahramanmaraş',37.5820,36.9220,'kahramanmaras-tas-han','Tarihî çarşı dokusu içinde yer alan geleneksel han yapısı.','Taş Han, Kahramanmaraş merkezindeki tarihî ticaret yapıları arasında resmî turizm kaynaklarında anılır.','https://kahramanmaras.ktb.gov.tr/TR-149576/gezilecek-yerler.html','["han","tarih","çarşı"]')
+) AS v(name,category,place_type,city,address,latitude,longitude,slug,short_description,long_description,source_url,tags)
+WHERE NOT EXISTS (SELECT 1 FROM public.places p WHERE p.slug=v.slug);
