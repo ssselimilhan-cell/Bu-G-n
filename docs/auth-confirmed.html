@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BUGÜN - E-posta doğrulama</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f5f5f3;color:#171717;font-family:Arial,Helvetica,sans-serif}.panel{width:min(100%,520px);padding:32px;border-radius:20px;background:#fff;box-shadow:0 12px 40px #0000000d;text-align:center}h1{margin:0 0 12px;font-size:27px}p{line-height:1.6;color:#555}.mark{width:58px;height:58px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-size:28px}a{display:inline-block;margin-top:12px;padding:13px 20px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:700}.hint{font-size:13px;margin-top:20px}
+</style>
+</head>
+<body>
+<main class="panel">
+  <div class="mark" id="mark">✓</div>
+  <h1 id="title">E-posta doğrulama işlemi</h1>
+  <p id="message">Bağlantının sonucu kontrol ediliyor. Bu sayfayı kapatıp BUGÜN uygulamasında aynı e-posta adresinle giriş yapabilirsin.</p>
+  <a href="https://play.google.com/store/apps/details?id=tr.bugun.app">BUGÜN uygulamasını aç / indir</a>
+  <p class="hint">Bağlantı süresi dolmuşsa uygulamadaki doğrulama e-postasını yeniden gönder seçeneğini kullan.</p>
+</main>
+<script>
+(function(){
+  const params=new URLSearchParams(location.search);
+  const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+  const code=params.get('error_code')||hash.get('error_code');
+  const error=params.get('error_description')||hash.get('error_description')||params.get('error')||hash.get('error');
+  const title=document.getElementById('title');
+  const message=document.getElementById('message');
+  const mark=document.getElementById('mark');
+  if(error||code){
+    title.textContent='Doğrulama tamamlanamadı';
+    mark.textContent='!';
+    message.textContent=code==='otp_expired'
+      ? 'Bu doğrulama bağlantısının süresi dolmuş veya bağlantı daha önce kullanılmış. BUGÜN uygulamasından aynı e-posta adresine yeni doğrulama bağlantısı iste.'
+      : 'Bağlantı doğrulanamadı. BUGÜN uygulamasından yeni bir doğrulama bağlantısı iste veya destek ekibine ulaş.';
+  }else{
+    title.textContent='E-posta bağlantısı açıldı';
+    message.textContent='Supabase doğrulama adımından bu sayfaya yönlendirildin. Şimdi BUGÜN uygulamasını açıp aynı e-posta adresin ve şifrenle giriş yap. Giriş yapamıyorsan uygulamadaki doğrulama bağlantısını yeniden gönder seçeneğini kullan.';
+  }
+})();
+</script>
+</body>
+</html>
