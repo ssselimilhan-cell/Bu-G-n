@@ -520,6 +520,8 @@ class _AccountDialogState extends State<_AccountDialog> {
         final response = await widget.client.auth.signUp(
           email: _email.text.trim(),
           password: _password.text,
+          emailRedirectTo:
+              'https://ssselimilhan-cell.github.io/Bu-G-n/auth-confirmed.html',
           data: {'display_name': _name.text.trim()},
         );
         final user = response.user;
@@ -543,7 +545,18 @@ class _AccountDialogState extends State<_AccountDialog> {
         if (mounted) Navigator.pop(context, true);
       }
     } on AuthException catch (error) {
-      setState(() => _error = error.message);
+      final message = error.message.toLowerCase();
+      setState(() {
+        if (message.contains('rate limit') ||
+            message.contains('security purposes') ||
+            message.contains('after')) {
+          _error = 'Güvenlik nedeniyle kısa süre beklemelisin. Bir dakika sonra tekrar dene.';
+        } else if (message.contains('email not confirmed')) {
+          _error = 'E-posta adresin henüz doğrulanmamış. Doğrulama e-postasını yeniden gönderebilirsin.';
+        } else {
+          _error = error.message;
+        }
+      });
     } catch (_) {
       setState(() => _error = 'İşlem tamamlanamadı. İnternet bağlantını ve Supabase Auth ayarlarını kontrol et.');
     } finally {
@@ -569,6 +582,44 @@ class _AccountDialogState extends State<_AccountDialog> {
     }
   }
 
+  Future<void> _resendConfirmation() async {
+    final email = _email.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = 'Önce kayıt sırasında kullandığın e-posta adresini yaz.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
+    try {
+      await widget.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo:
+            'https://ssselimilhan-cell.github.io/Bu-G-n/auth-confirmed.html',
+      );
+      if (mounted) {
+        setState(() => _error =
+            'Yeni doğrulama bağlantısı gönderme isteği alındı. Gelen kutunu ve gereksiz e-posta klasörünü kontrol et.');
+      }
+    } on AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      if (mounted) {
+        setState(() {
+          _error = (message.contains('rate') ||
+                  message.contains('security') ||
+                  message.contains('after'))
+              ? 'Yeni e-posta göndermek için güvenlik bekleme süresi var. Bir dakika sonra tekrar dene.'
+              : 'Doğrulama e-postası gönderilemedi. Hesabın daha önce oluşturulmuş ve doğrulanmamış olmalı; e-posta adresini kontrol et.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Doğrulama e-postası gönderilemedi. Bağlantını kontrol edip tekrar dene.');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -581,6 +632,13 @@ class _AccountDialogState extends State<_AccountDialog> {
             TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(labelText: 'E-posta'), validator: (value) => (value == null || !value.contains('@')) ? 'Geçerli bir e-posta yaz.' : null),
             TextFormField(controller: _password, obscureText: _hidePassword, autofillHints: _creating ? const [AutofillHints.newPassword] : const [AutofillHints.password], decoration: InputDecoration(labelText: 'Şifre', suffixIcon: IconButton(icon: Icon(_hidePassword ? Icons.visibility : Icons.visibility_off), onPressed: () => setState(() => _hidePassword = !_hidePassword))), validator: (value) => (value == null || value.length < 6) ? 'Şifre en az 6 karakter olmalı.' : null),
             if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12))),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _busy ? null : _resendConfirmation,
+                child: const Text('Doğrulama e-postasını yeniden gönder'),
+              ),
+            ),
             if (!_creating) Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _busy ? null : _resetPassword, child: const Text('Şifremi unuttum'))),
           ]),
         ),
