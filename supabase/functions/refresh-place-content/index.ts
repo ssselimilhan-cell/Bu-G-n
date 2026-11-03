@@ -16,7 +16,11 @@ function stripHtml(html: string): string {
   return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/\s+/g, " ").trim().slice(0, 12000);
+    .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/\s+/g, " ").trim().slice(0, 30000);
+}
+function extractPageTitle(html: string): string {
+  const match = html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i);
+  return match ? stripHtml(match[1]).slice(0, 300) : "";
 }
 function safePublicUrl(raw: string): URL | null {
   try {
@@ -63,7 +67,7 @@ Deno.serve(async (req: Request) => {
     .limit(placeId ? 1 : limit);
   if (error) return json({ error: "Could not load places", details: error.message }, 500);
 
-  const results: Array<{id: string; status: string; source?: string}> = [];
+  const results: Array<{id: string; status: string; source?: string; source_title?: string; ai_status?: string; short_description?: string; long_description?: string}> = [];
   for (const place of places ?? []) {
     try {
       let sourceUrl: string | null = null;
@@ -155,7 +159,7 @@ Deno.serve(async (req: Request) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: "Türkçe şehir rehberi editörüsün. Yalnızca kaynak metninde desteklenen olguları kullan. Kaynakta olmayan ücret, çalışma saati, ulaşım, tarih veya özellik uydurma. Kaynak yeri doğrulamıyorsa eligible=false döndür. Yalnızca JSON döndür: eligible boolean, short_description string (en fazla 350 karakter), long_description string (600-1800 karakter). Kaynağı kopyalama, dikkatli özetle." }] },
+            systemInstruction: { parts: [{ text: "Türkçe şehir rehberi editörüsün. Görevin, verilen kaynak metninin istenen yerle gerçekten ilgili olup olmadığını dikkatle değerlendirmek ve yalnızca metinde bulunan bilgileri özetlemektir. Kaynak başlığı genel bir sayfa başlığı olabilir; bu tek başına ret nedeni değildir. Önce kaynak metninin tamamında yerin adını ve eş anlamlı/alternatif yazımlarını ara. Yer adı metinde açıkça geçiyor ve çevresindeki bağlam bu yerin verilen şehirdeki istenen yer olduğunu makul biçimde doğruluyorsa eligible=true ver. Yalnızca isim benzerliği varsa, yer başka şehirdeyse veya kaynak metni ilişkiyi doğrulamıyorsa eligible=false ver. Kaynakta olmayan ücret, çalışma saati, ulaşım, tarih, özellik, tarihçe veya mimari ayrıntı uydurma. Metin az bilgi içeriyorsa kısa ve ölçülü yaz; uzunluğu doldurmak için bilgi ekleme. Yalnızca JSON döndür: eligible boolean, short_description string (30-350 karakter), long_description string (120-1800 karakter). Kaynağı kopyalama, dikkatli ve doğal Türkçeyle özetle." }] },
             contents: [{ role: "user", parts: [{ text: JSON.stringify({ name: place.name, city: place.city, source_title: sourceTitle, source_url: sourceUrl, source_text: sourceText }) }] }],
             generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
           }),
@@ -173,22 +177,22 @@ Deno.serve(async (req: Request) => {
               shortDescription = generated.short_description.trim().slice(0, 350);
               longDescription = generated.long_description.trim().slice(0, 4000);
               status = "source_backed";
-              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "accepted" }));
+              aiStatus = "accepted";\n              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "accepted" }));
             } else {
-              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: generated.eligible === true ? "rejected_validation" : "rejected_ineligible" }));
+              aiStatus = generated.eligible === true ? "rejected_validation" : "rejected_ineligible";\n              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
             }
           } else {
-            console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "empty_response" }));
+            aiStatus = "empty_response";\n            console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "empty_response" }));
           }
         } else {
-          console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "http_error", status: aiResponse.status }));
+          aiStatus = `http_error_${aiResponse.status}`;\n          console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
         }
       } else {
-        console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "missing_api_key" }));
+        aiStatus = "missing_api_key";\n        console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
       }
 
       if (dryRun) {
-        results.push({ id: place.id, status: "dry_run_ready", source: sourceUrl ?? undefined });
+        results.push({ id: place.id, status: "dry_run_ready", source: sourceUrl ?? undefined, source_title: sourceTitle || undefined, ai_status: aiStatus, short_description: shortDescription, long_description: longDescription });
         continue;
       }
       const now = new Date().toISOString();
