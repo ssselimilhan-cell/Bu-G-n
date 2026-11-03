@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) return json({ error: "Supabase server secrets are not configured" }, 503);
   const client = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const openAiKey = Deno.env.get("OPENAI_API_KEY");
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
   let limit = 10;
   try {
     const body = await req.json().catch(() => ({}));
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
   } catch { /* use default */ }
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  const refreshFilter = openAiKey
+  const refreshFilter = geminiKey
     ? `content_review_status.eq.needs_review,content_review_status.eq.stale,content_review_status.eq.source_backed,verified_at.lt.${cutoff}`
     : `content_review_status.eq.needs_review,content_review_status.eq.stale,verified_at.lt.${cutoff}`;
   const { data: places, error } = await client.from("places")
@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
       const knownUrl = typeof place.source_url === "string" && place.source_url.trim()
         ? place.source_url : (typeof place.website === "string" ? place.website : "");
       const safeKnownUrl = knownUrl ? safePublicUrl(knownUrl) : null;
-      if (safeKnownUrl && openAiKey) {
+      if (safeKnownUrl && geminiKey) {
         const page = await fetch(safeKnownUrl.toString(), {
           headers: { "User-Agent": "BugunCityGuide/1.0 (source-based content refresh)" },
           signal: AbortSignal.timeout(8000),
@@ -134,25 +134,21 @@ Deno.serve(async (req: Request) => {
       let longDescription = sourceText.slice(0, 1800);
       // Source discovery and AI summarization never constitute administrator approval.
       let status = "source_backed";
-      if (openAiKey) {
-        const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      if (geminiKey) {
+        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
           method: "POST",
-          headers: { "Authorization": `Bearer ${openAiKey}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "gpt-4.1-mini",
-            temperature: 0.1,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: "Türkçe şehir rehberi editörüsün. Yalnızca kaynak metninde desteklenen olguları kullan. Kaynakta olmayan ücret, çalışma saati, ulaşım, tarih veya özellik uydurma. Kaynak yeri doğrulamıyorsa eligible=false döndür. JSON: eligible boolean, short_description string (en fazla 350 karakter), long_description string (600-1800 karakter). Kaynağı kopyalama, dikkatli özetle." },
-              { role: "user", content: JSON.stringify({ name: place.name, city: place.city, source_title: sourceTitle, source_url: sourceUrl, source_text: sourceText }) },
-            ],
+            systemInstruction: { parts: [{ text: "Türkçe şehir rehberi editörüsün. Yalnızca kaynak metninde desteklenen olguları kullan. Kaynakta olmayan ücret, çalışma saati, ulaşım, tarih veya özellik uydurma. Kaynak yeri doğrulamıyorsa eligible=false döndür. Yalnızca JSON döndür: eligible boolean, short_description string (en fazla 350 karakter), long_description string (600-1800 karakter). Kaynağı kopyalama, dikkatli özetle." }] },
+            contents: [{ role: "user", parts: [{ text: JSON.stringify({ name: place.name, city: place.city, source_title: sourceTitle, source_url: sourceUrl, source_text: sourceText }) }] }],
+            generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
           }),
           signal: AbortSignal.timeout(25000),
         });
         if (aiResponse.ok) {
           const aiJson = await aiResponse.json();
-          const raw = aiJson.choices?.[0]?.message?.content;
-          if (typeof raw === "string") {
+          const raw = aiJson.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text ?? "").join("");
+          if (typeof raw === "string" && raw) {
             const generated = JSON.parse(raw);
             if (generated.eligible === true && typeof generated.short_description === "string" &&
                 typeof generated.long_description === "string" && generated.short_description.trim().length >= 30 &&
@@ -185,6 +181,6 @@ Deno.serve(async (req: Request) => {
     processed: results.length,
     updated: results.filter((item) => item.status === "updated").length,
     results,
-    note: "Descriptions are derived from fetched source text; AI enrichment is used only when OPENAI_API_KEY is configured. Missing matches are not fabricated.",
+    note: "Descriptions are derived from fetched source text; AI enrichment is used only when GEMINI_API_KEY is configured. Missing matches are not fabricated.",
   });
 });
