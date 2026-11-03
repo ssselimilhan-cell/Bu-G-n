@@ -1,0 +1,44 @@
+name: Test one place description (dry run only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check required secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" || { echo "::error::SUPABASE_URL secret is missing"; exit 1; }
+          test -n "$CONTENT_REFRESH_SECRET" || { echo "::error::CONTENT_REFRESH_SECRET secret is missing"; exit 1; }
+
+      - name: Run Anitkabir dry-run (no database writes)
+        id: test
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CONTENT_REFRESH_SECRET: ${{ secrets.CONTENT_REFRESH_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --silent --show-error --fail-with-body \
+            --request POST "${SUPABASE_URL}/functions/v1/refresh-place-content" \
+            --header "Content-Type: application/json" \
+            --header "x-content-refresh-secret: ${CONTENT_REFRESH_SECRET}" \
+            --data '{"place_id":"3c52a76e-70ef-4316-b05e-95e06976971c","dry_run":true}')"
+          echo "$response"
+          echo "$response" | jq -e '
+            .dry_run == true and
+            .updated == 0 and
+            .processed == 1 and
+            (.results[0].id == "3c52a76e-70ef-4316-b05e-95e06976971c")
+          ' >/dev/null
+          echo "::notice::Single-record dry-run completed. No place row was updated."
