@@ -177,18 +177,23 @@ Deno.serve(async (req: Request) => {
               shortDescription = generated.short_description.trim().slice(0, 350);
               longDescription = generated.long_description.trim().slice(0, 4000);
               status = "source_backed";
-              aiStatus = "accepted";\n              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "accepted" }));
+              aiStatus = "accepted";
+              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "accepted" }));
             } else {
-              aiStatus = generated.eligible === true ? "rejected_validation" : "rejected_ineligible";\n              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
+              aiStatus = generated.eligible === true ? "rejected_validation" : "rejected_ineligible";
+              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
             }
           } else {
-            aiStatus = "empty_response";\n            console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "empty_response" }));
+            aiStatus = "empty_response";
+            console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "empty_response" }));
           }
         } else {
-          aiStatus = `http_error_${aiResponse.status}`;\n          console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
+          aiStatus = `http_error_${aiResponse.status}`;
+          console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
         }
       } else {
-        aiStatus = "missing_api_key";\n        console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
+        aiStatus = "missing_api_key";
+        console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: aiStatus }));
       }
 
       if (dryRun) {
