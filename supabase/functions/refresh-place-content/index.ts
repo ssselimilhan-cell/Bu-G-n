@@ -88,7 +88,8 @@ Deno.serve(async (req: Request) => {
             redirect: "follow",
           });
           const finalUrl = safePublicUrl(page.url);
-          if (page.ok && finalUrl) {\n            sourceFetchStatus = "fetched";
+          if (page.ok && finalUrl) {
+            sourceFetchStatus = "fetched";
             const type = page.headers.get("content-type") || "";
             if (type.includes("text/html") || type.includes("text/plain")) {
               sourceText = stripHtml(await page.text());
