@@ -156,6 +156,7 @@ Deno.serve(async (req: Request) => {
       let longDescription = sourceText.slice(0, 1800);
       // Source discovery and AI summarization never constitute administrator approval.
       let status = "source_backed";
+      let aiStatus = geminiKey ? "not_run" : "missing_api_key";
       if (geminiKey) {
         const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(geminiKey)}`, {
           method: "POST",
