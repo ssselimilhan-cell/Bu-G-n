@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
     try {
       let sourceUrl: string | null = null;
       let sourceText = "";
-      let sourceTitle = "";
+      let sourceTitle = "";\n      let sourceFetchStatus = "not_attempted";
 
       const knownUrl = typeof place.source_url === "string" && place.source_url.trim()
         ? place.source_url : (typeof place.website === "string" ? place.website : "");
@@ -83,11 +83,11 @@ Deno.serve(async (req: Request) => {
         try {
           const page = await fetch(safeKnownUrl.toString(), {
             headers: { "User-Agent": "BugunCityGuide/1.0 (source-based content refresh)" },
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(15000),
             redirect: "follow",
           });
           const finalUrl = safePublicUrl(page.url);
-          if (page.ok && finalUrl) {
+          if (page.ok && finalUrl) {\n            sourceFetchStatus = "fetched";
             const type = page.headers.get("content-type") || "";
             if (type.includes("text/html") || type.includes("text/plain")) {
               sourceText = stripHtml(await page.text());
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
         const summaryLink = summary.content_urls?.desktop?.page;
         const finalWikiUrl = typeof summaryLink === "string" ? safePublicUrl(summaryLink) : null;
         if (!summaryText || !finalWikiUrl || summaryText.length < 100) {
-          results.push({ id: place.id, status: "insufficient_source_text" });
+          results.push({ id: place.id, status: "insufficient_source_text", source: sourceUrl ?? undefined, source_title: sourceTitle || undefined, source_fetch_status: sourceFetchStatus });
           continue;
         }
         sourceText = summaryText;
