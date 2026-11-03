@@ -39,21 +39,28 @@ Deno.serve(async (req: Request) => {
   const client = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
   let limit = 10;
+  let placeId: string | null = null;
+  let dryRun = false;
   try {
     const body = await req.json().catch(() => ({}));
     if (Number.isInteger(body?.limit)) limit = Math.max(1, Math.min(25, body.limit));
+    if (typeof body?.place_id === "string" && body.place_id.trim()) placeId = body.place_id.trim();
+    dryRun = body?.dry_run === true;
   } catch { /* use default */ }
+  console.log("refresh_started", JSON.stringify({ model: "gemini-2.5-flash", gemini_configured: Boolean(geminiKey), dry_run: dryRun, single_place: Boolean(placeId), limit }));
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const refreshFilter = geminiKey
     ? `content_review_status.eq.needs_review,content_review_status.eq.stale,content_review_status.eq.source_backed,verified_at.lt.${cutoff}`
     : `content_review_status.eq.needs_review,content_review_status.eq.stale,verified_at.lt.${cutoff}`;
-  const { data: places, error } = await client.from("places")
+  let placesQuery = client.from("places")
     .select("id,name,city,short_description,long_description,website,source_url,verified_at,content_review_status")
-    .eq("is_active", true)
-    .or(refreshFilter)
+    .eq("is_active", true);
+  if (placeId) placesQuery = placesQuery.eq("id", placeId);
+  else placesQuery = placesQuery.or(refreshFilter);
+  const { data: places, error } = await placesQuery
     .order("verified_at", { ascending: true, nullsFirst: true })
-    .limit(limit);
+    .limit(placeId ? 1 : limit);
   if (error) return json({ error: "Could not load places", details: error.message }, 500);
 
   const results: Array<{id: string; status: string; source?: string}> = [];
@@ -107,7 +114,7 @@ Deno.serve(async (req: Request) => {
         });
         if (!candidate) {
           // No source match is not proof that the place is invalid. Keep it in the admin review queue.
-          await client.from("places").update({ content_review_status: "needs_review" }).eq("id", place.id);
+          if (!dryRun) await client.from("places").update({ content_review_status: "needs_review" }).eq("id", place.id);
           results.push({ id: place.id, status: "no_reliable_wikipedia_match" });
           continue;
         }
@@ -145,6 +152,7 @@ Deno.serve(async (req: Request) => {
           }),
           signal: AbortSignal.timeout(25000),
         });
+        console.log("gemini_http", JSON.stringify({ place_id: place.id, status: aiResponse.status }));
         if (aiResponse.ok) {
           const aiJson = await aiResponse.json();
           const raw = aiJson.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text ?? "").join("");
@@ -156,11 +164,24 @@ Deno.serve(async (req: Request) => {
               shortDescription = generated.short_description.trim().slice(0, 350);
               longDescription = generated.long_description.trim().slice(0, 4000);
               status = "source_backed";
+              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "accepted" }));
+            } else {
+              console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: generated.eligible === true ? "rejected_validation" : "rejected_ineligible" }));
             }
+          } else {
+            console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "empty_response" }));
           }
+        } else {
+          console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "http_error", status: aiResponse.status }));
         }
+      } else {
+        console.log("gemini_outcome", JSON.stringify({ place_id: place.id, outcome: "missing_api_key" }));
       }
 
+      if (dryRun) {
+        results.push({ id: place.id, status: "dry_run_ready", source: sourceUrl ?? undefined });
+        continue;
+      }
       const now = new Date().toISOString();
       const { error: updateError } = await client.from("places").update({
         short_description: shortDescription,
@@ -172,7 +193,8 @@ Deno.serve(async (req: Request) => {
         updated_at: now,
       }).eq("id", place.id);
       results.push({ id: place.id, status: updateError ? "database_update_failed" : "updated", source: sourceUrl ?? undefined });
-    } catch {
+    } catch (error) {
+      console.log("refresh_failed", JSON.stringify({ place_id: place.id, error_type: error instanceof Error ? error.name : "unknown" }));
       results.push({ id: place.id, status: "refresh_failed" });
     }
   }
@@ -181,6 +203,7 @@ Deno.serve(async (req: Request) => {
     processed: results.length,
     updated: results.filter((item) => item.status === "updated").length,
     results,
+    dry_run: dryRun,
     note: "Descriptions are derived from fetched source text; AI enrichment is used only when GEMINI_API_KEY is configured. Missing matches are not fabricated.",
   });
 });
