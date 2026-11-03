@@ -19,7 +19,7 @@ function stripHtml(html: string): string {
     .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/\s+/g, " ").trim().slice(0, 30000);
 }
 function extractPageTitle(html: string): string {
-  const match = html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i);
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   return match ? stripHtml(match[1]).slice(0, 300) : "";
 }
 function safePublicUrl(raw: string): URL | null {
