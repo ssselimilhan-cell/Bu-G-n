@@ -47,7 +47,7 @@ Deno.serve(async (req: Request) => {
     if (typeof body?.place_id === "string" && body.place_id.trim()) placeId = body.place_id.trim();
     dryRun = body?.dry_run === true;
   } catch { /* use default */ }
-  console.log("refresh_started", JSON.stringify({ model: "gemini-2.5-flash", gemini_configured: Boolean(geminiKey), dry_run: dryRun, single_place: Boolean(placeId), limit }));
+  console.log("refresh_started", JSON.stringify({ model: "gemini-3.5-flash-lite", gemini_configured: Boolean(geminiKey), dry_run: dryRun, single_place: Boolean(placeId), limit }));
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const refreshFilter = geminiKey
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
       // Source discovery and AI summarization never constitute administrator approval.
       let status = "source_backed";
       if (geminiKey) {
-        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiKey)}`, {
+        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(geminiKey)}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
