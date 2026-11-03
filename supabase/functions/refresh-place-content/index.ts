@@ -12,15 +12,31 @@ function json(data: unknown, status = 200) {
 function normalize(value: string): string {
   return value.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ı/g, "i").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
+function decodeHtmlText(value: string): string {
+  return value.replace(/&nbsp;/gi, " ").replace(/&#160;/gi, " ")
+    .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
+    .replace(/&uuml;/gi, "ü").replace(/&Uuml;/g, "Ü").replace(/&ouml;/gi, "ö")
+    .replace(/&Ouml;/g, "Ö").replace(/&ccedil;/gi, "ç").replace(/&Ccedil;/g, "Ç")
+    .replace(/&gbreve;/gi, "ğ").replace(/&Gbreve;/g, "Ğ").replace(/&scedil;/gi, "ş")
+    .replace(/&Scedil;/g, "Ş").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
+}
 function stripHtml(html: string): string {
-  return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/\s+/g, " ").trim().slice(0, 30000);
+  let content = html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|svg|header|footer|nav|aside|form|button)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  const main = content.match(/<(main|article)\b[^>]*>([\s\S]*?)<\/\1>/i);
+  if (main?.[2] && main[2].length > 500) content = main[2];
+  content = content.replace(/<(br|\/p|\/div|\/li|\/h[1-6]|\/section|\/tr)\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return decodeHtmlText(content).replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n")
+    .replace(/\n{2,}/g, "\n").trim().slice(0, 30000);
 }
 function extractPageTitle(html: string): string {
-  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return match ? stripHtml(match[1]).slice(0, 300) : "";
+  const h1 = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return decodeHtmlText((h1?.[1] || title?.[1] || "").replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ").trim().slice(0, 300);
 }
 function safePublicUrl(raw: string): URL | null {
   try {
@@ -71,7 +87,7 @@ Deno.serve(async (req: Request) => {
   for (const place of places ?? []) {
     try {
       let sourceUrl: string | null = null;
-      let sourceText = "";
+      let sourceText = "";\n      let sourceFetchStatus = "not_attempted";
       let sourceTitle = "";
       let sourceFetchStatus = "not_attempted";
 
@@ -88,13 +104,14 @@ Deno.serve(async (req: Request) => {
             redirect: "follow",
           });
           const finalUrl = safePublicUrl(page.url);
-          if (page.ok && finalUrl) {
+          if (page.ok && finalUrl) {\n            sourceFetchStatus = "fetched";
             sourceFetchStatus = "fetched";
             const type = page.headers.get("content-type") || "";
             if (type.includes("text/html") || type.includes("text/plain")) {
-              sourceText = stripHtml(await page.text());
+              const html = await page.text();
+              sourceText = stripHtml(html);
               sourceUrl = finalUrl.toString();
-              sourceTitle = place.name;
+              sourceTitle = extractPageTitle(html) || finalUrl.hostname;
             }
           }
         } catch (sourceFetchError) {
@@ -200,7 +217,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (dryRun) {
-        results.push({ id: place.id, status: "dry_run_ready", source: sourceUrl ?? undefined, source_title: sourceTitle || undefined, ai_status: aiStatus, short_description: shortDescription, long_description: longDescription });
+        results.push({ id: place.id, status: "dry_run_ready", source: sourceUrl ?? undefined, source_title: sourceTitle || undefined, source_fetch_status: sourceFetchStatus, source_text_length: sourceText.length, source_text_preview: sourceText.slice(0, 900), ai_status: aiStatus, short_description: shortDescription, long_description: longDescription });
         continue;
       }
       const now = new Date().toISOString();
