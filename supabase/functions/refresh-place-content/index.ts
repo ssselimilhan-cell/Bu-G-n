@@ -74,19 +74,28 @@ Deno.serve(async (req: Request) => {
         ? place.source_url : (typeof place.website === "string" ? place.website : "");
       const safeKnownUrl = knownUrl ? safePublicUrl(knownUrl) : null;
       if (safeKnownUrl && geminiKey) {
-        const page = await fetch(safeKnownUrl.toString(), {
-          headers: { "User-Agent": "BugunCityGuide/1.0 (source-based content refresh)" },
-          signal: AbortSignal.timeout(8000),
-          redirect: "follow",
-        });
-        const finalUrl = safePublicUrl(page.url);
-        if (page.ok && finalUrl) {
-          const type = page.headers.get("content-type") || "";
-          if (type.includes("text/html") || type.includes("text/plain")) {
-            sourceText = stripHtml(await page.text());
-            sourceUrl = finalUrl.toString();
-            sourceTitle = place.name;
+        // A slow official site must not abort the whole place refresh.
+        // If it times out or is unavailable, continue to the independent source-discovery fallback.
+        try {
+          const page = await fetch(safeKnownUrl.toString(), {
+            headers: { "User-Agent": "BugunCityGuide/1.0 (source-based content refresh)" },
+            signal: AbortSignal.timeout(5000),
+            redirect: "follow",
+          });
+          const finalUrl = safePublicUrl(page.url);
+          if (page.ok && finalUrl) {
+            const type = page.headers.get("content-type") || "";
+            if (type.includes("text/html") || type.includes("text/plain")) {
+              sourceText = stripHtml(await page.text());
+              sourceUrl = finalUrl.toString();
+              sourceTitle = place.name;
+            }
           }
+        } catch (sourceFetchError) {
+          console.log("known_source_unavailable", JSON.stringify({
+            place_id: place.id,
+            error_type: sourceFetchError instanceof Error ? sourceFetchError.name : "unknown",
+          }));
         }
       }
 
