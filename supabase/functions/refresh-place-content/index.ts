@@ -72,7 +72,8 @@ Deno.serve(async (req: Request) => {
     try {
       let sourceUrl: string | null = null;
       let sourceText = "";
-      let sourceTitle = "";\n      let sourceFetchStatus = "not_attempted";
+      let sourceTitle = "";
+      let sourceFetchStatus = "not_attempted";
 
       const knownUrl = typeof place.source_url === "string" && place.source_url.trim()
         ? place.source_url : (typeof place.website === "string" ? place.website : "");
