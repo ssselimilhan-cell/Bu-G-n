@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -53,6 +56,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   late String? _selectedCategory;
 
   String _searchText = '';
+
+  String _placeSort = 'alphabetical';
+  Position? _userPosition;
+  int _randomSeed = 0;
 
   final List<String> _categories = const [
     'Tümü',
@@ -255,13 +262,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ? ''
         : _normalizeSearch(_selectedCategory!);
 
-    // Preserve the original fast path: when "Tümü" is selected and the
-    // search field is empty, return the loaded list directly. In particular,
-    // do not rebuild searchable text for every row unless the user is
-    // actually searching.
-    if (query.isEmpty && selected.isEmpty) return _places;
-
-    return _places.where((place) {
+    final filtered = _places.where((place) {
       if (selected.isNotEmpty) {
         final category = _normalizeSearch(place.category);
         final matchesCategory = category == selected ||
@@ -289,6 +290,134 @@ class _ExploreScreenState extends State<ExploreScreen>
       ].join(' '));
       return text.contains(query);
     }).toList();
+
+    return _sortPlaces(filtered);
+  }
+
+  List<Place> _sortPlaces(List<Place> places) {
+    final sorted = List<Place>.of(places);
+    if (_placeSort == 'random') {
+      sorted.shuffle(Random(_randomSeed));
+    } else if (_placeSort == 'nearest' && _userPosition != null) {
+      sorted.sort((a, b) {
+        final da = _distanceTo(a);
+        final db = _distanceTo(b);
+        if (da == null && db == null) return _compareTurkish(a.name, b.name);
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da.compareTo(db);
+      });
+    } else {
+      sorted.sort((a, b) => _compareTurkish(a.name, b.name));
+    }
+    return sorted;
+  }
+
+  int _compareTurkish(String a, String b) {
+    const alphabet = 'abcçdefgğhıijklmnoöprsştuüvyz';
+    final left = a.toLowerCase();
+    final right = b.toLowerCase();
+    final maxLength = min(left.runes.length, right.runes.length);
+    final leftRunes = left.runes.toList();
+    final rightRunes = right.runes.toList();
+    for (var i = 0; i < maxLength; i++) {
+      final li = alphabet.indexOf(String.fromCharCode(leftRunes[i]));
+      final ri = alphabet.indexOf(String.fromCharCode(rightRunes[i]));
+      final l = li < 0 ? leftRunes[i] + alphabet.length : li;
+      final r = ri < 0 ? rightRunes[i] + alphabet.length : ri;
+      if (l != r) return l.compareTo(r);
+    }
+    return leftRunes.length.compareTo(rightRunes.length);
+  }
+
+  double? _distanceTo(Place place) {
+    final position = _userPosition;
+    final lat = place.latitude;
+    final lng = place.longitude;
+    if (position == null || lat == null || lng == null ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return null;
+    }
+    return Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      lat,
+      lng,
+    );
+  }
+
+  Future<void> _selectPlaceSort(String? value) async {
+    if (value == null) return;
+    if (value == 'nearest') {
+      await _enableLocationSorting();
+      if (!mounted) return;
+      if (_userPosition == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Yakınlığa göre sıralamak için konum izni ve konum hizmeti gerekli.')),
+        );
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _placeSort = value;
+      if (value == 'random') _randomSeed++;
+    });
+  }
+
+  Future<void> _enableLocationSorting() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cihazın konum hizmeti kapalı. Yakınlık sıralaması için konumu açmalısın.')),
+          );
+        }
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          final openSettings = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Konum izni gerekli'),
+              content: const Text('Yakınlığa göre sıralama için BUGÜN uygulamasına konum izni vermelisin. İzinleri uygulama ayarlarından açabilirsin.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Vazgeç')),
+                FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ayarları aç')),
+              ],
+            ),
+          );
+          if (openSettings == true) await Geolocator.openAppSettings();
+        }
+        return;
+      }
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      if (!mounted) return;
+      setState(() => _userPosition = position);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Konum alınamadı. Daha sonra tekrar deneyebilirsin.')),
+        );
+      }
+    }
+  }
+
+  void _reshufflePlaces() {
+    setState(() => _randomSeed++);
   }
 
   String _normalizeSearch(String value) => value
@@ -628,16 +757,40 @@ class _ExploreScreenState extends State<ExploreScreen>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${places.length} yer bulundu',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-                fontWeight: FontWeight.w600,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${places.length} yer bulundu',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+              if (_placeSort == 'random')
+                IconButton(
+                  tooltip: 'Rastgele sırayı değiştir',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _reshufflePlaces,
+                  icon: const Icon(Icons.shuffle_rounded, size: 19),
+                ),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _placeSort,
+                  isDense: true,
+                  borderRadius: BorderRadius.circular(12),
+                  style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w700),
+                  items: const [
+                    DropdownMenuItem(value: 'nearest', child: Text('Yakınlığa göre')),
+                    DropdownMenuItem(value: 'alphabetical', child: Text('Alfabetik')),
+                    DropdownMenuItem(value: 'random', child: Text('Rastgele')),
+                  ],
+                  onChanged: _selectPlaceSort,
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
