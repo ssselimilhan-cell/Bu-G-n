@@ -1,0 +1,63 @@
+name: Build isolated offline test APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test/offline-apk-no-supabase
+
+permissions:
+  contents: read
+
+jobs:
+  build-offline-test-apk:
+    runs-on: ubuntu-latest
+    env:
+      BUGUN_ISOLATED_TEST_BUILD: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Verify isolated build flags
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$BUGUN_ISOLATED_TEST_BUILD" = "true"
+          if [ -n "${SUPABASE_URL:-}" ] || [ -n "${SUPABASE_ANON_KEY:-}" ] || [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Supabase environment variables must not be present in the offline test build."
+            exit 1
+          fi
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build isolated APK
+        run: flutter build apk --release --flavor offlineTest --dart-define=BUGUN_ISOLATED_TEST_BUILD=true
+      - name: Verify package ID and absence of Internet permission
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-offlineTest-release.apk"
+          test -f "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump badging "$APK" | grep -F "package: name='tr.bugun.app.test'"
+          if "$AAPT" dump permissions "$APK" | grep -F "android.permission.INTERNET"; then
+            echo "::error::Offline test APK unexpectedly contains INTERNET permission."
+            exit 1
+          fi
+          echo "Verified: tr.bugun.app.test; INTERNET permission absent."
+      - name: Upload offline test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-offline-test-apk
+          path: build/app/outputs/flutter-apk/app-offlineTest-release.apk
+          if-no-files-found: error
+          retention-days: 14
