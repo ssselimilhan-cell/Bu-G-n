@@ -84,7 +84,7 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
         _busyIds.remove(id);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Durum güncellendi: \${_statuses[status]}')),
+        SnackBar(content: Text('Durum güncellendi: ${_statuses[status]}')),
       );
     } catch (_) {
       if (!mounted) return;
@@ -197,7 +197,7 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
                                 child: ExpansionTile(
                                   leading: const Icon(Icons.feedback_outlined),
                                   title: Text(item['category']?.toString() ?? 'Genel', style: const TextStyle(fontWeight: FontWeight.w800)),
-                                  subtitle: Text('\${_date(item['created_at'])} · \${_statuses[status] ?? status}'),
+                                  subtitle: Text('${_date(item['created_at'])} · ${_statuses[status] ?? status}'),
                                   childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                   expandedCrossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -208,11 +208,11 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
                                     ],
                                     if (item['app_version'] != null) ...[
                                       const SizedBox(height: 6),
-                                      Text('Uygulama sürümü: \${item['app_version']}'),
+                                      Text('Uygulama sürümü: ${item['app_version']}'),
                                     ],
                                     if (item['user_id'] != null) ...[
                                       const SizedBox(height: 6),
-                                      Text('Kullanıcı hesabı: \${item['user_id']}'),
+                                      Text('Kullanıcı hesabı: ${item['user_id']}'),
                                     ],
                                     const SizedBox(height: 14),
                                     Row(
@@ -258,7 +258,7 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
           if (!_loading && _error == null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('\${visible.length} geri bildirim gösteriliyor', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+              child: Text('${visible.length} geri bildirim gösteriliyor', style: const TextStyle(fontSize: 11, color: Colors.black54)),
             ),
         ],
       ),
