@@ -75,7 +75,7 @@ create table if not exists public.city_food_suggestions (
 );
 alter table public.city_food_suggestions enable row level security;
 drop policy if exists "Anyone can submit food suggestions" on public.city_food_suggestions;
-create policy "Anyone can submit food suggestions" on public.city_food_suggestions for insert to anon, authenticated with check (status = 'pending');
+create policy "Anyone can submit food suggestions" on public.city_food_suggestions for insert to anon, authenticated with check (status = 'pending' and (user_id is null or user_id = auth.uid()));
 drop policy if exists "Admins can read food suggestions" on public.city_food_suggestions;
 create policy "Admins can read food suggestions" on public.city_food_suggestions for select to authenticated using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 drop policy if exists "Admins can update food suggestions" on public.city_food_suggestions;
