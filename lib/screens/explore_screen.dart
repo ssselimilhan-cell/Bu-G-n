@@ -15,6 +15,7 @@ import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 import 'cinema_screen.dart';
+import 'city_food_screen.dart';
 import '../widgets/city_picker_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -80,8 +81,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     _tabController = TabController(
-      length: 4,
-      initialIndex: widget.initialMapView ? 3 : 0,
+      length: 5,
+      initialIndex: widget.initialMapView ? 4 : 0,
       vsync: this,
     );
 
@@ -117,7 +118,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void didUpdateWidget(covariant ExploreScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialMapView != widget.initialMapView) {
-      _tabController.animateTo(widget.initialMapView ? 3 : 0);
+      _tabController.animateTo(widget.initialMapView ? 4 : 0);
     }
   }
 
@@ -247,9 +248,12 @@ class _ExploreScreenState extends State<ExploreScreen>
       return '$_selectedCity etkinlikleri';
     }
     if (_tabController.index == 2) {
-      return 'Sinema';
+      return 'Ne Yenir?';
     }
     if (_tabController.index == 3) {
+      return 'Sinema';
+    }
+    if (_tabController.index == 4) {
       return 'Haritada keşfet';
     }
 
@@ -489,6 +493,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             Tab(
               text: 'Etkinlikler',
             ),
+            Tab(text: 'Ne Yenir?'),
             Tab(
               text: 'Sinema',
             ),
@@ -502,6 +507,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           children: [
             _buildPlacesTab(),
             _buildEventsTab(),
+            CityFoodScreen(city: _selectedCity),
             CinemaScreen(city: _selectedCity),
             _buildMapTab(),
           ],
