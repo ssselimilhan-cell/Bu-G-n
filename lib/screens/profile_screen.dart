@@ -8,6 +8,7 @@ import '../services/city_preference_service.dart';
 import 'city_offers_admin_screen.dart';
 import 'places_admin_screen.dart';
 import 'user_feedback_admin_screen.dart';
+import 'community_events_admin_screen.dart';
 import 'feedback_submit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -365,6 +366,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(builder: (_) => const PlacesAdminScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _settingCard(
+                      icon: Icons.event_note_outlined,
+                      title: 'Yönetici paneli · Kullanıcı etkinlikleri',
+                      subtitle: 'Kullanıcıların oluşturduğu etkinlikleri görüntüle, düzenle ve sil',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const CommunityEventsAdminScreen()),
                       ),
                     ),
                     const SizedBox(height: 10),
