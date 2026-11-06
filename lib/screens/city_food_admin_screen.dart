@@ -14,7 +14,10 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
   void _msg(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
   Future<void> _load() async {
     if(!_admin){setState(()=>_loading=false);return;}
-    setState(()=>{_loading=true;_error=null;});
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try{final data=await _db.from('city_foods').select('id,city,name,short_description,long_description,where_to_eat,venue_name,venue_address,map_url,image_url,sort_order,is_active').eq('city',_city).order('sort_order');
       if(mounted)setState(()=>_rows=data.whereType<Map<String,dynamic>>().toList());
     }catch(_){if(mounted)setState(()=>_error='Yemek kayıtları alınamadı. 113 numaralı migration ve yönetici iznini kontrol et.');}
