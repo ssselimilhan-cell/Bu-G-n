@@ -1,16 +1,22 @@
 class AppConfig {
-  // Supabase project URL. The client URL must be the project root,
-  // not the REST endpoint (/rest/v1/).
-  static const supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://yvshqvethzbwcgpqaptd.supabase.co',
+  // The isolated test APK is compiled with BUGUN_ISOLATED_TEST_BUILD=true.
+  // Its client is deliberately pointed at loopback, never at the production project.
+  static const bool isolatedTestBuild = bool.fromEnvironment(
+    'BUGUN_ISOLATED_TEST_BUILD',
+    defaultValue: false,
   );
 
-  // Supabase publishable key. This key is intended for client applications.
-  // A dart-define can override it for other environments.
-  static const supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue:
-        'sb_publishable_OEVkps-n_bkL2ykgC1oS_A_A_WK3ppN',
-  );
+  static const String supabaseUrl = isolatedTestBuild
+      ? 'http://127.0.0.1:54321'
+      : String.fromEnvironment(
+          'SUPABASE_URL',
+          defaultValue: 'https://yvshqvethzbwcgpqaptd.supabase.co',
+        );
+
+  static const String supabaseAnonKey = isolatedTestBuild
+      ? 'offline-test-no-key'
+      : String.fromEnvironment(
+          'SUPABASE_ANON_KEY',
+          defaultValue: 'sb_publishable_OEVkps-n_bkL2ykgC1oS_A_A_WK3ppN',
+        );
 }
