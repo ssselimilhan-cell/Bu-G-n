@@ -7,7 +7,7 @@
     <application
         android:label="BUGÜN"
         android:name="${applicationName}"
-        android:icon="@drawable/bugun_launcher">
+        android:icon="@drawable/ic_bugun_launcher">
 
         <activity
             android:name=".MainActivity"
