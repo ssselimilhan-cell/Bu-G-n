@@ -1,6 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
@@ -8,6 +10,7 @@ import '../services/event_service.dart';
 import '../services/place_service.dart';
 import '../services/saved_event_service.dart';
 import '../services/saved_place_service.dart';
+import '../services/saved_place_note_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 
@@ -425,31 +428,48 @@ class _SavedPlaceCard extends StatefulWidget {
 
 class _SavedPlaceCardState extends State<_SavedPlaceCard> {
   final TextEditingController _noteController = TextEditingController();
+  final SavedPlaceNoteService _noteService = SavedPlaceNoteService();
+  late final StreamSubscription<AuthState> _authSubscription;
   bool _loadingNote = true;
   bool _savingNote = false;
-  String get _noteKey => 'bugun_saved_place_note_${widget.place.id}';
 
   @override
   void initState() {
     super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.signedOut) {
+        _loadNote();
+      }
+    });
     _loadNote();
   }
 
   Future<void> _loadNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    _noteController.text = prefs.getString(_noteKey) ?? '';
-    setState(() => _loadingNote = false);
+    setState(() => _loadingNote = true);
+    try {
+      final note = await _noteService.getNote(widget.place.id);
+      if (!mounted) return;
+      _noteController.text = note;
+      setState(() => _loadingNote = false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingNote = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kişisel not yüklenemedi. Tekrar deneyebilirsin.')),
+      );
+    }
   }
 
   Future<void> _saveNote() async {
     setState(() => _savingNote = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_noteKey, _noteController.text.trim());
+      await _noteService.saveNote(widget.place.id, _noteController.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notun kaydedildi.')),
+        SnackBar(content: Text(Supabase.instance.client.auth.currentUser == null
+            ? 'Notun bu cihaza kaydedildi.'
+            : 'Notun hesabına kaydedildi.')),
       );
     } catch (_) {
       if (mounted) {
@@ -464,6 +484,7 @@ class _SavedPlaceCardState extends State<_SavedPlaceCard> {
 
   @override
   void dispose() {
+    _authSubscription.cancel();
     _noteController.dispose();
     super.dispose();
   }
