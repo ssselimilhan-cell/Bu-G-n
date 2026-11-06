@@ -5,4 +5,8 @@
     <uses-permission
         android:name="android.permission.INTERNET"
         tools:node="remove" />
+
+    <application
+        android:label="BUGÜN TEST"
+        tools:replace="android:label" />
 </manifest>
