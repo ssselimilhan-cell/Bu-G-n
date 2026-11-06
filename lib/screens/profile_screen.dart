@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/city_preference_service.dart';
 import 'city_offers_admin_screen.dart';
 import 'places_admin_screen.dart';
+import 'user_feedback_admin_screen.dart';
+import 'feedback_submit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -365,6 +367,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         MaterialPageRoute<void>(builder: (_) => const PlacesAdminScreen()),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    _settingCard(
+                      icon: Icons.feedback_outlined,
+                      title: 'Yönetici paneli · Kullanıcı geri bildirimleri',
+                      subtitle: 'Kullanıcıların öneri, hata ve diğer bildirimlerini görüntüle',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const UserFeedbackAdminScreen()),
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 24),
                   const _SectionLabel('ŞEHİR'),
@@ -408,7 +420,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 24),
                   const _SectionLabel('YARDIM VE HESAP'),
                   const SizedBox(height: 10),
-                  _settingCard(icon: Icons.mail_outline_rounded, title: 'Bize ulaşın', subtitle: 'E-posta ile destek al', onTap: _contactUs),
+                  _settingCard(
+                    icon: Icons.feedback_outlined,
+                    title: 'Bize ulaşın',
+                    subtitle: 'Öneri, hata bildirimi veya görüşünü bize gönder',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(builder: (_) => const FeedbackSubmitScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _settingCard(
+                    icon: Icons.email_outlined,
+                    title: 'E-posta ile iletişim',
+                    subtitle: 'Doğrudan e-posta göndermek için',
+                    onTap: _contactUs,
+                  ),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.open_in_browser_rounded, title: 'Web üzerinden hesap silme', subtitle: 'Hesap silme talebi sayfasını aç', onTap: () => _openWebPage('https://ssselimilhan-cell.github.io/Bu-G-n/account-deletion.html')),
                   const SizedBox(height: 10),
