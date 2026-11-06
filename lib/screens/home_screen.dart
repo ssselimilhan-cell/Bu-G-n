@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/event.dart';
 import '../models/place.dart';
@@ -916,173 +917,90 @@ class _HomeScreenState
   Widget _buildEventCard(
     Event event,
   ) {
-    final local =
-        event.startsAt.toLocal();
-
-    final day =
-        local.day.toString().padLeft(
-              2,
-              '0',
-            );
-
-    final month =
-        local.month.toString().padLeft(
-              2,
-              '0',
-            );
-
-    final hour =
-        local.hour.toString().padLeft(
-              2,
-              '0',
-            );
-
-    final minute =
-        local.minute.toString().padLeft(
-              2,
-              '0',
-            );
+    final imageUrl = event.imageUrl?.trim();
+    final dateText = DateFormat(
+      'd MMM · HH:mm',
+      'tr_TR',
+    ).format(event.startsAt.toLocal());
 
     return Container(
-      margin:
-          const EdgeInsets.only(
-        bottom: 10,
-      ),
-      decoration:
-          BoxDecoration(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-        border:
-            Border.all(
-          color:
-              Colors.grey.shade200,
-        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: InkWell(
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-        onTap:
-            () => _openEvent(
-          event,
-        ),
-        child:
-            Padding(
-          padding:
-              const EdgeInsets.all(
-            14,
-          ),
-          child:
-              Row(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _openEvent(event),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
             children: [
               Container(
-                width: 58,
-                height: 58,
-                decoration:
-                    BoxDecoration(
-                  color:
-                      Colors.black,
-                  borderRadius:
-                      BorderRadius.circular(
-                    15,
-                  ),
+                width: 72,
+                height: 76,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(13),
                 ),
-                child:
-                    Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment
-                          .center,
-                  children: [
-                    Text(
-                      '$day.$month',
-                      style:
-                          const TextStyle(
-                        color:
-                            Colors.white,
-                        fontSize:
-                            13,
-                        fontWeight:
-                            FontWeight.w900,
+                child: imageUrl == null || imageUrl.isEmpty
+                    ? const Center(
+                        child: Icon(Icons.event_outlined, size: 30),
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.event_outlined, size: 30),
+                        ),
                       ),
-                    ),
-                    const SizedBox(
-                      height: 2,
-                    ),
-                    Text(
-                      '$hour:$minute',
-                      style:
-                          const TextStyle(
-                        color:
-                            Colors.white70,
-                        fontSize:
-                            10,
-                        fontWeight:
-                            FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-              const SizedBox(
-                width: 12,
-              ),
+              const SizedBox(width: 12),
               Expanded(
-                child:
-                    Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      dateText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
                     Text(
                       event.title,
                       maxLines: 2,
-                      overflow:
-                          TextOverflow
-                              .ellipsis,
-                      style:
-                          const TextStyle(
-                        fontSize:
-                            14,
-                        fontWeight:
-                            FontWeight.w900,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(
-                      height: 5,
-                    ),
+                    const SizedBox(height: 5),
                     Text(
                       [
                         event.category,
-                        if (event
-                                .venueName !=
-                            null)
+                        if (event.venueName != null &&
+                            event.venueName!.trim().isNotEmpty)
                           event.venueName!,
                       ].join(' · '),
                       maxLines: 2,
-                      overflow:
-                          TextOverflow
-                              .ellipsis,
-                      style:
-                          TextStyle(
-                        fontSize:
-                            10,
-                        color:
-                            Colors.grey
-                                .shade600,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ],
                 ),
               ),
               const Icon(
-                Icons
-                    .chevron_right_rounded,
-                color:
-                    Colors.black38,
+                Icons.chevron_right_rounded,
+                color: Colors.black38,
               ),
             ],
           ),
