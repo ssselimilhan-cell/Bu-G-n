@@ -1008,6 +1008,22 @@ class _ExploreScreenState extends State<ExploreScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (event.isFeatured)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF0E5),
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: const Text(
+                                  'ÖNE ÇIKAN',
+                                  style: TextStyle(color: Color(0xFFB85A18), fontSize: 8, fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                            ),
                           Text('${event.category} · $date', maxLines: 2, overflow: TextOverflow.ellipsis),
                           if (venue.isNotEmpty)
                             Text(venue, maxLines: 1, overflow: TextOverflow.ellipsis),
