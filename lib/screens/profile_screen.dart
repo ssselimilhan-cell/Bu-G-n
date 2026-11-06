@@ -394,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _settingCard(
                       icon: Icons.restaurant_menu_outlined,
                       title: 'Yönetici paneli · Ne Yenir?',
-                      subtitle: 'Şehirlere beş yemek ekle, açıklamaları ve Nerede Yenir? alanını düzenle',
+                      subtitle: 'Şehirlere sınırsız yemek ekle, sırala ve Nerede Yenir? alanını düzenle',
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(builder: (_) => const CityFoodAdminScreen()),
