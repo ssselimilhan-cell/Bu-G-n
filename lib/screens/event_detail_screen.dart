@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -210,6 +212,52 @@ class _EventDetailScreenState
     }
   }
 
+
+  Future<void> _shareEvent() async {
+    final event = widget.event;
+    final dateText = DateFormat(
+      'd MMMM yyyy, EEEE · HH:mm',
+      'tr_TR',
+    ).format(event.startsAt.toLocal());
+
+    final details = <String>[
+      'BUGÜN uygulamasında bu etkinliğe göz at:',
+      '',
+      event.title,
+      'Kategori: ${event.category}',
+      'Tarih: $dateText',
+      if (event.venueName != null && event.venueName!.trim().isNotEmpty)
+        'Mekân: ${event.venueName}',
+      if (event.address != null && event.address!.trim().isNotEmpty)
+        'Adres: ${event.address}',
+      if (event.description != null && event.description!.trim().isNotEmpty)
+        '',
+      if (event.description != null && event.description!.trim().isNotEmpty)
+        event.description!.trim(),
+      if (event.ticketUrl != null && event.ticketUrl!.trim().isNotEmpty)
+        '',
+      if (event.ticketUrl != null && event.ticketUrl!.trim().isNotEmpty)
+        'Bilet: ${event.ticketUrl}',
+      if (event.latitude != null && event.longitude != null)
+        'Harita: https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}',
+      '',
+      'BUGÜN uygulamasını indir: https://play.google.com/store/apps/details?id=tr.bugun.app',
+    ];
+    final message = details.join('\n');
+
+    try {
+      await Share.share(message, subject: 'BUGÜN · ${event.title}');
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: message));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Etkinlik bilgileri kopyalandı. İstediğin uygulamada paylaşabilirsin.'),
+        ),
+      );
+    }
+  }
+
   String _dateText() {
     return DateFormat(
       'd MMMM yyyy, EEEE · HH:mm',
@@ -300,6 +348,11 @@ class _EventDetailScreenState
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Etkinliği paylaş',
+            onPressed: _shareEvent,
+            icon: const Icon(Icons.share_outlined),
+          ),
           IconButton(
             onPressed:
                 _loadingSaved
