@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="BUGÜN"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@drawable/ic_bugun_launcher">
 
