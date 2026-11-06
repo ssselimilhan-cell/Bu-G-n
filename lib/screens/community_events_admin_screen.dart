@@ -139,7 +139,7 @@ class _CommunityEventsAdminScreenState extends State<CommunityEventsAdminScreen>
   Future<void> _delete(Map<String, dynamic> event) async {
     final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
       title: const Text('Kullanıcı etkinliği silinsin mi?'),
-      content: Text('" ${event['title']} " etkinliği kalıcı olarak silinecek. Bu etkinliğe verilmiş katılım yanıtları da silinir. Bu işlem geri alınamaz.'),
+      content: Text('" ${event['title']}" etkinliği kalıcı olarak silinecek. Bu etkinliğe verilmiş katılım yanıtları da silinir. Bu işlem geri alınamaz.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('VAZGEÇ')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ETKİNLİĞİ SİL')),
