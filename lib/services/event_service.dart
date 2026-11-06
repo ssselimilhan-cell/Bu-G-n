@@ -158,12 +158,14 @@ class EventService {
           longitude,
           trust_score,
           recommendation_score,
-          is_active
+          is_active,
+          is_featured
         ''')
         .inFilter(
           'id',
           idList,
         )
+        .order('is_featured', ascending: false)
         .order(
           'starts_at',
           ascending: true,
@@ -207,7 +209,8 @@ class EventService {
       longitude,
       trust_score,
       recommendation_score,
-      is_active
+      is_active,
+      is_featured
     ''';
 
     // Filter by city on the server before limiting, so other cities cannot
@@ -219,6 +222,7 @@ class EventService {
         .ilike('city', city.trim())
         .gte('starts_at', start.toIso8601String())
         .lte('starts_at', end.toIso8601String())
+        .order('is_featured', ascending: false)
         .order('starts_at', ascending: true)
         .order('recommendation_score', ascending: false)
         .limit(limit);
