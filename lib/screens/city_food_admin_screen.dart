@@ -20,6 +20,24 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
     }catch(_){if(mounted)setState(()=>_error='Yemek kayıtları alınamadı. 113 numaralı migration ve yönetici iznini kontrol et.');}
     finally{if(mounted)setState(()=>_loading=false);}
   }
+  int _nextAvailableOrder() {
+    final used=_rows.map((r)=>(r['sort_order'] as num?)?.toInt()).toSet();
+    for(var i=1;i<=5;i++){if(!used.contains(i))return i;}
+    return 1;
+  }
+  Future<void> _move(int index,int delta) async {
+    final other=index+delta;
+    if(other<0||other>=_rows.length)return;
+    try {
+      await _db.rpc('swap_city_food_order',params:{
+        'p_food_a':_rows[index]['id'],
+        'p_food_b':_rows[other]['id'],
+      });
+      await _load();
+    } catch (_) {
+      _msg('Sıralama değiştirilemedi. 113 numaralı migration uygulanmış olmalı.');
+    }
+  }
   String? _nil(String s)=>s.trim().isEmpty?null:s.trim();
   Future<void> _edit([Map<String,dynamic>? row]) async {
     final c=<String,TextEditingController>{
@@ -32,7 +50,7 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
       'map':TextEditingController(text:row?['map_url']?.toString()??''),
       'image':TextEditingController(text:row?['image_url']?.toString()??''),
     };
-    final key=GlobalKey<FormState>(); int order=(row?['sort_order'] as num?)?.toInt()??(_rows.length+1).clamp(1,5).toInt(); bool active=row?['is_active']!=false;
+    final key=GlobalKey<FormState>(); int order=(row?['sort_order'] as num?)?.toInt()??_nextAvailableOrder(); bool active=row?['is_active']!=false;
     Widget field(String id,String label,{bool required=false,int lines=1})=>Padding(padding:const EdgeInsets.only(bottom:10),child:TextFormField(controller:c[id],maxLines:lines,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),validator:required?(v)=>v==null||v.trim().isEmpty?'Bu alan gerekli.':null:null));
     final ok=await showDialog<bool>(context:context,builder:(dc)=>StatefulBuilder(builder:(context,ss)=>AlertDialog(
       title:Text(row==null?'Yeni yemek ekle':'Yemek kaydını düzenle'),
@@ -70,7 +88,7 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
         Padding(padding:const EdgeInsets.all(12),child:DropdownButtonFormField<String>(value:_city,isExpanded:true,decoration:const InputDecoration(labelText:'Şehir',border:OutlineInputBorder()),items:_cities.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null){setState(()=>_city=v);_load();}})),
         if(_loading)const Expanded(child:Center(child:CircularProgressIndicator()))
         else if(_error!=null)Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(_error!,textAlign:TextAlign.center))))
-        else Expanded(child:_rows.isEmpty?const Center(child:Text('Bu şehir için henüz yemek eklenmemiş.')):ListView.separated(itemCount:_rows.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final r=_rows[i];return ListTile(leading:CircleAvatar(child:Text('${r['sort_order']}')),title:Text(r['name']?.toString()??'İsimsiz yemek',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(r['is_active']==false?'Yayında değil':'Yayında'),onTap:()=>_edit(r),trailing:IconButton(icon:const Icon(Icons.delete_outline),onPressed:()=>_delete(r)));})),
+        else Expanded(child:_rows.isEmpty?const Center(child:Text('Bu şehir için henüz yemek eklenmemiş.')):ListView.separated(itemCount:_rows.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final r=_rows[i];return ListTile(leading:CircleAvatar(child:Text('${r['sort_order']}')),title:Text(r['name']?.toString()??'İsimsiz yemek',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(r['is_active']==false?'Yayında değil':'Yayında'),onTap:()=>_edit(r),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:'Yukarı taşı',icon:const Icon(Icons.keyboard_arrow_up),onPressed:i==0?null:()=>_move(i,-1)),IconButton(tooltip:'Aşağı taşı',icon:const Icon(Icons.keyboard_arrow_down),onPressed:i==_rows.length-1?null:()=>_move(i,1)),IconButton(tooltip:'Sil',icon:const Icon(Icons.delete_outline),onPressed:()=>_delete(r))]));})),
         if(!_loading&&_error==null)Padding(padding:const EdgeInsets.fromLTRB(16,0,16,12),child:Text('${_rows.length}/5 kayıt · Her şehirde en fazla beş yemek',style:const TextStyle(color:Colors.black54,fontSize:12))),
       ]));
   }
