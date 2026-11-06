@@ -15,6 +15,7 @@ class Event {
   final String? ticketUrl;
   final int trustScore;
   final double recommendationScore;
+  final bool isFeatured;
 
   const Event({
     required this.id,
@@ -33,6 +34,7 @@ class Event {
     this.ticketUrl,
     this.trustScore = 0,
     this.recommendationScore = 0,
+    this.isFeatured = false,
   });
 
   factory Event.fromMap(
@@ -76,6 +78,7 @@ class Event {
           (map['recommendation_score'] as num?)
                   ?.toDouble() ??
               0,
+      isFeatured: map['is_featured'] == true,
     );
   }
 }
