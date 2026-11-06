@@ -9,6 +9,7 @@ import 'city_offers_admin_screen.dart';
 import 'places_admin_screen.dart';
 import 'user_feedback_admin_screen.dart';
 import 'community_events_admin_screen.dart';
+import 'events_admin_screen.dart';
 import 'feedback_submit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -380,6 +381,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 10),
                     _settingCard(
+                      icon: Icons.event_available_outlined,
+                      title: 'Yönetici paneli · Etkinlikler',
+                      subtitle: 'Manuel etkinlik ekle, düzenle, yayından kaldır ve öne çıkar',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const EventsAdminScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _settingCard(
                       icon: Icons.feedback_outlined,
                       title: 'Yönetici paneli · Kullanıcı geri bildirimleri',
                       subtitle: 'Kullanıcıların öneri, hata ve diğer bildirimlerini görüntüle',
@@ -412,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: Text(interest),
                       selected: selected,
                       onSelected: (_) => _toggleInterest(interest),
-                      selectedColor: Colors.black,
+                      selectedColor: const Color(0xFF1268B3),
                       checkmarkColor: Colors.white,
                       labelStyle: TextStyle(color: selected ? Colors.white : Colors.black, fontWeight: FontWeight.w600),
                       backgroundColor: Colors.white,
@@ -455,7 +466,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (!signedIn)
                     FilledButton(
                       onPressed: _openAccount,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54), backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17))),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54), backgroundColor: const Color(0xFF1268B3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17))),
                       child: const Text('GİRİŞ YAP / HESAP OLUŞTUR', style: TextStyle(fontWeight: FontWeight.w900)),
                     )
                   else
@@ -478,7 +489,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = _displayName ?? _user?.userMetadata?['display_name'] as String?;
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(26)),
+      decoration: BoxDecoration(color: const Color(0xFF123F70), borderRadius: BorderRadius.circular(26)),
       child: Row(children: [
         Container(width: 60, height: 60, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.person_outline_rounded, size: 34)),
         const SizedBox(width: 15),
