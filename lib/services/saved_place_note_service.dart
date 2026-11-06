@@ -34,6 +34,7 @@ class SavedPlaceNoteService {
       await _client.from('saved_place_notes').upsert(
         rows,
         onConflict: 'user_id,place_id',
+        ignoreDuplicates: true,
       );
     }
 
