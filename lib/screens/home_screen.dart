@@ -16,6 +16,7 @@ import 'saved_screen.dart';
 import 'city_offers_screen.dart';
 import 'together_event_screen.dart';
 import 'calendar_screen.dart';
+import '../widgets/bugun_brand_logo.dart';
 
 enum EventPeriod {
   today,
@@ -482,14 +483,7 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'BUGÜN',
-          style: TextStyle(
-            fontSize: 27,
-            fontWeight:
-                FontWeight.w900,
-          ),
-        ),
+        title: const BugunBrandLogo(),
         actions: [
           IconButton(
             tooltip: 'Şehir seç',
@@ -591,10 +585,8 @@ class _HomeScreenState
         ),
         style:
             FilledButton.styleFrom(
-          backgroundColor:
-              Colors.black,
-          foregroundColor:
-              Colors.white,
+          backgroundColor: const Color(0xFF1268B3),
+          foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(
             borderRadius:
@@ -874,10 +866,7 @@ class _HomeScreenState
                 ),
         style:
             OutlinedButton.styleFrom(
-          backgroundColor:
-              selected
-                  ? Colors.black
-                  : Colors.white,
+          backgroundColor: selected ? const Color(0xFF1268B3) : Colors.white,
           foregroundColor:
               selected
                   ? Colors.white
@@ -886,9 +875,7 @@ class _HomeScreenState
               Colors.white,
           side:
               BorderSide(
-            color: selected
-                ? Colors.black
-                : Colors.grey.shade300,
+            color: selected ? const Color(0xFF1268B3) : Colors.grey.shade300,
           ),
           padding:
               EdgeInsets.zero,
