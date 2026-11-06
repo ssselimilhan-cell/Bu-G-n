@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -760,12 +761,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
 
     String eventDate(Event event) {
-      final value = event.startsAt.toLocal();
-      final day = value.day.toString().padLeft(2, '0');
-      final month = value.month.toString().padLeft(2, '0');
-      final hour = value.hour.toString().padLeft(2, '0');
-      final minute = value.minute.toString().padLeft(2, '0');
-      return '$day.$month.${value.year} · $hour:$minute';
+      return DateFormat(
+        'd MMM · HH:mm',
+        'tr_TR',
+      ).format(event.startsAt.toLocal());
     }
 
     String eventPrice(Event event) {
@@ -817,10 +816,32 @@ class _ExploreScreenState extends State<ExploreScreen>
                   child: ListTile(
                     isThreeLine: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    leading: CircleAvatar(
-                      radius: 21,
-                      backgroundColor: const Color(0xFFF0F0EE),
-                      child: Icon(Icons.event_outlined, color: Colors.grey.shade800),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: SizedBox(
+                        width: 58,
+                        height: 64,
+                        child: event.imageUrl == null ||
+                                event.imageUrl!.trim().isEmpty
+                            ? Container(
+                                color: const Color(0xFFF0F0EE),
+                                child: Icon(
+                                  Icons.event_outlined,
+                                  color: Colors.grey.shade800,
+                                ),
+                              )
+                            : Image.network(
+                                event.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFFF0F0EE),
+                                  child: Icon(
+                                    Icons.event_outlined,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ),
+                      ),
                     ),
                     title: Text(
                       event.title,
