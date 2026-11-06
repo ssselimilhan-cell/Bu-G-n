@@ -34,6 +34,15 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("offlineTest") {
+            dimension = "environment"
+            applicationIdSuffix = ".test"
+            resValue("string", "app_name", "BUGÜN TEST")
+        }
+    }
+
     signingConfigs {
         create("release") {
             if (hasReleaseSigning) {
