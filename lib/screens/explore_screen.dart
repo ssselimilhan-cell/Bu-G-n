@@ -479,9 +479,9 @@ class _ExploreScreenState extends State<ExploreScreen>
             _searchController.clear();
             setState(() {});
           },
-          labelColor: Colors.black,
+          labelColor: const Color(0xFF123F70),
           unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.black,
+          indicatorColor: const Color(0xFFFF8A3D),
           tabs: const [
             Tab(
               text: 'Yerler',
@@ -672,7 +672,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     label: Text(category),
                     selected: isSelected,
                     onSelected: (_) => _selectCategory(category),
-                    selectedColor: Colors.black,
+                    selectedColor: const Color(0xFF1268B3),
                     backgroundColor: Colors.white,
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
