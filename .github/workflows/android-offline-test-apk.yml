@@ -17,16 +17,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+
       - name: Verify isolated build flags
         shell: bash
         run: |
@@ -36,11 +39,14 @@ jobs:
             echo "::error::Supabase environment variables must not be present in the offline test build."
             exit 1
           fi
+
       - name: Install dependencies
         run: flutter pub get
+
       - name: Build isolated APK
         run: flutter build apk --release --flavor offlineTest --dart-define=BUGUN_ISOLATED_TEST_BUILD=true
-      - name: Verify package ID and absence of Internet permission
+
+      - name: Verify APK isolation
         shell: bash
         run: |
           set -euo pipefail
@@ -53,21 +59,14 @@ jobs:
             echo "::error::Offline test APK unexpectedly contains INTERNET permission."
             exit 1
           fi
-          for SO in $(unzip -Z1 "$APK" | grep '/libapp.so
-      - name: Upload offline test APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: bugun-offline-test-apk
-          path: build/app/outputs/flutter-apk/app-offlineTest-release.apk
-          if-no-files-found: error
-          retention-days: 14
-); do
+          while IFS= read -r SO; do
             if unzip -p "$APK" "$SO" | strings | grep -E 'yvshqvethzbwcgpqaptd|sb_publishable_OEVkps'; then
               echo "::error::Production Supabase URL or publishable key found in the test APK."
               exit 1
             fi
-          done
+          done < <(unzip -Z1 "$APK" | grep -E '^lib/[^/]+/libapp\.so$')
           echo "Verified: test package ID; no INTERNET permission; no production Supabase URL/key in Flutter AOT binaries."
+
       - name: Upload offline test APK
         uses: actions/upload-artifact@v4
         with:
