@@ -53,7 +53,21 @@ jobs:
             echo "::error::Offline test APK unexpectedly contains INTERNET permission."
             exit 1
           fi
-          echo "Verified: tr.bugun.app.test; INTERNET permission absent."
+          for SO in $(unzip -Z1 "$APK" | grep '/libapp.so
+      - name: Upload offline test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugun-offline-test-apk
+          path: build/app/outputs/flutter-apk/app-offlineTest-release.apk
+          if-no-files-found: error
+          retention-days: 14
+); do
+            if unzip -p "$APK" "$SO" | strings | grep -E 'yvshqvethzbwcgpqaptd|sb_publishable_OEVkps'; then
+              echo "::error::Production Supabase URL or publishable key found in the test APK."
+              exit 1
+            fi
+          done
+          echo "Verified: test package ID; no INTERNET permission; no production Supabase URL/key in Flutter AOT binaries."
       - name: Upload offline test APK
         uses: actions/upload-artifact@v4
         with:
