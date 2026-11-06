@@ -11,6 +11,7 @@ import 'user_feedback_admin_screen.dart';
 import 'community_events_admin_screen.dart';
 import 'events_admin_screen.dart';
 import 'city_food_admin_screen.dart';
+import 'city_food_suggestions_admin_screen.dart';
 import 'feedback_submit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -398,6 +399,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(builder: (_) => const CityFoodAdminScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _settingCard(
+                      icon: Icons.rate_review_outlined,
+                      title: 'Yönetici paneli · Yemek önerileri',
+                      subtitle: 'Kullanıcıların gönderdiği yemek önerilerini incele ve yayımla',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(builder: (_) => const CityFoodSuggestionsAdminScreen()),
                       ),
                     ),
                     const SizedBox(height: 10),
