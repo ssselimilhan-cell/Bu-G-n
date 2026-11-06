@@ -24,9 +24,11 @@ class SavedEventService {
         'entity_id': id,
       }).toList();
 
-      await _client.from('saved_items').insert(rows).onConflict(
-        'user_id,entity_type,entity_id',
-      ).ignoreDuplicates();
+      await _client.from('saved_items').upsert(
+        rows,
+        onConflict: 'user_id,entity_type,entity_id',
+        ignoreDuplicates: true,
+      );
       // Remove local copies only after the server accepted the import.
       await prefs.remove(_key);
     }
