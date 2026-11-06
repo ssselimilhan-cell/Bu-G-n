@@ -22,8 +22,7 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
   }
   int _nextAvailableOrder() {
     final used=_rows.map((r)=>(r['sort_order'] as num?)?.toInt()).toSet();
-    for(var i=1;i<=5;i++){if(!used.contains(i))return i;}
-    return 1;
+    return used.whereType<int>().fold<int>(0, (maxValue, value) => value > maxValue ? value : maxValue) + 1;
   }
   Future<void> _move(int index,int delta) async {
     final other=index+delta;
@@ -64,7 +63,7 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
         field('address','Adres / konum açıklaması',lines:2),
         field('map','Harita bağlantısı'),
         field('image','Görsel bağlantısı (isteğe bağlı)'),
-        DropdownButtonFormField<int>(value:order,decoration:const InputDecoration(labelText:'Listedeki sırası',border:OutlineInputBorder()),items:List.generate(5,(i)=>DropdownMenuItem(value:i+1,child:Text('${i+1}. sıra'))),onChanged:(v){if(v!=null)ss(()=>order=v);}),
+        const Padding(padding:EdgeInsets.only(bottom:8),child:Align(alignment:Alignment.centerLeft,child:Text('Sıralama, kayıttan sonra yukarı/aşağı oklarıyla yapılır.',style:TextStyle(fontSize:12,color:Colors.black54)))),
         SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Yayında'),value:active,onChanged:(v)=>ss(()=>active=v)),
       ])))),
       actions:[TextButton(onPressed:()=>Navigator.pop(dc,false),child:const Text('İPTAL')),FilledButton(onPressed:()=>key.currentState!.validate()?Navigator.pop(dc,true):null,child:const Text('KAYDET'))],
@@ -83,13 +82,13 @@ class _CityFoodAdminScreenState extends State<CityFoodAdminScreen> {
   @override Widget build(BuildContext context){
     if(!_admin)return Scaffold(appBar:AppBar(title:const Text('Ne Yenir? yönetimi')),body:const Center(child:Text('Bu alan yalnızca yöneticilere açıktır.')));
     return Scaffold(appBar:AppBar(title:const Text('Yönetici paneli · Ne Yenir?'),actions:[IconButton(onPressed:_load,icon:const Icon(Icons.refresh))]),
-      floatingActionButton:FloatingActionButton.extended(onPressed:_rows.length>=5?null:()=>_edit(),icon:const Icon(Icons.add),label:const Text('Yemek ekle')),
+      floatingActionButton:FloatingActionButton.extended(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('Yemek ekle')),
       body:Column(children:[
         Padding(padding:const EdgeInsets.all(12),child:DropdownButtonFormField<String>(value:_city,isExpanded:true,decoration:const InputDecoration(labelText:'Şehir',border:OutlineInputBorder()),items:_cities.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null){setState(()=>_city=v);_load();}})),
         if(_loading)const Expanded(child:Center(child:CircularProgressIndicator()))
         else if(_error!=null)Expanded(child:Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(_error!,textAlign:TextAlign.center))))
         else Expanded(child:_rows.isEmpty?const Center(child:Text('Bu şehir için henüz yemek eklenmemiş.')):ListView.separated(itemCount:_rows.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final r=_rows[i];return ListTile(leading:CircleAvatar(child:Text('${r['sort_order']}')),title:Text(r['name']?.toString()??'İsimsiz yemek',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text(r['is_active']==false?'Yayında değil':'Yayında'),onTap:()=>_edit(r),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:'Yukarı taşı',icon:const Icon(Icons.keyboard_arrow_up),onPressed:i==0?null:()=>_move(i,-1)),IconButton(tooltip:'Aşağı taşı',icon:const Icon(Icons.keyboard_arrow_down),onPressed:i==_rows.length-1?null:()=>_move(i,1)),IconButton(tooltip:'Sil',icon:const Icon(Icons.delete_outline),onPressed:()=>_delete(r))]));})),
-        if(!_loading&&_error==null)Padding(padding:const EdgeInsets.fromLTRB(16,0,16,12),child:Text('${_rows.length}/5 kayıt · Her şehirde en fazla beş yemek',style:const TextStyle(color:Colors.black54,fontSize:12))),
+        if(!_loading&&_error==null)Padding(padding:const EdgeInsets.fromLTRB(16,0,16,12),child:Text('${_rows.length} yemek kaydı · Sınır yok',style:const TextStyle(color:Colors.black54,fontSize:12))),
       ]));
   }
 }
