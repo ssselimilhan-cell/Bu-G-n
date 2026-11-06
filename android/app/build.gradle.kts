@@ -39,7 +39,6 @@ android {
         create("offlineTest") {
             dimension = "environment"
             applicationIdSuffix = ".test"
-            resValue("string", "app_name", "BUGÜN TEST")
         }
     }
 
