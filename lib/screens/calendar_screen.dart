@@ -400,7 +400,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       if (!_signedIn)
                         const Padding(
                           padding: EdgeInsets.only(bottom: 10),
-                          child: Text('Oluşturduğun planları ve kişisel notları hesabınla senkronize görmek için giriş yap.'),
+                          child: Text('Kaydettiğin etkinlikleri, oluşturduğun planları, katılım yanıtlarını ve kişisel notlarını hesabınla senkronize görmek için giriş yap.'),
                         ),
                       if (entries.isEmpty)
                         const Padding(
