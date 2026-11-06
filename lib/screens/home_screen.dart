@@ -15,6 +15,7 @@ import 'recommendation_screen.dart';
 import 'saved_screen.dart';
 import 'city_offers_screen.dart';
 import 'together_event_screen.dart';
+import 'calendar_screen.dart';
 
 enum EventPeriod {
   today,
@@ -546,6 +547,8 @@ class _HomeScreenState
                 height: 16,
               ),
               _buildCommunityShortcuts(),
+              const SizedBox(height: 8),
+              _buildCalendarShortcut(),
               const SizedBox(height: 16),
               _buildRecommendationButton(),
               const SizedBox(height: 22),
@@ -598,6 +601,45 @@ class _HomeScreenState
                 BorderRadius.circular(
               18,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildCalendarShortcut() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => const CalendarScreen(),
+          ),
+        ),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 58),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.calendar_month_outlined, size: 23),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Takvimim',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.black45),
+            ],
           ),
         ),
       ),
