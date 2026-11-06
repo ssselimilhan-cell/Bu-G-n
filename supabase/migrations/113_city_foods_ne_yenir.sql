@@ -10,7 +10,7 @@ create table if not exists public.city_foods (
   venue_address text,
   map_url text,
   image_url text,
-  sort_order integer not null check (sort_order between 1 and 5),
+  sort_order integer not null default 1 check (sort_order >= 1),
   is_active boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -63,3 +63,24 @@ end;
 $$;
 revoke all on function public.swap_city_food_order(uuid, uuid) from public;
 grant execute on function public.swap_city_food_order(uuid, uuid) to authenticated;
+
+
+-- User-submitted food suggestions remain unpublished until administrator review.
+create table if not exists public.city_food_suggestions (
+  id uuid primary key default gen_random_uuid(), city text not null,
+  food_name text not null check (length(trim(food_name)) between 1 and 120), note text,
+  user_id uuid references auth.users(id) on delete set null,
+  status text not null default 'pending' check (status in ('pending','reviewed')),
+  created_at timestamptz not null default now()
+);
+alter table public.city_food_suggestions enable row level security;
+drop policy if exists "Anyone can submit food suggestions" on public.city_food_suggestions;
+create policy "Anyone can submit food suggestions" on public.city_food_suggestions for insert to anon, authenticated with check (status = 'pending');
+drop policy if exists "Admins can read food suggestions" on public.city_food_suggestions;
+create policy "Admins can read food suggestions" on public.city_food_suggestions for select to authenticated using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+drop policy if exists "Admins can update food suggestions" on public.city_food_suggestions;
+create policy "Admins can update food suggestions" on public.city_food_suggestions for update to authenticated using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin') with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+drop policy if exists "Admins can delete food suggestions" on public.city_food_suggestions;
+create policy "Admins can delete food suggestions" on public.city_food_suggestions for delete to authenticated using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+grant insert on public.city_food_suggestions to anon, authenticated;
+grant select, update, delete on public.city_food_suggestions to authenticated;
