@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/place.dart';
@@ -87,6 +89,45 @@ class _PlaceDetailScreenState
     }
   }
 
+
+  Future<void> _sharePlace() async {
+    final place = widget.place;
+    final details = <String>[
+      'BUGÜN uygulamasında bu yeri keşfet:',
+      '',
+      place.name,
+      'Kategori: ${place.category}',
+      'Şehir: ${place.city}',
+      if (place.address != null && place.address!.trim().isNotEmpty)
+        'Adres: ${place.address}',
+      if (place.shortDescription != null && place.shortDescription!.trim().isNotEmpty)
+        '',
+      if (place.shortDescription != null && place.shortDescription!.trim().isNotEmpty)
+        place.shortDescription!.trim(),
+      if (place.website != null && place.website!.trim().isNotEmpty)
+        '',
+      if (place.website != null && place.website!.trim().isNotEmpty)
+        'Web sitesi: ${place.website}',
+      if (place.latitude != null && place.longitude != null)
+        'Harita: https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}',
+      '',
+      'BUGÜN uygulamasını indir: https://play.google.com/store/apps/details?id=tr.bugun.app',
+    ];
+    final message = details.join('\n');
+
+    try {
+      await Share.share(message, subject: 'BUGÜN · ${place.name}');
+    } catch (_) {
+      await Clipboard.setData(ClipboardData(text: message));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Yer bilgileri kopyalandı. İstediğin uygulamada paylaşabilirsin.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _openMaps() async {
     final place = widget.place;
 
@@ -156,6 +197,11 @@ class _PlaceDetailScreenState
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Yeri paylaş',
+            onPressed: _sharePlace,
+            icon: const Icon(Icons.share_outlined),
+          ),
           IconButton(
             onPressed:
                 _loadingSaved
