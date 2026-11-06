@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,7 +25,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _selected = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   List<Event> _events = [];
   List<Map<String, dynamic>> _plans = [];
+  List<Map<String, dynamic>> _responses = [];
   List<Map<String, dynamic>> _notes = [];
+  late final StreamSubscription<AuthState> _authSubscription;
   bool _loading = true;
   String? _error;
   bool _saving = false;
@@ -33,7 +37,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    _authSubscription = _client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.signedOut) {
+        _load();
+      }
+    });
     _load();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
   }
 
   DateTime _day(DateTime value) => DateTime(value.year, value.month, value.day);
@@ -48,30 +64,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final ids = await _savedEvents.getSavedIds();
       final eventsFuture = _eventService.getEventsByIds(ids);
-      final plansFuture = _signedIn
+      final userId = _client.auth.currentUser?.id;
+      final plansFuture = userId != null
           ? _client.from('community_events')
               .select('id,title,city,starts_at,meeting_point,description,creator_id')
-              .eq('creator_id', _client.auth.currentUser!.id)
+              .eq('creator_id', userId)
               .order('starts_at')
               .limit(200)
           : Future.value(<Map<String, dynamic>>[]);
-      final notesFuture = _signedIn
+      final responsesFuture = userId != null
+          ? _client.from('community_event_responses')
+              .select('status,community_events!community_event_responses_event_id_fkey(id,title,city,starts_at,meeting_point,description,creator_id)')
+              .eq('user_id', userId)
+              .order('updated_at', ascending: false)
+              .limit(200)
+          : Future.value(<Map<String, dynamic>>[]);
+      final notesFuture = userId != null
           ? _client.from('calendar_notes')
               .select('id,title,details,starts_at,ends_at,all_day')
-              .eq('user_id', _client.auth.currentUser!.id)
+              .eq('user_id', userId)
               .order('starts_at')
               .limit(500)
           : Future.value(<Map<String, dynamic>>[]);
       final results = await Future.wait<dynamic>([
         eventsFuture,
         plansFuture,
+        responsesFuture,
         notesFuture,
       ]);
       if (!mounted) return;
       setState(() {
         _events = results[0] as List<Event>;
         _plans = (results[1] as List).whereType<Map<String, dynamic>>().toList();
-        _notes = (results[2] as List).whereType<Map<String, dynamic>>().toList();
+        _responses = (results[2] as List).whereType<Map<String, dynamic>>().toList();
+        _notes = (results[3] as List).whereType<Map<String, dynamic>>().toList();
         _loading = false;
       });
     } catch (error) {
@@ -88,10 +114,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
       DateTime.tryParse(plan['starts_at']?.toString() ?? '')?.toLocal();
   DateTime? _noteDate(Map<String, dynamic> note) =>
       DateTime.tryParse(note['starts_at']?.toString() ?? '')?.toLocal();
+  DateTime? _responseDate(Map<String, dynamic> response) {
+    final event = response['community_events'];
+    if (event is! Map<String, dynamic>) return null;
+    return DateTime.tryParse(event['starts_at']?.toString() ?? '')?.toLocal();
+  }
+
+  String _responseLabel(String? status) => switch (status) {
+        'yes' => 'Evet, katılacağım',
+        'no' => 'Hayır, katılmayacağım',
+        'maybe' => 'Belki katılacağım',
+        _ => 'Yanıt kaydedildi',
+      };
 
   bool _hasItems(DateTime day) {
     return _events.any((e) => _eventDate(e) != null && _sameDay(_eventDate(e)!, day)) ||
         _plans.any((p) => _planDate(p) != null && _sameDay(_planDate(p)!, day)) ||
+        _responses.any((r) => _responseDate(r) != null && _sameDay(_responseDate(r)!, day)) ||
         _notes.any((n) => _noteDate(n) != null && _sameDay(_noteDate(n)!, day));
   }
 
@@ -119,6 +158,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
           kind: 'plan',
         ));
       }
+    }
+    for (final response in _responses) {
+      final event = response['community_events'];
+      if (event is! Map<String, dynamic>) continue;
+      final date = _responseDate(response);
+      if (date == null || !_sameDay(date, _selected)) continue;
+      if (event['creator_id']?.toString() == _client.auth.currentUser?.id) continue;
+      entries.add(_CalendarEntry(
+        date: date,
+        title: event['title']?.toString() ?? 'Davet etkinliği',
+        subtitle: '${event['city'] ?? ''} · ${_responseLabel(response['status']?.toString())}',
+        kind: 'response',
+      ));
     }
     for (final note in _notes) {
       final date = _noteDate(note);
@@ -435,14 +487,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildEntryCard(_CalendarEntry entry) {
     final icon = entry.kind == 'event'
         ? Icons.event_outlined
-        : entry.kind == 'plan'
+        : entry.kind == 'plan' || entry.kind == 'response'
             ? Icons.groups_outlined
             : Icons.sticky_note_2_outlined;
     final label = entry.kind == 'event'
         ? 'KAYITLI ETKİNLİK'
         : entry.kind == 'plan'
-            ? 'BİRLİKTE PLAN'
-            : 'KİŞİSEL NOT';
+            ? 'OLUŞTURDUĞUN PLAN'
+            : entry.kind == 'response'
+                ? 'KATILIM YANITI'
+                : 'KİŞİSEL NOT';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
