@@ -483,7 +483,7 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const BugunBrandLogo(),
+        title: const BugunBrandLogo(fontSize: 36),
         actions: [
           IconButton(
             tooltip: 'Şehir seç',
@@ -514,18 +514,7 @@ class _HomeScreenState
               30,
             ),
             children: [
-              Text(
-                _selectedCity,
-                style:
-                    TextStyle(
-                  fontSize: 14,
-                  color:
-                      Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(
-                height: 15,
-              ),
+              const SizedBox(height: 8),
               Text(
                 'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:

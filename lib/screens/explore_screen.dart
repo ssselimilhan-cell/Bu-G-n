@@ -17,6 +17,7 @@ import 'place_detail_screen.dart';
 import 'cinema_screen.dart';
 import 'city_food_screen.dart';
 import '../widgets/city_picker_sheet.dart';
+import '../widgets/bugun_brand_logo.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -243,6 +244,33 @@ class _ExploreScreenState extends State<ExploreScreen>
     await _loadPlaces();
   }
 
+  String _cityAccusative(String city) {
+    const suffixes = {
+      'a': 'ı',
+      'ı': 'ı',
+      'o': 'u',
+      'u': 'u',
+      'e': 'i',
+      'i': 'i',
+      'ö': 'ü',
+      'ü': 'ü',
+    };
+    final runes = city.toLowerCase().runes.toList();
+    if (runes.isEmpty) return city;
+    var lastVowel = 'a';
+    for (final rune in runes.reversed) {
+      final letter = String.fromCharCode(rune);
+      if (suffixes.containsKey(letter)) {
+        lastVowel = letter;
+        break;
+      }
+    }
+    const vowels = 'aeıioöuü';
+    final lastLetter = String.fromCharCode(runes.last);
+    final buffer = vowels.contains(lastLetter) ? 'y' : '';
+    return "$city’$buffer${suffixes[lastVowel]}";
+  }
+
   String _pageTitle() {
     if (_tabController.index == 1) {
       return '$_selectedCity etkinlikleri';
@@ -257,7 +285,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       return 'Haritada keşfet';
     }
 
-    return _selectedCategory ?? '$_selectedCity’yi keşfet';
+    return _selectedCategory ?? '${_cityAccusative(_selectedCity)} keşfet';
   }
 
   List<Place> get _filteredPlaces {
@@ -468,53 +496,64 @@ class _ExploreScreenState extends State<ExploreScreen>
         ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          _pageTitle(),
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        bottom: TabBar(
-          isScrollable: false,
-          controller: _tabController,
-          onTap: (_) {
-            // A query typed in one tab must not silently hide all items in another.
-            _searchController.clear();
-            setState(() {});
-          },
-          labelColor: const Color(0xFF174F80),
-          unselectedLabelColor: const Color(0xFF718096),
-          labelStyle: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
-          ),
-          labelPadding: EdgeInsets.zero,
-          indicatorColor: const Color(0xFFFF8A3D),
-          indicatorWeight: 3,
-          indicatorSize: TabBarIndicatorSize.tab,
-          tabs: const [
-            Tab(text: 'Yerler'),
-            Tab(text: 'Etkinlikler'),
-            Tab(
+        titleSpacing: 4,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BugunBrandLogo(fontSize: 20),
+            const SizedBox(width: 8),
+            Flexible(
               child: Text(
-                'Ne Yenir?',
+                _pageTitle(),
                 maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  color: Color(0xFFFF8A3D),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            Tab(text: 'Sinema'),
-            Tab(text: 'Harita'),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(58),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F1FA),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: TabBar(
+                isScrollable: false,
+                controller: _tabController,
+                onTap: (_) {
+                  _searchController.clear();
+                  setState(() {});
+                },
+                labelColor: Colors.white,
+                unselectedLabelColor: const Color(0xFF174F80),
+                labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
+                unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                labelPadding: EdgeInsets.zero,
+                indicator: BoxDecoration(
+                  color: const Color(0xFF1268B3),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(text: 'Yerler'),
+                  Tab(text: 'Etkinlikler'),
+                  Tab(text: 'Ne Yenir?'),
+                  Tab(text: 'Sinema'),
+                  Tab(text: 'Harita'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: SafeArea(

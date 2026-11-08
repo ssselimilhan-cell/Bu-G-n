@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/city_preference_service.dart';
+import '../widgets/bugun_brand_logo.dart';
 import 'city_offers_admin_screen.dart';
 import 'places_admin_screen.dart';
 import 'user_feedback_admin_screen.dart';
@@ -337,7 +338,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFFF6F6F4),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const Text('PROFİL', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BugunBrandLogo(fontSize: 20),
+            const SizedBox(width: 10),
+            const Text('PROFİL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+          ],
+        ),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -439,19 +447,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   const Text('Sana uygun etkinlikleri bulmak için ilgilendiğin konuları seç.', style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4)),
                   const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: _interests.map((interest) {
-                    final selected = _selectedInterests.contains(interest);
-                    return FilterChip(
-                      label: Text(interest),
-                      selected: selected,
-                      onSelected: (_) => _toggleInterest(interest),
-                      selectedColor: const Color(0xFF1268B3),
-                      checkmarkColor: Colors.white,
-                      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black, fontWeight: FontWeight.w600),
-                      backgroundColor: Colors.white,
-                      side: BorderSide.none,
-                    );
-                  }).toList()),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _interests.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 3.15,
+                    ),
+                    itemBuilder: (context, index) {
+                      final interest = _interests[index];
+                      final selected = _selectedInterests.contains(interest);
+                      return Material(
+                        color: selected ? const Color(0xFF1268B3) : Colors.white,
+                        borderRadius: BorderRadius.circular(13),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(13),
+                          onTap: () => _toggleInterest(interest),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  selected ? Icons.check_circle : Icons.circle_outlined,
+                                  size: 18,
+                                  color: selected ? Colors.white : const Color(0xFF718096),
+                                ),
+                                const SizedBox(width: 7),
+                                Expanded(
+                                  child: Text(
+                                    interest,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: selected ? Colors.white : const Color(0xFF243447),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 24),
                   const _SectionLabel('AYARLAR'),
                   const SizedBox(height: 10),
@@ -520,7 +563,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 5),
           Text(signedIn ? (_user?.email ?? 'Hesabın bağlı') : 'Hesap açmadan kullanabilirsin', style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 3),
-          Text('$_city · BUGÜN', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(_city, style: const TextStyle(color: Colors.white70, fontSize: 12)),
         ])),
       ]),
     );

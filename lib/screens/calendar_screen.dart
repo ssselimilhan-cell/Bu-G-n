@@ -8,9 +8,12 @@ import '../models/event.dart';
 import '../services/event_service.dart';
 import '../services/saved_event_service.dart';
 import 'event_detail_screen.dart';
+import '../widgets/bugun_brand_logo.dart';
 
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  final bool embedded;
+
+  const CalendarScreen({super.key, this.embedded = false});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -349,19 +352,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final entries = _entriesForSelectedDay();
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F7F5),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('TAKVİMİM', style: TextStyle(fontWeight: FontWeight.w900)),
-        actions: [
-          IconButton(
-            tooltip: 'Not ekle',
-            onPressed: _saving ? null : () => _editNote(),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xFFF7F7F5),
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const BugunBrandLogo(fontSize: 20),
+                  const SizedBox(width: 10),
+                  const Text('TAKVİMİM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Not ekle',
+                  onPressed: _saving ? null : () => _editNote(),
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

@@ -13,6 +13,8 @@ import '../services/saved_place_service.dart';
 import '../services/saved_place_note_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
+import 'calendar_screen.dart';
+import '../widgets/bugun_brand_logo.dart';
 
 class SavedScreen extends StatefulWidget {
   const SavedScreen({
@@ -52,7 +54,7 @@ class _SavedScreenState
     super.initState();
 
     _tabController = TabController(
-      length: 2,
+      length: 3,
       vsync: this,
     );
 
@@ -118,28 +120,46 @@ class _SavedScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Kayıtlarım',
-          style:
-              TextStyle(
-            fontWeight:
-                FontWeight.w800,
-          ),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.black,
-          unselectedLabelColor:
-              Colors.grey,
-          indicatorColor: Colors.black,
-          tabs: const [
-            Tab(
-              text: 'Etkinlikler',
-            ),
-            Tab(
-              text: 'Yerler',
-            ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BugunBrandLogo(fontSize: 20),
+            const SizedBox(width: 10),
+            const Text('Kayıtlarım', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(58),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F1FA),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: false,
+                labelColor: Colors.white,
+                unselectedLabelColor: const Color(0xFF174F80),
+                labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+                unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                labelPadding: EdgeInsets.zero,
+                indicator: BoxDecoration(
+                  color: const Color(0xFF1268B3),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(text: 'Etkinlikler'),
+                  Tab(text: 'Yerler'),
+                  Tab(text: 'Takvimim'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -147,6 +167,7 @@ class _SavedScreenState
         children: [
           _buildEvents(),
           _buildPlaces(),
+          const CalendarScreen(embedded: true),
         ],
       ),
     );
