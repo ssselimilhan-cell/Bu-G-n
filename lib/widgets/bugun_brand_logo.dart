@@ -19,7 +19,8 @@ class BugunBrandLogo extends StatelessWidget {
         height: fontSize * 1.25,
         child: ClipRect(
           child: Align(
-            heightFactor: 0.36,
+            alignment: const Alignment(0, -0.5),
+            heightFactor: 0.45,
             child: ColorFiltered(
               colorFilter: const ColorFilter.mode(Color(0xFFF7F7F5), BlendMode.multiply),
               child: Image.asset(

@@ -338,6 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFFF6F6F4),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        titleSpacing: 16,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
