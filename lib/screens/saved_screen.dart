@@ -164,6 +164,7 @@ class _SavedScreenState
       backgroundColor:
           const Color(0xFFF7F7F5),
       appBar: AppBar(
+        toolbarHeight: 64,
         backgroundColor:
             const Color(0xFFF7F7F5),
         surfaceTintColor:
