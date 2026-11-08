@@ -16,12 +16,12 @@ class BugunBrandLogo extends StatelessWidget {
       image: true,
       child: SizedBox(
         width: fontSize * 3.6,
-        // Önceki 1.25 yükseklik, yıldız ve yazı çiziminin tamamı için
-        // gereken dikey alanı fiziksel olarak daraltıyordu.
         height: fontSize * 1.85,
         child: ClipRect(
           child: Align(
-            alignment: Alignment.center,
+            // Görseli kırpma penceresinde aşağı al: üstteki yıldız uçları
+            // AppBar sınırına takılmadan görünür; renkli kaynak değişmez.
+            alignment: const Alignment(0, -0.25),
             child: ColorFiltered(
               colorFilter: const ColorFilter.mode(
                 Color(0xFFF7F7F5),
