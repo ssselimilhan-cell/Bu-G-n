@@ -16,13 +16,17 @@ class BugunBrandLogo extends StatelessWidget {
       image: true,
       child: SizedBox(
         width: fontSize * 3.6,
-        height: fontSize * 1.25,
+        // Önceki 1.25 yükseklik, yıldız ve yazı çiziminin tamamı için
+        // gereken dikey alanı fiziksel olarak daraltıyordu.
+        height: fontSize * 1.85,
         child: ClipRect(
           child: Align(
-            alignment: const Alignment(0, -0.5),
-            heightFactor: 0.45,
+            alignment: Alignment.center,
             child: ColorFiltered(
-              colorFilter: const ColorFilter.mode(Color(0xFFF7F7F5), BlendMode.multiply),
+              colorFilter: const ColorFilter.mode(
+                Color(0xFFF7F7F5),
+                BlendMode.multiply,
+              ),
               child: Image.asset(
                 'assets/images/bugun_brand_wordmark.png.png',
                 width: fontSize * 3.6,
@@ -31,7 +35,11 @@ class BugunBrandLogo extends StatelessWidget {
                 filterQuality: FilterQuality.high,
                 errorBuilder: (context, error, stackTrace) => const Text(
                   'BUGÜN',
-                  style: TextStyle(color: Colors.black, fontSize: 30, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
