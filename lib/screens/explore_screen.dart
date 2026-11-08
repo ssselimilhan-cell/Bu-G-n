@@ -513,6 +513,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F5),
       appBar: AppBar(
+        toolbarHeight: 64,
         backgroundColor: const Color(0xFFF7F7F5),
         actions: [
           IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
