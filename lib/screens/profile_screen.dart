@@ -335,6 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F4),
       appBar: AppBar(
+        toolbarHeight: 64,
         backgroundColor: const Color(0xFFF6F6F4),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
