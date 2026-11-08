@@ -453,9 +453,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     itemCount: _interests.length,
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 3.15,
+                      mainAxisSpacing: 6,
+                      crossAxisSpacing: 7,
+                      childAspectRatio: 4.25,
                     ),
                     itemBuilder: (context, index) {
                       final interest = _interests[index];
@@ -467,15 +467,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           borderRadius: BorderRadius.circular(13),
                           onTap: () => _toggleInterest(interest),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Row(
                               children: [
                                 Icon(
                                   selected ? Icons.check_circle : Icons.circle_outlined,
-                                  size: 18,
+                                  size: 16,
                                   color: selected ? Colors.white : const Color(0xFF718096),
                                 ),
-                                const SizedBox(width: 7),
+                                const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     interest,
@@ -483,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: selected ? Colors.white : const Color(0xFF243447),
-                                      fontSize: 12,
+                                      fontSize: 11.5,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),

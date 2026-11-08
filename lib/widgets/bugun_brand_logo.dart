@@ -33,12 +33,12 @@ class BugunBrandLogo extends StatelessWidget {
               Positioned(
                 left: fontSize * 0.16,
                 top: -fontSize * 0.04,
-                child: Icon(Icons.auto_awesome, size: fontSize * 0.22, color: Colors.black),
+                child: Icon(Icons.auto_awesome, size: fontSize * 0.22, color: const Color(0xFFFF8A3D)),
               ),
               Positioned(
                 right: fontSize * 0.16,
                 top: -fontSize * 0.04,
-                child: Icon(Icons.auto_awesome, size: fontSize * 0.22, color: Colors.black),
+                child: Icon(Icons.auto_awesome, size: fontSize * 0.22, color: const Color(0xFF1268B3)),
               ),
             ],
           ),

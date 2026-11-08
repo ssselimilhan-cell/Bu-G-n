@@ -9,6 +9,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
+import '../widgets/bugun_brand_logo.dart';
 
 part 'recommendation_location.dart';
 part 'recommendation_filter_controls.dart';
@@ -138,14 +139,20 @@ class _RecommendationScreenState
             Colors.transparent,
         elevation:
             0,
-        title:
-            const Text(
-          'Bugün ne yapayım?',
-          style:
-              TextStyle(
-            fontWeight:
-                FontWeight.w800,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BugunBrandLogo(fontSize: 20),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text(
+                'Bugün ne yapayım?',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar:

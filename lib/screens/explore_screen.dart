@@ -244,6 +244,27 @@ class _ExploreScreenState extends State<ExploreScreen>
     await _loadPlaces();
   }
 
+  Widget _coloredTab(String label, Color color) {
+    return Tab(
+      child: Container(
+        width: double.infinity,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 9),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+
   String _cityAccusative(String city) {
     const suffixes = {
       'a': 'ı',
@@ -496,7 +517,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 4,
+        titleSpacing: NavigationToolbar.kMiddleSpacing,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -534,22 +555,19 @@ class _ExploreScreenState extends State<ExploreScreen>
                   setState(() {});
                 },
                 labelColor: Colors.white,
-                unselectedLabelColor: const Color(0xFF174F80),
+                unselectedLabelColor: Colors.white,
                 labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
                 unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-                labelPadding: EdgeInsets.zero,
-                indicator: BoxDecoration(
-                  color: const Color(0xFF1268B3),
-                  borderRadius: BorderRadius.circular(11),
-                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                indicator: const BoxDecoration(color: Colors.transparent),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: 'Yerler'),
-                  Tab(text: 'Etkinlikler'),
-                  Tab(text: 'Ne Yenir?'),
-                  Tab(text: 'Sinema'),
-                  Tab(text: 'Harita'),
+                tabs: [
+                  _coloredTab('Yerler', const Color(0xFF1268B3)),
+                  _coloredTab('Etkinlikler', const Color(0xFFFF8A3D)),
+                  _coloredTab('Ne Yenir?', const Color(0xFF1268B3)),
+                  _coloredTab('Sinema', const Color(0xFFFF8A3D)),
+                  _coloredTab('Harita', const Color(0xFF1268B3)),
                 ],
               ),
             ),
