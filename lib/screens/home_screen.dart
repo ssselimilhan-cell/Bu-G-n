@@ -602,7 +602,7 @@ class _HomeScreenState
 
   Widget _buildCalendarShortcut() {
     return Material(
-      color: Colors.white,
+      color: const Color(0xFFF0F6FC),
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
@@ -618,19 +618,23 @@ class _HomeScreenState
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: const Color(0xFF1268B3).withOpacity(0.18)),
           ),
           child: const Row(
             children: [
-              Icon(Icons.calendar_month_outlined, size: 23),
+              Icon(Icons.calendar_month_outlined, size: 23, color: Color(0xFFFF8A3D)),
               SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Takvimim',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                  style: TextStyle(
+                    color: Color(0xFF174F80),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-              Icon(Icons.chevron_right, color: Colors.black45),
+              Icon(Icons.chevron_right, color: Color(0xFF6386A5)),
             ],
           ),
         ),
@@ -687,8 +691,15 @@ class _HomeScreenState
     required String title,
     required VoidCallback onTap,
   }) {
+    final accent = title == 'Birlikte planla'
+        ? const Color(0xFFFF8A3D)
+        : const Color(0xFF1268B3);
+    final surface = title == 'Birlikte planla'
+        ? const Color(0xFFFFF5ED)
+        : const Color(0xFFF0F6FC);
+
     return Material(
-      color: Colors.white,
+      color: surface,
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         onTap: onTap,
@@ -698,20 +709,33 @@ class _HomeScreenState
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(color: accent.withOpacity(0.20)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: 22),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 22, color: accent),
+              ),
               const SizedBox(height: 8),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, height: 1.15),
+                style: const TextStyle(
+                  color: Color(0xFF174F80),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11,
+                  height: 1.15,
+                ),
               ),
             ],
           ),
@@ -955,9 +979,9 @@ class _HomeScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF7FAFE),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: const Color(0xFF1268B3).withOpacity(0.16)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -1145,73 +1169,51 @@ class _HomeScreenState
     Place place,
   ) {
     return InkWell(
-      borderRadius:
-          BorderRadius.circular(
-        18,
-      ),
-      onTap:
-          () => _openPlace(
-        place,
-      ),
-      child:
-          Container(
-        padding:
-            const EdgeInsets.all(
-          14,
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openPlace(place),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8F2),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFFF8A3D).withOpacity(0.20)),
         ),
-        decoration:
-            BoxDecoration(
-          color:
-              Colors.white,
-          borderRadius:
-              BorderRadius.circular(
-            18,
-          ),
-          border:
-              Border.all(
-            color:
-                Colors.grey.shade200,
-          ),
-        ),
-        child:
-            Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          mainAxisAlignment:
-              MainAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.place_outlined,
-              size: 26,
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF8A3D).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Icon(
+                Icons.place_outlined,
+                size: 25,
+                color: Color(0xFFFF8A3D),
+              ),
             ),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
             Text(
               place.name,
               maxLines: 2,
-              overflow:
-                  TextOverflow.ellipsis,
-              style:
-                  const TextStyle(
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF174F80),
                 fontSize: 14,
-                fontWeight:
-                    FontWeight.w900,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(
-              height: 5,
-            ),
+            const SizedBox(height: 5),
             Text(
               place.category,
               maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-              style:
-                  TextStyle(
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
                 fontSize: 10,
-                color:
-                    Colors.grey.shade600,
+                color: Colors.grey.shade700,
               ),
             ),
           ],
