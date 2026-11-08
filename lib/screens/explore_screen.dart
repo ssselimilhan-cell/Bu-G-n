@@ -476,27 +476,43 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
         ),
         bottom: TabBar(
-          isScrollable: true,
+          isScrollable: false,
           controller: _tabController,
           onTap: (_) {
             // A query typed in one tab must not silently hide all items in another.
             _searchController.clear();
             setState(() {});
           },
-          labelColor: const Color(0xFF123F70),
-          unselectedLabelColor: Colors.grey,
+          labelColor: const Color(0xFF174F80),
+          unselectedLabelColor: const Color(0xFF718096),
+          labelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+          ),
+          labelPadding: EdgeInsets.zero,
           indicatorColor: const Color(0xFFFF8A3D),
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
+            Tab(text: 'Yerler'),
+            Tab(text: 'Etkinlikler'),
             Tab(
-              text: 'Yerler',
+              child: Text(
+                'Ne Yenir?',
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: Color(0xFFFF8A3D),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
-            Tab(
-              text: 'Etkinlikler',
-            ),
-            Tab(text: 'Ne Yenir?'),
-            Tab(
-              text: 'Sinema',
-            ),
+            Tab(text: 'Sinema'),
             Tab(text: 'Harita'),
           ],
         ),
