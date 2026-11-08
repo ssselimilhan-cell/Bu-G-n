@@ -483,7 +483,11 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        title: const BugunBrandLogo(fontSize: 36),
+        toolbarHeight: 72,
+        title: Transform.translate(
+          offset: const Offset(0, 5),
+          child: const BugunBrandLogo(fontSize: 36),
+        ),
         actions: [
           IconButton(
             tooltip: 'Şehir seç',
