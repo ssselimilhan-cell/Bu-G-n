@@ -346,6 +346,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Text('PROFİL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
           ],
         ),
+        actions: [
+          IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
+          IconButton(tooltip: 'Profil', onPressed: () {}, icon: const Icon(Icons.person_outline_rounded)),
+          const SizedBox(width: 4),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -358,6 +363,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 12),
                   ],
                   _profileHeader(signedIn),
+                  if (!signedIn) ...[
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _openAccount,
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: const Color(0xFF1268B3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17))),
+                      child: const Text('GİRİŞ YAP / HESAP OLUŞTUR', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ],
                   if (_client.auth.currentUser?.appMetadata['role'] == 'admin') ...[
                     const SizedBox(height: 14),
                     _settingCard(
@@ -495,7 +508,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
+                  if (_saving) const LinearProgressIndicator(),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton.icon(
+                      onPressed: _saving ? null : _savePreferences,
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('TERCİHLERİ KAYDET', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   const _SectionLabel('AYARLAR'),
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.location_searching_rounded, title: 'Konum izni', subtitle: 'Yakınındaki etkinlikleri sıralamaya yardımcı olur', onTap: _requestLocation),
@@ -528,22 +551,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
                   _settingCard(icon: Icons.delete_outline_rounded, title: 'Hesabı ve verileri sil', subtitle: 'Hesap ve ilişkili verilerin silinmesini talep et', onTap: _requestAccountDeletion),
                   const SizedBox(height: 22),
-                  if (!signedIn)
-                    FilledButton(
-                      onPressed: _openAccount,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54), backgroundColor: const Color(0xFF1268B3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17))),
-                      child: const Text('GİRİŞ YAP / HESAP OLUŞTUR', style: TextStyle(fontWeight: FontWeight.w900)),
-                    )
-                  else
+                  if (signedIn)
                     OutlinedButton.icon(
                       onPressed: _signOut,
                       icon: const Icon(Icons.logout),
                       label: const Text('ÇIKIŞ YAP'),
                       style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52), foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17))),
                     ),
-                  if (_saving) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
-                  const SizedBox(height: 8),
-                  TextButton(onPressed: _savePreferences, child: const Text('TERCİHLERİ KAYDET')),
                 ],
               ),
             ),

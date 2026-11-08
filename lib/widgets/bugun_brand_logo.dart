@@ -14,17 +14,26 @@ class BugunBrandLogo extends StatelessWidget {
     return Semantics(
       label: 'BUGÜN',
       image: true,
-      child: Image.asset(
-        'assets/images/bugun_brand_wordmark.png.png',
-        fit: BoxFit.contain,
-        height: fontSize * 1.15,
-        filterQuality: FilterQuality.high,
-        errorBuilder: (context, error, stackTrace) => const Text(
-          'BUGÜN',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 30,
-            fontWeight: FontWeight.w900,
+      child: SizedBox(
+        width: fontSize * 3.6,
+        height: fontSize * 1.25,
+        child: ClipRect(
+          child: Align(
+            heightFactor: 0.36,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.mode(Color(0xFFF7F7F5), BlendMode.multiply),
+              child: Image.asset(
+                'assets/images/bugun_brand_wordmark.png.png',
+                width: fontSize * 3.6,
+                height: fontSize * 3.6,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (context, error, stackTrace) => const Text(
+                  'BUGÜN',
+                  style: TextStyle(color: Colors.black, fontSize: 30, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
           ),
         ),
       ),

@@ -11,16 +11,19 @@ import '../services/place_service.dart';
 import '../services/saved_event_service.dart';
 import '../services/saved_place_service.dart';
 import '../services/saved_place_note_service.dart';
+import '../services/city_preference_service.dart';
+import '../widgets/city_picker_sheet.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
 import 'calendar_screen.dart';
+import 'profile_screen.dart';
 import '../widgets/bugun_brand_logo.dart';
 
 class _SavedTabLabel extends StatelessWidget {
   final String label;
-  final Color color;
+  final bool selected;
 
-  const _SavedTabLabel({required this.label, required this.color});
+  const _SavedTabLabel({required this.label, required this.selected});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,7 @@ class _SavedTabLabel extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 9),
       decoration: BoxDecoration(
-        color: color,
+        color: selected ? const Color(0xFFFF8A3D) : const Color(0xFF1268B3),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -74,6 +77,7 @@ class _SavedScreenState
 
   bool _loading = true;
   String? _error;
+  String _selectedCity = CityPreferenceService.defaultCity;
 
   @override
   void initState() {
@@ -84,11 +88,30 @@ class _SavedScreenState
       vsync: this,
     );
 
+    _tabController.addListener(_handleTabChange);
+    _loadSelectedCity();
     _loadSaved();
+  }
+
+  void _handleTabChange() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadSelectedCity() async {
+    final city = await CityPreferenceService().getSelectedCity();
+    if (mounted) setState(() => _selectedCity = city);
+  }
+
+  Future<void> _chooseCity() async {
+    final city = await showCityPickerSheet(context, _selectedCity);
+    if (city == null || !mounted || city == _selectedCity) return;
+    await CityPreferenceService().saveSelectedCity(city);
+    if (mounted) setState(() => _selectedCity = city);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
   }
@@ -146,6 +169,11 @@ class _SavedScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
+          IconButton(tooltip: 'Profil', onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const ProfileScreen())), icon: const Icon(Icons.person_outline_rounded)),
+          const SizedBox(width: 4),
+        ],
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -175,16 +203,10 @@ class _SavedScreenState
                 indicator: const BoxDecoration(color: Colors.transparent),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(
-                    child: _SavedTabLabel(label: 'Etkinlikler', color: Color(0xFF1268B3)),
-                  ),
-                  Tab(
-                    child: _SavedTabLabel(label: 'Yerler', color: Color(0xFFFF8A3D)),
-                  ),
-                  Tab(
-                    child: _SavedTabLabel(label: 'Takvimim', color: Color(0xFF1268B3)),
-                  ),
+                tabs: [
+                  Tab(child: _SavedTabLabel(label: 'Etkinlikler', selected: _tabController.index == 0)),
+                  Tab(child: _SavedTabLabel(label: 'Yerler', selected: _tabController.index == 1)),
+                  Tab(child: _SavedTabLabel(label: 'Takvimim', selected: _tabController.index == 2)),
                 ],
               ),
             ),

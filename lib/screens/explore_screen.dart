@@ -14,6 +14,7 @@ import '../services/place_service.dart';
 import '../services/city_preference_service.dart';
 import 'event_detail_screen.dart';
 import 'place_detail_screen.dart';
+import 'profile_screen.dart';
 import 'cinema_screen.dart';
 import 'city_food_screen.dart';
 import '../widgets/city_picker_sheet.dart';
@@ -85,13 +86,17 @@ class _ExploreScreenState extends State<ExploreScreen>
       length: 5,
       initialIndex: widget.initialMapView ? 4 : 0,
       vsync: this,
-    );
+    )..addListener(_handleTabChange);
 
     _searchController.addListener(
       _onSearchChanged,
     );
 
     _initialize();
+  }
+
+  void _handleTabChange() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _initialize() async {
@@ -125,6 +130,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _searchController.removeListener(
       _onSearchChanged,
@@ -244,7 +250,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     await _loadPlaces();
   }
 
-  Widget _coloredTab(String label, Color color) {
+  Widget _coloredTab(String label, bool selected) {
+    final color = selected ? const Color(0xFFFF8A3D) : const Color(0xFF1268B3);
     return Tab(
       child: Container(
         width: double.infinity,
@@ -508,16 +515,13 @@ class _ExploreScreenState extends State<ExploreScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFFF7F7F5),
         actions: [
-          IconButton(
-            tooltip: 'Şehir seç',
-            onPressed: _chooseCity,
-            icon: const Icon(Icons.location_city_outlined),
-          ),
+          IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
+          IconButton(tooltip: 'Profil', onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const ProfileScreen())), icon: const Icon(Icons.person_outline_rounded)),
           const SizedBox(width: 4),
         ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: NavigationToolbar.kMiddleSpacing,
+        titleSpacing: 16,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -563,11 +567,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 tabs: [
-                  _coloredTab('Yerler', const Color(0xFF1268B3)),
-                  _coloredTab('Etkinlikler', const Color(0xFFFF8A3D)),
-                  _coloredTab('Ne Yenir?', const Color(0xFF1268B3)),
-                  _coloredTab('Sinema', const Color(0xFFFF8A3D)),
-                  _coloredTab('Harita', const Color(0xFF1268B3)),
+                  _coloredTab('Yerler', _tabController.index == 0),
+                  _coloredTab('Etkinlikler', _tabController.index == 1),
+                  _coloredTab('Ne Yenir?', _tabController.index == 2),
+                  _coloredTab('Sinema', _tabController.index == 3),
+                  _coloredTab('Harita', _tabController.index == 4),
                 ],
               ),
             ),
