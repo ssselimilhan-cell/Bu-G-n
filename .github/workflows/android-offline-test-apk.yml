@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="build/app/outputs/flutter-apk/app-offlineTest-release.apk"
+          APK="build/app/outputs/flutter-apk/app-offlinetest-release.apk"
           test -f "$APK"
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort | tail -n 1)"
           test -n "$AAPT"
@@ -71,6 +71,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bugun-offline-test-apk
-          path: build/app/outputs/flutter-apk/app-offlineTest-release.apk
+          path: build/app/outputs/flutter-apk/app-offlinetest-release.apk
           if-no-files-found: error
           retention-days: 14
