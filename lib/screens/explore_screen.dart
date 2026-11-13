@@ -539,7 +539,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BugunBrandLogo(fontSize: 20),
+            const BugunBrandLogo(fontSize: 32),
               Flexible(
               child: Text(
                 _pageTitle(),
