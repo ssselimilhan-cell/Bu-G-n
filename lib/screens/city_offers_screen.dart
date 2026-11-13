@@ -123,7 +123,7 @@ class _CityOffersScreenState extends State<CityOffersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async { final next = _load(); setState(() => _offers = next); await next; },
