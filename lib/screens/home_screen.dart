@@ -426,20 +426,20 @@ class _HomeScreenState
   Widget _buildBottomNavigationBar() {
     return NavigationBarTheme(
       data: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDCEBFA),
+        backgroundColor: const Color(0xFFFFFAF4),
+        indicatorColor: const Color(0xFFFFD7B0),
         labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-            color: selected ? const Color(0xFF174F80) : Colors.black54,
+            color: selected ? const Color(0xFF9C4D1C) : Colors.black54,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? const Color(0xFF174F80) : Colors.black54,
+            color: selected ? const Color(0xFF9C4D1C) : Colors.black54,
             size: selected ? 25 : 23,
           );
         }),
@@ -476,10 +476,10 @@ class _HomeScreenState
   Widget _buildHome() {
     return Scaffold(
       backgroundColor:
-          const Color(0xFFF7F7F5),
+          const Color(0xFFFFF0DF),
       appBar: AppBar(
         backgroundColor:
-            const Color(0xFFF7F7F5),
+            const Color(0xFFFFF0DF),
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
@@ -578,7 +578,7 @@ class _HomeScreenState
         ),
         style:
             FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF1268B3),
+          backgroundColor: const Color(0xFFE97824),
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(
@@ -595,7 +595,7 @@ class _HomeScreenState
 
   Widget _buildCalendarShortcut() {
     return Material(
-      color: const Color(0xFFF0F6FC),
+      color: const Color(0xFFFFEAD5),
       borderRadius: BorderRadius.circular(15),
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
@@ -689,7 +689,7 @@ class _HomeScreenState
         : const Color(0xFF1268B3);
     final surface = title == 'Birlikte planla'
         ? const Color(0xFFFFF5ED)
-        : const Color(0xFFF0F6FC);
+        : const Color(0xFFFFEAD5);
 
     return Material(
       color: surface,
