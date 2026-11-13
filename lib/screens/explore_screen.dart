@@ -529,24 +529,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
         ],
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BugunBrandLogo(fontSize: 32),
-              Flexible(
-              child: Text(
-                _pageTitle(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
+        title: const BugunBrandLogo(),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(58),
           child: Padding(
