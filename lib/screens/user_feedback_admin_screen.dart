@@ -150,10 +150,10 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
         ? _items
         : _items.where((item) => item['category'] == _filter).toList();
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         title: const Text('KULLANICI GERİ BİLDİRİMLERİ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-        backgroundColor: const Color(0xFFF7F7F5),
+        backgroundColor: const Color(0xFFFFF0DF),
         surfaceTintColor: Colors.transparent,
         actions: [IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh))],
       ),
@@ -192,7 +192,7 @@ class _UserFeedbackAdminScreenState extends State<UserFeedbackAdminScreen> {
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  side: const BorderSide(color: Color(0xFFE8E8E5)),
+                                  side: const BorderSide(color: Color(0xFFF0D8C1)),
                                 ),
                                 child: ExpansionTile(
                                   leading: const Icon(Icons.feedback_outlined),
