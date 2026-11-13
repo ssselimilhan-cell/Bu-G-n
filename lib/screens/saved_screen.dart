@@ -192,7 +192,7 @@ class _SavedScreenState
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BugunBrandLogo(fontSize: 20),
+            const BugunBrandLogo(fontSize: 32),
             const SizedBox(width: 10),
             const Text('Kayıtlarım', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
           ],
