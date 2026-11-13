@@ -182,9 +182,12 @@ actions: [
           ),
         ],
         title: const BugunBrandLogo(),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
-          child: Padding(
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            SizedBox(height: 58, child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: Container(
               padding: const EdgeInsets.all(4),
@@ -210,16 +213,19 @@ actions: [
                 ],
               ),
             ),
-          ),
+          )),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildEvents(),
+                  _buildPlaces(),
+                  const CalendarScreen(embedded: true),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildEvents(),
-          _buildPlaces(),
-          const CalendarScreen(embedded: true),
-        ],
       ),
     );
   }
