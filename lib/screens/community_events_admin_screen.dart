@@ -164,9 +164,9 @@ class _CommunityEventsAdminScreenState extends State<CommunityEventsAdminScreen>
     if (!_isAdmin) return Scaffold(appBar: AppBar(title: const Text('Kullanıcı etkinlikleri')), body: const Center(child: Text('Bu alan yalnızca yöneticilere açıktır.')));
     final visible = _visible;
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(title: const Text('KULLANICI ETKİNLİKLERİ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFFF7F7F5), surfaceTintColor: Colors.transparent,
+        backgroundColor: const Color(0xFFFFF0DF), surfaceTintColor: Colors.transparent,
         actions: [IconButton(onPressed: _loading || _saving ? null : _load, icon: const Icon(Icons.refresh))]),
       body: Column(children: [
         Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: TextField(controller: _searchController,
@@ -187,7 +187,7 @@ class _CommunityEventsAdminScreenState extends State<CommunityEventsAdminScreen>
               final event = visible[index];
               final code = event['invite_code']?.toString() ?? '';
               return Card(color: Colors.white, elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE8E8E5))),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFF0D8C1))),
                 child: ExpansionTile(leading: const Icon(Icons.groups_outlined),
                   title: Text(event['title']?.toString() ?? 'İsimsiz etkinlik', style: const TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: Text('${event['city'] ?? 'Şehir yok'} · ${_date(event['starts_at'])}'),
