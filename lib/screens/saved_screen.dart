@@ -181,14 +181,7 @@ actions: [
             ),
           ),
         ],
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BugunBrandLogo(fontSize: 32),
-            const SizedBox(width: 10),
-            const Text('Kayıtlarım', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-          ],
-        ),
+        title: const BugunBrandLogo(),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(58),
           child: Padding(
