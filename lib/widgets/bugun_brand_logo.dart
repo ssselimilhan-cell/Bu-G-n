@@ -70,3 +70,44 @@ class BugunHeaderActionButton extends StatelessWidget {
     );
   }
 }
+
+/// One shared app-bar layout for all four primary sections.
+class BugunMainAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final Widget title;
+  final List<Widget> actions;
+  final PreferredSizeWidget? bottom;
+  final Color backgroundColor;
+
+  const BugunMainAppBar({
+    super.key,
+    required this.title,
+    required this.actions,
+    this.bottom,
+    this.backgroundColor = const Color(0xFFFFF0DF),
+  });
+
+  static const double toolbarHeight = 64;
+
+  @override
+  Size get preferredSize => Size.fromHeight(
+        toolbarHeight + (bottom?.preferredSize.height ?? 0),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      primary: true,
+      toolbarHeight: toolbarHeight,
+      automaticallyImplyLeading: false,
+      centerTitle: false,
+      titleSpacing: 16,
+      actionsPadding: const EdgeInsets.only(right: 8),
+      backgroundColor: backgroundColor,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      title: title,
+      actions: actions,
+      bottom: bottom,
+    );
+  }
+}
