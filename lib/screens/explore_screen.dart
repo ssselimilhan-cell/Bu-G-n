@@ -568,6 +568,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
       ),
       body: SafeArea(
+        top: false,
         child: TabBarView(
           controller: _tabController,
           children: [
