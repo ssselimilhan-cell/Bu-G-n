@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 /// Uses the original BUGÜN wordmark asset without color filters.
 class BugunBrandLogo extends StatelessWidget {
-  final double fontSize;
+  final double width;
+  final double height;
 
   const BugunBrandLogo({
     super.key,
-    this.fontSize = 34,
+    this.width = 176,
+    this.height = 82,
   });
 
   @override
@@ -15,14 +17,14 @@ class BugunBrandLogo extends StatelessWidget {
       label: 'BUGÜN',
       image: true,
       child: SizedBox(
-        width: fontSize * 3.6,
-        height: fontSize * 1.85,
+        width: width,
+        height: height,
         child: Image.asset(
           'assets/images/bugun_brand_wordmark.png.png',
-          width: fontSize * 3.6,
-          height: fontSize * 1.85,
+          width: width,
+          height: height,
           fit: BoxFit.contain,
-          alignment: Alignment.center,
+          alignment: Alignment.centerLeft,
           filterQuality: FilterQuality.high,
           errorBuilder: (context, error, stackTrace) => const Text(
             'BUGÜN',
@@ -86,7 +88,7 @@ class BugunMainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor = const Color(0xFFFFF0DF),
   });
 
-  static const double toolbarHeight = 64;
+  static const double toolbarHeight = 90;
 
   @override
   Size get preferredSize => Size.fromHeight(
