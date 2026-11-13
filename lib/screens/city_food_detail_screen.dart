@@ -13,7 +13,7 @@ class CityFoodDetailScreen extends StatelessWidget {
   }
   @override Widget build(BuildContext context){
     final hasVenue=[food.whereToEat,food.venueName,food.venueAddress,food.mapUrl].any((v)=>(v??'').trim().isNotEmpty);
-    return Scaffold(backgroundColor:const Color(0xFFF7F7F5),appBar:AppBar(title:const Text('Ne Yenir?'),backgroundColor:const Color(0xFFF7F7F5),surfaceTintColor:Colors.transparent),
+    return Scaffold(backgroundColor:const Color(0xFFFFF0DF),appBar:AppBar(title:const Text('Ne Yenir?'),backgroundColor:const Color(0xFFFFF0DF),surfaceTintColor:Colors.transparent),
       body:ListView(padding:const EdgeInsets.fromLTRB(18,8,18,28),children:[
         if((food.imageUrl??'').trim().isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(18),child:Image.network(food.imageUrl!,height:210,width:double.infinity,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox.shrink())),
         const SizedBox(height:16),Text(food.city.toUpperCase(),style:const TextStyle(color:Color(0xFF1268B3),fontSize:12,letterSpacing:1.3,fontWeight:FontWeight.w800)),
