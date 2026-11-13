@@ -480,7 +480,7 @@ class _HomeScreenState
       appBar: BugunMainAppBar(
         backgroundColor:
             const Color(0xFFFFF0DF),
-title: const BugunBrandLogo(fontSize: 32),
+title: const BugunBrandLogo(),
         actions: [
           BugunHeaderActionButton(
             tooltip: 'Şehir seç',
