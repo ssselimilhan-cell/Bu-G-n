@@ -333,10 +333,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final signedIn = _user != null;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F4),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         toolbarHeight: 64,
-        backgroundColor: const Color(0xFFF6F6F4),
+        backgroundColor: const Color(0xFFFFF0DF),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 16,
