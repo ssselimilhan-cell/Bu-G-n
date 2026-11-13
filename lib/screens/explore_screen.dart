@@ -511,10 +511,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     BuildContext context,
   ) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         toolbarHeight: 64,
-        backgroundColor: const Color(0xFFF7F7F5),
+        backgroundColor: const Color(0xFFFFF0DF),
         actions: [
           IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
           IconButton(tooltip: 'Profil', onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const ProfileScreen())), icon: const Icon(Icons.person_outline_rounded)),
@@ -1061,7 +1061,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         child: event.imageUrl == null ||
                                 event.imageUrl!.trim().isEmpty
                             ? Container(
-                                color: const Color(0xFFF0F0EE),
+                                color: const Color(0xFFFFEAD5),
                                 child: Icon(
                                   Icons.event_outlined,
                                   color: Colors.grey.shade800,
@@ -1071,7 +1071,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 event.imageUrl!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFFF0F0EE),
+                                  color: const Color(0xFFFFEAD5),
                                   child: Icon(
                                     Icons.event_outlined,
                                     color: Colors.grey.shade800,
@@ -1706,7 +1706,7 @@ class _SmallPill extends StatelessWidget {
         vertical: 5,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F1),
+        color: const Color(0xFFFFEAD5),
         borderRadius: BorderRadius.circular(
           15,
         ),
