@@ -336,6 +336,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         toolbarHeight: 64,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: 16,
+        actionsPadding: const EdgeInsets.only(right: 8),
         backgroundColor: const Color(0xFFFFF0DF),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -359,7 +363,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.person_outline_rounded,
             onPressed: () {},
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: _loading
