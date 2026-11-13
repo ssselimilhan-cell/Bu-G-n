@@ -483,25 +483,20 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        toolbarHeight: 72,
-        title: Transform.translate(
-          offset: const Offset(0, 5),
-          child: const BugunBrandLogo(fontSize: 36),
-        ),
+        toolbarHeight: 64,
+        title: const BugunBrandLogo(fontSize: 32),
         actions: [
-          IconButton(
+          BugunHeaderActionButton(
             tooltip: 'Şehir seç',
+            icon: Icons.location_city_outlined,
             onPressed: _chooseCity,
-            icon: const Icon(Icons.location_city_outlined),
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              tooltip: 'Profil',
-              onPressed: () => setState(() => _selectedIndex = 3),
-              icon: const Icon(Icons.person_outline_rounded),
-            ),
+          BugunHeaderActionButton(
+            tooltip: 'Profil',
+            icon: Icons.person_outline_rounded,
+            onPressed: () => setState(() => _selectedIndex = 3),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
