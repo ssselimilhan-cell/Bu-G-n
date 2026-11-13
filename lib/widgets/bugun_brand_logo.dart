@@ -25,7 +25,7 @@ class BugunBrandLogo extends StatelessWidget {
             1, 0, 0, 0, 0,
             0, 1, 0, 0, 0,
             0, 0, 1, 0, 0,
-            -1, -1, -1, 0, 3,
+            -0.0039215686, -0.0039215686, -0.0039215686, 0, 3,
           ]),
           child: Image.asset(
             'assets/images/bugun_brand_wordmark.png.png',
@@ -43,7 +43,6 @@ class BugunBrandLogo extends StatelessWidget {
               ),
             ),
           ),
-        ),
       ),
     );
   }
@@ -66,17 +65,16 @@ class BugunHeaderActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 48,
-      height: 64,
-      child: Center(
-        child: SizedBox(
-          width: 44,
-          height: 44,
+      height: 48,
+      child: SizedBox(
+          width: 48,
+          height: 48,
           child: IconButton(
             tooltip: tooltip,
             onPressed: onPressed,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            iconSize: 22,
+            constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+            iconSize: 24,
             visualDensity: VisualDensity.standard,
             icon: Icon(icon),
           ),
