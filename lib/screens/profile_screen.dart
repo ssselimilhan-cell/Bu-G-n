@@ -353,8 +353,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
+              top: false,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 children: [
                   if (_message != null) ...[
                     Text(_message!, style: const TextStyle(color: Colors.red)),
