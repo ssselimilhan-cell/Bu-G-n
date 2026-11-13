@@ -530,9 +530,12 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
         ],
         title: const BugunBrandLogo(),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
-          child: Padding(
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            SizedBox(height: 58, child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: Container(
               padding: const EdgeInsets.all(4),
@@ -564,19 +567,19 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildPlacesTab(),
-            _buildEventsTab(),
-            CityFoodScreen(city: _selectedCity),
-            CinemaScreen(city: _selectedCity),
-            _buildMapTab(),
+          )),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildPlacesTab(),
+                  _buildEventsTab(),
+                  CityFoodScreen(city: _selectedCity),
+                  CinemaScreen(city: _selectedCity),
+                  _buildMapTab(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
