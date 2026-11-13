@@ -346,7 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BugunBrandLogo(fontSize: 20),
+            const BugunBrandLogo(fontSize: 32),
             const SizedBox(width: 10),
             const Text('PROFİL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
           ],
