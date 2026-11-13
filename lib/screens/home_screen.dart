@@ -400,6 +400,11 @@ class _HomeScreenState
 
   Widget _buildCurrentPage() {
     switch (_selectedIndex) {
+      case 0:
+        return Scaffold(
+          body: _buildHome(),
+          bottomNavigationBar: _buildBottomNavigationBar(),
+        );
       case 1:
         return Scaffold(
           body: ExploreScreen(
@@ -419,7 +424,10 @@ class _HomeScreenState
           bottomNavigationBar: _buildBottomNavigationBar(),
         );
       default:
-        return _buildHome();
+        return Scaffold(
+          body: _buildHome(),
+          bottomNavigationBar: _buildBottomNavigationBar(),
+        );
     }
   }
 
@@ -495,6 +503,7 @@ title: const BugunBrandLogo(),
         ],
       ),
       body: SafeArea(
+        top: false,
         child: RefreshIndicator(
           onRefresh: _loadHome,
           child: ListView(
@@ -503,12 +512,11 @@ title: const BugunBrandLogo(),
             padding:
                 const EdgeInsets.fromLTRB(
               20,
-              4,
+              0,
               20,
               30,
             ),
             children: [
-              const SizedBox(height: 8),
               Text(
                 'Bugün $_selectedCity için\nne yapmak istersin?',
                 style:
@@ -541,7 +549,6 @@ title: const BugunBrandLogo(),
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
