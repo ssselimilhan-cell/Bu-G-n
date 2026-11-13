@@ -4,25 +4,29 @@ import 'package:flutter/material.dart';
 class BugunBrandLogo extends StatelessWidget {
   final double width;
   final double height;
+  final double? fontSize;
 
   const BugunBrandLogo({
     super.key,
-    this.width = 176,
-    this.height = 82,
+    this.width = 260,
+    this.height = 104,
+    this.fontSize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final imageWidth = fontSize == null ? width : fontSize! * 8.8;
+    final imageHeight = fontSize == null ? height : fontSize! * 4.1;
     return Semantics(
       label: 'BUGÜN',
       image: true,
       child: SizedBox(
-        width: width,
-        height: height,
+        width: imageWidth,
+        height: imageHeight,
         child: Image.asset(
           'assets/images/bugun_brand_wordmark.png.png',
-          width: width,
-          height: height,
+          width: imageWidth,
+          height: imageHeight,
           fit: BoxFit.contain,
           alignment: Alignment.centerLeft,
           filterQuality: FilterQuality.high,
@@ -88,7 +92,7 @@ class BugunMainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor = const Color(0xFFFFF0DF),
   });
 
-  static const double toolbarHeight = 90;
+  static const double toolbarHeight = 112;
 
   @override
   Size get preferredSize => Size.fromHeight(
