@@ -276,7 +276,7 @@ class _TogetherEventScreenState extends State<TogetherEventScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 28), children: [
         Text('${widget.city} · Birlikte planla', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
