@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Orijinal BUGÜN marka görselini kullanır; yalnızca beyaz kaynak zemini
-/// alfa kanalında saydamlaştırılır. Logonun RGB renk kanalları korunur.
+/// Uses the original BUGÜN wordmark asset without color filters.
 class BugunBrandLogo extends StatelessWidget {
   final double fontSize;
 
@@ -19,19 +18,18 @@ class BugunBrandLogo extends StatelessWidget {
         width: fontSize * 3.6,
         height: fontSize * 1.85,
         child: Image.asset(
-            'assets/images/bugun_brand_wordmark.png.png',
-            width: fontSize * 3.6,
-            height: fontSize * 1.85,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (context, error, stackTrace) => const Text(
-              'BUGÜN',
-              style: TextStyle(
-                color: Color(0xFF263B50),
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-              ),
+          'assets/images/bugun_brand_wordmark.png.png',
+          width: fontSize * 3.6,
+          height: fontSize * 1.85,
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (context, error, stackTrace) => const Text(
+            'BUGÜN',
+            style: TextStyle(
+              color: Color(0xFF263B50),
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
@@ -40,7 +38,7 @@ class BugunBrandLogo extends StatelessWidget {
   }
 }
 
-/// Tüm ana ekranlarda aynı ölçüde şehir/profil ikonları.
+/// Shared, fixed-size city/profile action used by all main app bars.
 class BugunHeaderActionButton extends StatelessWidget {
   final String tooltip;
   final IconData icon;
@@ -58,7 +56,6 @@ class BugunHeaderActionButton extends StatelessWidget {
     return SizedBox(
       width: 48,
       height: 48,
-      alignment: Alignment.center,
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
