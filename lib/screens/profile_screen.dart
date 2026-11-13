@@ -334,15 +334,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final signedIn = _user != null;
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0DF),
-      appBar: AppBar(
-        toolbarHeight: 64,
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-        titleSpacing: 16,
-        actionsPadding: const EdgeInsets.only(right: 8),
+      appBar: BugunMainAppBar(
         backgroundColor: const Color(0xFFFFF0DF),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
