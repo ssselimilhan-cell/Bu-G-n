@@ -29,17 +29,17 @@ class BugunApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF7F7F5),
+        scaffoldBackgroundColor: const Color(0xFFFFF0DF),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1268B3),
+          seedColor: const Color(0xFFE97824),
           brightness: Brightness.light,
         ).copyWith(
-          secondary: const Color(0xFFFF8A3D),
+          secondary: const Color(0xFF1268B3),
           tertiary: const Color(0xFF20A6A0),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF1268B3),
+            backgroundColor: const Color(0xFFE97824),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
@@ -50,24 +50,24 @@ class BugunApp extends StatelessWidget {
         ),
         chipTheme: ChipThemeData(
           backgroundColor: Colors.white,
-          selectedColor: const Color(0xFFE5F1FC),
+          selectedColor: const Color(0xFFFFE1C2),
           checkmarkColor: const Color(0xFF1268B3),
-          side: const BorderSide(color: Color(0xFFDCE7F0)),
+          side: const BorderSide(color: Color(0xFFF0CBA8)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFDCE7F0))),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFDCE7F0))),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFF1268B3), width: 1.5)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFF0CBA8))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFF0CBA8))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: const BorderSide(color: Color(0xFFE97824), width: 1.5)),
         ),
         switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? const Color(0xFF1268B3) : null),
-          trackColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? const Color(0xFFB9D8F2) : null),
+          thumbColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? const Color(0xFFE97824) : null),
+          trackColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? const Color(0xFFFFD0A3) : null),
         ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(color: Color(0xFF1268B3)),
+        progressIndicatorTheme: const ProgressIndicatorThemeData(color: Color(0xFFE97824)),
       ),
       home: const HomeScreen(),
     );
