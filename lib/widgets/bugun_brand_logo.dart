@@ -18,32 +18,28 @@ class BugunBrandLogo extends StatelessWidget {
       child: SizedBox(
         width: fontSize * 3.6,
         height: fontSize * 1.85,
-        child: ClipRect(
-          child: Align(
-            alignment: const Alignment(0, -0.25),
-            child: ColorFiltered(
-              // RGB kanallarına dokunulmaz; yalnızca beyaz zeminin alfa değeri
-              // düşürülür. Böylece orijinal harf ve yıldız renkleri korunur.
-              colorFilter: const ColorFilter.matrix(<double>[
-                1, 0, 0, 0, 0,
-                0, 1, 0, 0, 0,
-                0, 0, 1, 0, 0,
-                -1.15, -1.15, -1.15, 0, 3.35,
-              ]),
-              child: Image.asset(
-                'assets/images/bugun_brand_wordmark.png.png',
-                width: fontSize * 3.6,
-                height: fontSize * 3.6,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.high,
-                errorBuilder: (context, error, stackTrace) => const Text(
-                  'BUGÜN',
-                  style: TextStyle(
-                    color: Color(0xFF263B50),
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+        child: ColorFiltered(
+          // Orijinal görselin RGB renklerine dokunulmaz.
+          // Yalnızca beyaz/açık arka plan piksellerinin alfa değeri azaltılır.
+          colorFilter: const ColorFilter.matrix(<double>[
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            -1, -1, -1, 0, 3,
+          ]),
+          child: Image.asset(
+            'assets/images/bugun_brand_wordmark.png.png',
+            width: fontSize * 3.6,
+            height: fontSize * 1.85,
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (context, error, stackTrace) => const Text(
+              'BUGÜN',
+              style: TextStyle(
+                color: Color(0xFF263B50),
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -69,16 +65,22 @@ class BugunHeaderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 44,
-      height: 44,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        iconSize: 22,
-        visualDensity: VisualDensity.standard,
-        icon: Icon(icon),
+      width: 48,
+      height: 64,
+      child: Center(
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: IconButton(
+            tooltip: tooltip,
+            onPressed: onPressed,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            iconSize: 22,
+            visualDensity: VisualDensity.standard,
+            icon: Icon(icon),
+          ),
+        ),
       ),
     );
   }
