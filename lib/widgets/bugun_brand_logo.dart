@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// BUGÜN wordmark rendered as Flutter vector/text, so it has no opaque image
-/// canvas and remains clean on every app surface.
+/// Orijinal BUGÜN marka görselini kullanır; yalnızca beyaz kaynak zemini
+/// alfa kanalında saydamlaştırılır. Logonun renk pikselleri yeniden çizilmez.
 class BugunBrandLogo extends StatelessWidget {
   final double fontSize;
 
@@ -18,104 +18,68 @@ class BugunBrandLogo extends StatelessWidget {
       child: SizedBox(
         width: fontSize * 3.6,
         height: fontSize * 1.85,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
+        child: ClipRect(
+          child: Align(
+            alignment: const Alignment(0, -0.25),
+            child: ColorFiltered(
+              // RGB kanallarına dokunulmaz; yalnızca beyaz zeminin alfa değeri
+              // düşürülür. Böylece orijinal harf ve yıldız renkleri korunur.
+              colorFilter: const ColorFilter.matrix(<double>[
+                1, 0, 0, 0, 0,
+                0, 1, 0, 0, 0,
+                0, 0, 1, 0, 0,
+                -1.15, -1.15, -1.15, 0, 3.35,
+              ]),
+              child: Image.asset(
+                'assets/images/bugun_brand_wordmark.png.png',
+                width: fontSize * 3.6,
+                height: fontSize * 3.6,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (context, error, stackTrace) => const Text(
                   'BUGÜN',
-                  maxLines: 1,
                   style: TextStyle(
-                    color: const Color(0xFF101010),
-                    fontSize: fontSize * 1.02,
-                    height: 1,
+                    color: Color(0xFF263B50),
+                    fontSize: 30,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -fontSize * 0.045,
                   ),
                 ),
               ),
             ),
-            Positioned(
-              right: fontSize * 0.28,
-              top: 0,
-              width: fontSize * 1.45,
-              height: fontSize * 1.35,
-              child: CustomPaint(
-                painter: _BugunStarsPainter(),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _BugunStarsPainter extends CustomPainter {
+/// Tüm ana ekranlarda aynı dokunma alanı ve ikon ölçüsünü kullanır.
+class BugunHeaderActionButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const BugunHeaderActionButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width * 0.43, size.height * 0.57);
-
-    void petal(List<Offset> points, Color color) {
-      final path = Path()..moveTo(points.first.dx, points.first.dy);
-      for (final point in points.skip(1)) {
-        path.lineTo(point.dx, point.dy);
-      }
-      path.close();
-      canvas.drawPath(path, Paint()..color = color);
-    }
-
-    // Four-color central sparkle, matching the original BUGÜN mark.
-    petal([
-      center,
-      Offset(center.dx - 2, center.dy - size.height * 0.48),
-      Offset(center.dx + size.width * 0.12, center.dy - size.height * 0.15),
-    ], const Color(0xFFFFB51B));
-    petal([
-      center,
-      Offset(center.dx + size.width * 0.48, center.dy - size.height * 0.04),
-      Offset(center.dx + size.width * 0.16, center.dy + size.height * 0.12),
-    ], const Color(0xFF20A8E8));
-    petal([
-      center,
-      Offset(center.dx + size.width * 0.02, center.dy + size.height * 0.48),
-      Offset(center.dx - size.width * 0.15, center.dy + size.height * 0.16),
-    ], const Color(0xFF8654D7));
-    petal([
-      center,
-      Offset(center.dx - size.width * 0.48, center.dy - size.height * 0.04),
-      Offset(center.dx - size.width * 0.15, center.dy - size.height * 0.15),
-    ], const Color(0xFFEF526C));
-
-    void sparkle(Offset c, double radius, Color color) {
-      final path = Path()
-        ..moveTo(c.dx, c.dy - radius)
-        ..quadraticBezierTo(c.dx + radius * 0.12, c.dy - radius * 0.12, c.dx + radius, c.dy)
-        ..quadraticBezierTo(c.dx + radius * 0.12, c.dy + radius * 0.12, c.dx, c.dy + radius)
-        ..quadraticBezierTo(c.dx - radius * 0.12, c.dy + radius * 0.12, c.dx - radius, c.dy)
-        ..quadraticBezierTo(c.dx - radius * 0.12, c.dy - radius * 0.12, c.dx, c.dy - radius)
-        ..close();
-      canvas.drawPath(path, Paint()..color = color);
-    }
-
-    sparkle(
-      Offset(size.width * 0.88, size.height * 0.18),
-      size.height * 0.19,
-      const Color(0xFFFFB51B),
-    );
-    sparkle(
-      Offset(size.width * 0.91, size.height * 0.83),
-      size.height * 0.17,
-      const Color(0xFF20A8E8),
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        iconSize: 22,
+        visualDensity: VisualDensity.standard,
+        icon: Icon(icon),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant _BugunStarsPainter oldDelegate) => false;
 }
