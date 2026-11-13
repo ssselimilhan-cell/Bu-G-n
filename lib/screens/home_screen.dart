@@ -477,17 +477,11 @@ class _HomeScreenState
     return Scaffold(
       backgroundColor:
           const Color(0xFFFFF0DF),
-      appBar: AppBar(
-        toolbarHeight: 64,
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-        titleSpacing: 16,
-        actionsPadding: const EdgeInsets.only(right: 8),
+      appBar: BugunMainAppBar(
         backgroundColor:
             const Color(0xFFFFF0DF),
         surfaceTintColor:
             Colors.transparent,
-        elevation: 0,
         title: const BugunBrandLogo(fontSize: 32),
         actions: [
           BugunHeaderActionButton(
