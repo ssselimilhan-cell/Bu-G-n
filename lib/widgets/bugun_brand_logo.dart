@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Orijinal BUGÜN marka görselini kullanır; yalnızca beyaz kaynak zemini
-/// alfa kanalında saydamlaştırılır. Logonun renk pikselleri yeniden çizilmez.
+/// alfa kanalında saydamlaştırılır. Logonun RGB renk kanalları korunur.
 class BugunBrandLogo extends StatelessWidget {
   final double fontSize;
 
@@ -19,8 +19,8 @@ class BugunBrandLogo extends StatelessWidget {
         width: fontSize * 3.6,
         height: fontSize * 1.85,
         child: ColorFiltered(
-          // Orijinal görselin RGB renklerine dokunulmaz.
-          // Yalnızca beyaz/açık arka plan piksellerinin alfa değeri azaltılır.
+          // Flutter renk matrisi kanalları 0-255 aralığında işler.
+          // Bu katsayılarla saf beyazın alfa değeri 0, renk kanalları ise değişmez.
           colorFilter: const ColorFilter.matrix(<double>[
             1, 0, 0, 0, 0,
             0, 1, 0, 0, 0,
@@ -43,12 +43,13 @@ class BugunBrandLogo extends StatelessWidget {
               ),
             ),
           ),
+        ),
       ),
     );
   }
 }
 
-/// Tüm ana ekranlarda aynı dokunma alanı ve ikon ölçüsünü kullanır.
+/// Tüm ana ekranlarda aynı ölçüde şehir/profil ikonları.
 class BugunHeaderActionButton extends StatelessWidget {
   final String tooltip;
   final IconData icon;
@@ -66,19 +67,14 @@ class BugunHeaderActionButton extends StatelessWidget {
     return SizedBox(
       width: 48,
       height: 48,
-      child: SizedBox(
-          width: 48,
-          height: 48,
-          child: IconButton(
-            tooltip: tooltip,
-            onPressed: onPressed,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-            iconSize: 24,
-            visualDensity: VisualDensity.standard,
-            icon: Icon(icon),
-          ),
-        ),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+        iconSize: 24,
+        visualDensity: VisualDensity.standard,
+        icon: Icon(icon),
       ),
     );
   }
