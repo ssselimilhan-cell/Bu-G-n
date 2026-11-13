@@ -166,9 +166,7 @@ class _SavedScreenState
       appBar: BugunMainAppBar(
         backgroundColor:
             const Color(0xFFFFF0DF),
-        surfaceTintColor:
-            Colors.transparent,
-        actions: [
+actions: [
           BugunHeaderActionButton(
             tooltip: 'Şehir seç',
             icon: Icons.location_city_outlined,
