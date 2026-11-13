@@ -351,11 +351,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final entries = _entriesForSelectedDay();
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: widget.embedded
           ? null
           : AppBar(
-              backgroundColor: const Color(0xFFF7F7F5),
+              backgroundColor: const Color(0xFFFFF0DF),
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               title: Row(
