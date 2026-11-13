@@ -488,7 +488,6 @@ class _HomeScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        toolbarHeight: 64,
         title: const BugunBrandLogo(fontSize: 32),
         actions: [
           BugunHeaderActionButton(
