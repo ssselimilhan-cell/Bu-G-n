@@ -512,12 +512,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   ) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0DF),
-      appBar: AppBar(
-        toolbarHeight: 64,
-        automaticallyImplyLeading: false,
-        centerTitle: false,
-        titleSpacing: 16,
-        actionsPadding: const EdgeInsets.only(right: 8),
+      appBar: BugunMainAppBar(
         backgroundColor: const Color(0xFFFFF0DF),
         actions: [
           BugunHeaderActionButton(
@@ -534,8 +529,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
         ],
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -901,7 +894,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                 final place = places[index];
                 return Card(
                   margin: EdgeInsets.zero,
-                  elevation: 0,
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -1056,7 +1048,6 @@ class _ExploreScreenState extends State<ExploreScreen>
 
                 return Card(
                   margin: EdgeInsets.zero,
-                  elevation: 0,
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
