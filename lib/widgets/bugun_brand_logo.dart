@@ -92,7 +92,7 @@ class BugunMainAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor = const Color(0xFFFFF0DF),
   });
 
-  static const double toolbarHeight = 112;
+  static const double toolbarHeight = 104;
 
   @override
   Size get preferredSize => Size.fromHeight(
