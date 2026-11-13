@@ -62,7 +62,7 @@ for y in range(height):
 for x, y in edge:
     r, g, b, a = pixels[x, y]
     estimated_alpha = 255 - min(r, g, b)
-    if 0 < estimated_alpha < 245:
+    if 0 < estimated_alpha < 220:
         # Recover the foreground color from white-matted antialiasing.
         inv = 255 - estimated_alpha
         rr = max(0, min(255, round((r - inv) * 255 / estimated_alpha)))
