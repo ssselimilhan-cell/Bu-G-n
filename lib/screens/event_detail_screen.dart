@@ -333,10 +333,10 @@ class _EventDetailScreenState
 
     return Scaffold(
       backgroundColor:
-          const Color(0xFFF7F7F5),
+          const Color(0xFFFFF0DF),
       appBar: AppBar(
         backgroundColor:
-            const Color(0xFFF7F7F5),
+            const Color(0xFFFFF0DF),
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
