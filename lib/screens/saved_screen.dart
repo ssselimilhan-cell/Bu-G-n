@@ -174,7 +174,6 @@ class _SavedScreenState
         surfaceTintColor:
             Colors.transparent,
         elevation: 0,
-        titleSpacing: 16,
         actions: [
           BugunHeaderActionButton(
             tooltip: 'Şehir seç',
