@@ -536,7 +536,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 16,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
