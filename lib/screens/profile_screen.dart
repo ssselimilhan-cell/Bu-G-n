@@ -336,14 +336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: const Color(0xFFFFF0DF),
       appBar: BugunMainAppBar(
         backgroundColor: const Color(0xFFFFF0DF),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BugunBrandLogo(fontSize: 32),
-            const SizedBox(width: 10),
-            const Text('PROFİL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-          ],
-        ),
+        title: const BugunBrandLogo(),
         actions: [
           BugunHeaderActionButton(
             tooltip: 'Şehir seç',
