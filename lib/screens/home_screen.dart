@@ -478,6 +478,11 @@ class _HomeScreenState
       backgroundColor:
           const Color(0xFFFFF0DF),
       appBar: AppBar(
+        toolbarHeight: 64,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: 16,
+        actionsPadding: const EdgeInsets.only(right: 8),
         backgroundColor:
             const Color(0xFFFFF0DF),
         surfaceTintColor:
@@ -496,7 +501,6 @@ class _HomeScreenState
             icon: Icons.person_outline_rounded,
             onPressed: () => setState(() => _selectedIndex = 3),
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
