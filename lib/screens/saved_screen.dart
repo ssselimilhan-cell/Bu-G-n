@@ -165,6 +165,10 @@ class _SavedScreenState
           const Color(0xFFFFF0DF),
       appBar: AppBar(
         toolbarHeight: 64,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: 16,
+        actionsPadding: const EdgeInsets.only(right: 8),
         backgroundColor:
             const Color(0xFFFFF0DF),
         surfaceTintColor:
@@ -185,7 +189,6 @@ class _SavedScreenState
               MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
             ),
           ),
-          const SizedBox(width: 8),
         ],
         title: Row(
           mainAxisSize: MainAxisSize.min,
