@@ -514,6 +514,10 @@ class _ExploreScreenState extends State<ExploreScreen>
       backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         toolbarHeight: 64,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: 16,
+        actionsPadding: const EdgeInsets.only(right: 8),
         backgroundColor: const Color(0xFFFFF0DF),
         actions: [
           BugunHeaderActionButton(
@@ -529,7 +533,6 @@ class _ExploreScreenState extends State<ExploreScreen>
               MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
             ),
           ),
-          const SizedBox(width: 8),
         ],
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -538,8 +541,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             const BugunBrandLogo(fontSize: 20),
-            const SizedBox(width: 8),
-            Flexible(
+              Flexible(
               child: Text(
                 _pageTitle(),
                 maxLines: 1,
