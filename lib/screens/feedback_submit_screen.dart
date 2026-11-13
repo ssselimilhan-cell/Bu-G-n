@@ -61,10 +61,10 @@ class _FeedbackSubmitScreenState extends State<FeedbackSubmitScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F5),
+      backgroundColor: const Color(0xFFFFF0DF),
       appBar: AppBar(
         title: const Text('BİZE ULAŞIN', style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFFF7F7F5),
+        backgroundColor: const Color(0xFFFFF0DF),
         surfaceTintColor: Colors.transparent,
       ),
       body: SafeArea(
