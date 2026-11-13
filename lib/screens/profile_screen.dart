@@ -349,9 +349,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         actions: [
-          IconButton(tooltip: 'Şehir seç', onPressed: _chooseCity, icon: const Icon(Icons.location_city_outlined)),
-          IconButton(tooltip: 'Profil', onPressed: () {}, icon: const Icon(Icons.person_outline_rounded)),
-          const SizedBox(width: 4),
+          BugunHeaderActionButton(
+            tooltip: 'Şehir seç',
+            icon: Icons.location_city_outlined,
+            onPressed: _chooseCity,
+          ),
+          BugunHeaderActionButton(
+            tooltip: 'Profil',
+            icon: Icons.person_outline_rounded,
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _loading
