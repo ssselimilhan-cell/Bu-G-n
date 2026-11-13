@@ -18,16 +18,7 @@ class BugunBrandLogo extends StatelessWidget {
       child: SizedBox(
         width: fontSize * 3.6,
         height: fontSize * 1.85,
-        child: ColorFiltered(
-          // Flutter renk matrisi kanalları 0-255 aralığında işler.
-          // Bu katsayılarla saf beyazın alfa değeri 0, renk kanalları ise değişmez.
-          colorFilter: const ColorFilter.matrix(<double>[
-            1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
-            0, 0, 1, 0, 0,
-            -0.0039215686, -0.0039215686, -0.0039215686, 0, 3,
-          ]),
-          child: Image.asset(
+        child: Image.asset(
             'assets/images/bugun_brand_wordmark.png.png',
             width: fontSize * 3.6,
             height: fontSize * 1.85,
@@ -67,12 +58,15 @@ class BugunHeaderActionButton extends StatelessWidget {
     return SizedBox(
       width: 48,
       height: 48,
+      alignment: Alignment.center,
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints.tightFor(width: 48, height: 48),
         iconSize: 24,
+        alignment: Alignment.center,
+        splashRadius: 22,
         visualDensity: VisualDensity.standard,
         icon: Icon(icon),
       ),
